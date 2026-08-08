@@ -2736,6 +2736,7 @@ window.VIEWS = window.VIEWS || {};
             <button class="btn btn-sm" data-act="try-voice" data-id="clone">▶ 试听目前效果</button>
           </div>
           <div class="hint" style="margin-top:9px">演示环境无法播放克隆声，试听会用系统音代替，仅供确认语速与断句。</div>
+          <div class="hint" id="voice-sys" style="margin-top:6px"></div>
         </div>`
       : p.voiceMode === 'library' ? `
         <div class="label">挑一个配音员<span class="hint" style="margin-left:8px;font-weight:400">点卡片选用，点 ▶ 试听</span></div>
@@ -2750,7 +2751,8 @@ window.VIEWS = window.VIEWS || {};
             <div class="hint" style="margin-top:6px">适合：${v.plat.join(' / ')}</div>
           </div>`).join('')}
         </div>
-        <div class="hint" style="margin-top:12px">试听为系统音模拟不同音色（音高与语速有差异），正式版为真人录制声库，质感差很多。</div>`
+        <div class="hint" style="margin-top:12px">试听为<b>台湾口音国语</b>模拟不同音色（音高与语速有差异），正式版为真人录制声库，质感差很多。</div>
+        <div class="hint" id="voice-sys" style="margin-top:6px"></div>`
       : `
         <div class="explain" style="border-left-color:var(--amber)">
           <div class="ex-r"><span class="ex-k">注意</span><span>系统合成音<b>不建议用于正式发布</b>。它没有情绪起伏、断句机械，观众一听就知道是机器念的，完播率会明显偏低。</span></div>
@@ -3417,6 +3419,7 @@ window.TOUR = (function () {
     $('#user-role').textContent = ac.title;
     $('#user-avatar').textContent = ac.initial || ac.name.slice(0, 1);
     if (route === 'pipeline') $('#view').scrollTop = 0;
+    if (route === 'persona') showVoiceInfo();
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
   }
 
@@ -3927,15 +3930,57 @@ window.TOUR = (function () {
   }
   UI.onClose(stopPreview);
 
-  /* 挑一个中文语音；没有就只播画面。语音清单是非同步载入的，要等 voiceschanged */
+  /* 挑一个「台湾口音的国语」语音。
+     注意 zh-HK 是香港粤语，绝对不能选——之前误把它跟 zh-TW 并列，
+     导致系统语音清单里粤语排前面时就被选中。
+     语音清单是非同步载入的，要等 voiceschanged。 */
+  const CANTONESE = /zh[-_]HK|yue|cantonese|粤|粵/i;
   function pickVoice() {
     let vs = [];
     try { vs = speechSynthesis.getVoices() || []; } catch (e) { return null; }
-    return vs.find(v => /zh[-_]TW|zh[-_]HK/i.test(v.lang))
-      || vs.find(v => /^zh/i.test(v.lang))
-      || vs.find(v => /Chinese|中文|國語|普通话/i.test(v.name))
+    const ok = vs.filter(v => !CANTONESE.test(v.lang) && !CANTONESE.test(v.name));
+    return ok.find(v => /zh[-_]TW/i.test(v.lang))                    // 台湾国语，最优先
+      || ok.find(v => /台灣|臺灣|Taiwan/i.test(v.name))
+      || ok.find(v => /zh[-_]CN|zh[-_]Hans/i.test(v.lang))           // 退而求其次：普通话
+      || ok.find(v => /^zh/i.test(v.lang))
+      || ok.find(v => /Chinese|中文|國語|国语|普通话/i.test(v.name))
       || null;
   }
+
+  /* 目前实际用到的系统语音，供人格页显示（各台电脑装的语音不同） */
+  function voiceInfo() {
+    let vs = [];
+    try { vs = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+    const v = pickVoice();
+    if (!v) return { none: true, total: vs.length };
+    return {
+      name: v.name, lang: v.lang,
+      isTW: /zh[-_]TW/i.test(v.lang) || /台灣|臺灣|Taiwan/i.test(v.name),
+      total: vs.length
+    };
+  }
+  window.__voiceInfo = voiceInfo;
+
+  /* 把实际用到的系统语音显示在人格页，方便判断是不是台湾国语 */
+  function showVoiceInfo() {
+    const el = document.getElementById('voice-sys');
+    if (!el) return;
+    const v = voiceInfo();
+    if (!v) { el.innerHTML = '这个浏览器不支援语音合成。'; return; }
+    if (v.none) {
+      el.innerHTML = v.total
+        ? '⚠ 这台电脑没有可用的中文语音，试听不会有声音。'
+        : '语音清单载入中…';
+      el.style.color = 'var(--amber)'; return;
+    }
+    el.innerHTML = v.isTW
+      ? `目前试听使用：<b>${esc(v.name)}</b>（${esc(v.lang)}）— 台湾国语 ✓`
+      : `目前试听使用：<b>${esc(v.name)}</b>（${esc(v.lang)}）<br>
+         ⚠ 这台电脑没装台湾国语语音，改用其他中文语音代替。<br>
+         Windows 可到「设定 → 时间与语言 → 语言与地区 → 新增语言 → 中文（繁体，台湾）」并勾选语音套件。`;
+    el.style.color = v.isTW ? 'var(--txt-3)' : 'var(--amber)';
+  }
+  try { speechSynthesis.addEventListener('voiceschanged', showVoiceInfo); } catch (e) {}
   try {
     speechSynthesis.addEventListener('voiceschanged', () => {
       if (!pv) return;
