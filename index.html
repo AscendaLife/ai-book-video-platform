@@ -570,13 +570,12 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
       <a class="nav-item" data-route="projects"><span class="ni">＋</span>上传一本新书</a>
       <a class="nav-item" data-route="pipeline"><span class="ni">▶</span>一键生成短视频</a>
       <a class="nav-item" data-route="library"><span class="ni">▩</span>内容资产库</a>
+      <a class="nav-item" data-route="persona"><span class="ni">◉</span>数字人 / 声音 / 克隆</a>
       <a class="nav-item" data-route="publish"><span class="ni">▦</span>发布与数据</a>
-      <a class="nav-item" data-route="community"><span class="ni">◎</span>社群读书会</a>
 
       <details class="nav-more">
         <summary>团队 / 管理员</summary>
         <a class="nav-item admin" data-route="engine"><span class="ni">◇</span>人物引擎</a>
-        <a class="nav-item admin" data-route="persona"><span class="ni">◉</span>数字人 / 声音 / 人格</a>
         <a class="nav-item admin" data-route="analytics"><span class="ni">◑</span>数据分析</a>
         <a class="nav-item admin" data-route="docs"><span class="ni">▧</span>文档中心</a>
         <a class="nav-item admin" data-route="settings"><span class="ni">⚒</span>系统设置</a>
@@ -3129,16 +3128,13 @@ window.VIEWS = window.VIEWS || {};
 
 /* ===== views-extra.js ===== */
 /* ============================================================
- * views-extra.js — 人物引擎 / 社群读书会
+ * views-extra.js — 人物引擎
  * 合并自同事版本（分支 colleague-changes / 提交 3e955ab）
  * 调整：品牌维持「书影 BookReel」，人名一律跟随登录帐户
  * ========================================================== */
 (function () {
   const { esc, nf, statusTag } = UI;
 
-  /* =======================================================
-   * 人物引擎
-   * ===================================================== */
   VIEWS.engine = function (q) {
     const people = STORE.s.people || DATA.PEOPLE;
     const activeId = (q && q.id) || (people[0] || {}).id;
@@ -3225,126 +3221,6 @@ window.VIEWS = window.VIEWS || {};
       <table class="schema-table"><thead><tr><th>表</th><th>用途</th></tr></thead><tbody>
         ${tables.map(t => `<tr><td>${t[0]}</td><td>${t[1]}</td></tr>`).join('')}
       </tbody></table>
-    </div>`;
-  };
-
-  /* =======================================================
-   * 社群读书会
-   * ===================================================== */
-  VIEWS.community = function () {
-    const current = STORE.current || STORE.s.projects[0];
-    const qa = [
-      ['这本书适合谁读？', '适合正在做管理、品牌、内容或商业判断的人。AI 客服会引用书中章节回答，不会凭空发挥。'],
-      ['读书会什么时候开始？', '本周三 20:00 有一场线上共读，报名后会自动收到提醒和会前材料。'],
-      ['可以加入会员社群吗？', '可以。系统会先确认兴趣主题，再邀请进入对应社群分组。']
-    ];
-    const clubs = [
-      { name: '新书精读会', people: 128, status: '招募中', topic: current ? `《${current.title}》重点拆解` : '本周新书重点拆解' },
-      { name: '商业判断读书会', people: 86, status: '准备开场', topic: '管理者如何把一本书变成行动清单' },
-      { name: '作者签名书预约', people: 64, status: '开放预约', topic: '限量签名书名额与寄送资料确认' },
-      { name: '作者见面会', people: 40, status: '预约中', topic: '线下/线上见面会名额、签到与提醒' },
-      { name: '会员问答夜', people: 52, status: '待邀约', topic: 'AI 客服整理高频问题后，由团队挑题回应' }
-    ];
-    const agentTasks = [
-      ['每日创造问题', '每天从书中抽一个问题，引导会员回答、补充故事和提出反例。'],
-      ['持续创造好奇', '每周制造一个悬念主题，让会员期待下一场读书会或作者回应。'],
-      ['会员激励任务', '给活跃会员徽章、优先名额、提问机会和共创书署名机会。'],
-      ['沉默会员探访', '识别 7 天未互动会员，温和询问近况、兴趣和想看的主题。'],
-      ['下一步发展邀约', '把高意向会员带到读书会、签名书、作者见面会或共创书项目。'],
-      ['内容资产回流', '把高质量回答、故事和问题整理成短视频脚本、社群贴文和共创书素材。']
-    ];
-    const rhythms = [
-      ['每天', '1 个问题 + 1 次社群探访', '维持讨论温度'],
-      ['每周', '1 个好奇主题 + 1 场读书会邀约', '制造期待'],
-      ['每月', '1 次作者互动 + 1 次会员共创', '形成归属感'],
-      ['长期', '把讨论沉淀成书、课、短视频', '累积内容资产']
-    ];
-    const shows = [
-      { name: '新书对谈室', type: '作者访谈', source: '书籍重点 + 作者背景 + 社群提问', output: '长访谈 / 3 分钟精华 / 30 秒短片' },
-      { name: '会员问答特别篇', type: '社群提问', source: '读书会高频问题 + 留言区争议点', output: '问答短片 / Podcast / 电子报' },
-      { name: '一本书背后的十个问题', type: '主题节目', source: 'AI 阅读摘要 + 读者困惑 + ${esc(STORE.s.account.name)}判断', output: '系列短视频 / 圆桌提纲 / 共创书素材' }
-    ];
-
-    return `
-    <div class="page-h">
-      <div><div class="page-t">社群与读书会</div>
-        <div class="page-d">短视频负责引流，AI 客服与 AI Agent 负责承接、互动、邀约和复访</div></div>
-      <div class="right">
-        <button class="btn" data-act="community-create">建立会员社群</button>
-        <button class="btn btn-primary" data-act="club-create">＋ 发起读书会</button>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="community-hero">
-        <div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <span class="tag g"><i class="dot g"></i>AI 客服在线</span>
-            <span class="tag v">会员社群 3 个</span>
-            <span class="tag c">AI Agent 主动营运</span>
-          </div>
-          <div style="font-size:24px;font-weight:780;margin-bottom:6px">把看过视频的人，带进长期读书社群</div>
-          <div style="color:var(--txt-2);font-size:13px;line-height:1.75;max-width:780px">
-            读者看完短视频后，可以直接问书、报名读书会、加入会员社群。AI Agent 不是一次性群发，而是持续创造问题、好奇、激励、探访和下一步发展，把互动内容回流成下一轮脚本素材。
-          </div>
-          <div class="community-actions">
-            <div class="community-action" data-act="ai-cs-preview"><b>AI 客服自动回答</b><span class="hint">回答书籍、活动、报名与购买问题。</span></div>
-            <div class="community-action" data-act="community-create"><b>会员建立社群</b><span class="hint">依兴趣、书籍、身份分组经营。</span></div>
-            <div class="community-action" data-act="club-create"><b>发起读书会</b><span class="hint">自动生成主题、流程、邀约文案。</span></div>
-            <div class="community-action" data-act="show-create"><b>安排访谈节目</b><span class="hint">从社群问题生成访纲和节目素材。</span></div>
-            <div class="community-action" data-act="signing-create"><b>作者签名预约</b><span class="hint">收集签名书名额、姓名和寄送资料。</span></div>
-            <div class="community-action" data-act="meet-create"><b>作者见面会预约</b><span class="hint">安排名额、候补、提醒与签到。</span></div>
-            <div class="community-action" data-act="agent-run"><b>AI Agent 持续带动</b><span class="hint">每天提问、探访、激励、发展下一步。</span></div>
-          </div>
-          <div class="community-status"><b style="color:var(--green)">最近操作：</b>${esc(STORE.s.communityLastAction || '尚未启动社群动作')}</div>
-        </div>
-        <div class="task-panel">
-          <div class="card-h"><div><div class="card-t">AI 客服示例</div><div class="card-s">回答必须来自书籍资料与活动资料</div></div></div>
-          <div class="chat-demo">
-            <div class="bubble user">这本书我没时间读，可以先看哪一章？作者见面会还能预约吗？</div>
-            <div class="bubble ai">建议先看第 2 章和第 5 章。作者见面会目前还有候补名额，我也可以先帮你预约签名书，并在名额释出时提醒你确认。</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid g-2-1" style="margin-bottom:16px">
-      <div class="card">
-        <div class="card-h"><div><div class="card-t">读书会活动</div><div class="card-s">从短视频到活动报名，再到会员复访</div></div>
-          <div class="right"><button class="btn btn-sm" data-act="campaign-launch">启动本周邀约</button></div></div>
-        <table><thead><tr><th>活动</th><th>主题</th><th>人数</th><th>状态</th></tr></thead><tbody>
-          ${clubs.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.topic)}</td><td>${c.people}</td><td><span class="tag v">${esc(c.status)}</span></td></tr>`).join('')}
-        </tbody></table>
-      </div>
-      <div class="card">
-        <div class="card-h"><div><div class="card-t">AI Agent 持续带动循环</div><div class="card-s">不是一次性触达，而是长期创造讨论、好奇、激励与探访</div></div></div>
-        ${agentTasks.map((x, i) => `<div class="agent-row"><div class="agent-dot">${i + 1}</div>
-          <div><div style="font-weight:700">${x[0]}</div><div class="hint" style="margin-top:3px;line-height:1.7">${x[1]}</div></div></div>`).join('')}
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">营运节奏</div><div class="card-s">让社群持续有问题、有好奇、有目标、有被看见的感觉</div></div>
-        <div class="right"><button class="btn btn-sm" data-act="rhythm-preview">预览本周节奏</button></div></div>
-      <table><thead><tr><th>周期</th><th>AI Agent 动作</th><th>目的</th></tr></thead><tbody>
-        ${rhythms.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}
-      </tbody></table>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">访谈节目</div><div class="card-s">让新书不只被介绍，也能被作者、会员和社群问题继续展开</div></div>
-        <div class="right"><button class="btn btn-sm" data-act="outline-create">生成访纲</button><button class="btn btn-sm btn-primary" data-act="show-create">安排访谈</button></div></div>
-      <table><thead><tr><th>节目</th><th>形式</th><th>访纲来源</th><th>自动产出</th></tr></thead><tbody>
-        ${shows.map(s => `<tr><td>${esc(s.name)}</td><td>${esc(s.type)}</td><td>${esc(s.source)}</td><td>${esc(s.output)}</td></tr>`).join('')}
-      </tbody></table>
-    </div>
-
-    <div class="grid g3">
-      ${[
-        ['知识库边界', '客服只引用书籍资料、活动资料、会员规则，不知道就转人工。'],
-        ['会员权限', '社群邀请、私信提醒、活动通知都需要用户授权与退订入口。'],
-        ['内容回流', '高频问题、精彩观点、读书会讨论会回到脚本库、短视频选题与共创书素材。']
-      ].map(x => `<div class="card"><div class="card-h"><div><div class="card-t">${x[0]}</div></div></div><div class="hint" style="line-height:1.8">${x[1]}</div></div>`).join('')}
     </div>`;
   };
 
@@ -3534,7 +3410,7 @@ window.TOUR = (function () {
 
   const TITLES = {
     dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', library: '内容资产库',
-    community: '社群读书会', engine: '人物引擎',
+    engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
   };
@@ -3700,33 +3576,6 @@ window.TOUR = (function () {
         STORE.update(); render(); toast('已新增人物档案，请上传语料', 'ok');
         return;
       }
-
-      /* ---- 社群读书会（合并自同事版本）---- */
-      case 'ai-cs-preview': return modal('AI 客服自动回答', `
-        <div class="chat-demo">
-          <div class="bubble user">这本书适合我吗？我是做行销的。</div>
-          <div class="bubble ai">适合。书里第 3 章讲的正是行销人最常遇到的判断问题，我可以把那一章的重点整理给你。要吗？</div>
-          <div class="bubble user">读书会怎么参加？</div>
-          <div class="bubble ai">本周三 20:00 有一场线上共读，现在报名会自动收到提醒和会前材料。要我帮你留一个名额吗？</div>
-        </div>
-        <div class="hint" style="margin-top:14px">回答一律引用书中章节，问到书里没有的内容会直说不知道，不会编。</div>`);
-      case 'community-create': return modal('建立会员社群', `
-        <div class="field"><div class="label">社群名称</div><input class="input" placeholder="例如：新书精读会"></div>
-        <div class="field"><div class="label">分组依据</div>
-          <select class="input"><option>依兴趣主题</option><option>依书籍</option><option>依身份（管理者 / 创业者 / 学生）</option></select></div>
-        <div class="hint">建立后 AI Agent 会依设定的节奏发问题、办活动、探访沉默会员。</div>`,
-        `<button class="btn" onclick="UI.closeModal()">取消</button>
-         <button class="btn btn-primary" onclick="UI.closeModal();UI.toast('社群已建立（演示）','ok')">建立</button>`);
-      case 'club-create': return modal('发起读书会', `
-        <div class="row2">
-          <div class="field"><div class="label">主题</div><input class="input" value="《${esc(STORE.current.title)}》重点拆解"></div>
-          <div class="field"><div class="label">时间</div><input class="input" placeholder="例如：本周三 20:00"></div>
-        </div>
-        <div class="field"><div class="label">自动生成内容</div>
-          <div class="chip-list"><span class="tag g">流程表</span><span class="tag g">讨论提纲</span><span class="tag g">邀约文案</span><span class="tag g">会前材料</span></div></div>
-        <div class="hint">发起后会自动产生邀约文案，可直接推到发布排程。</div>`,
-        `<button class="btn" onclick="UI.closeModal()">取消</button>
-         <button class="btn btn-primary" onclick="UI.closeModal();UI.toast('读书会已建立（演示）','ok')">发起</button>`);
 
       case 'switch-proj': return;
       case 'toggle': {
