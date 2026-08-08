@@ -2686,15 +2686,24 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
+    <div class="explain" style="margin-bottom:16px">
+      <div class="ex-r"><span class="ex-k">这一页在做什么</span><span>决定<b>影片里说话的是谁、怎么说</b>。没有这一层，AI 写出来的稿子谁用都一样，念出来一股机器味。</span></div>
+      <div class="ex-r"><span class="ex-k">「${esc(ac.name)}」是谁</span><span>${ac.name === '主理人'
+        ? '<b>目前是空的占位名称</b>，不对应任何真人。点左下角可以改成本人的名字，改完全站都会跟着变。'
+        : `就是目前登录的帐户。所有生成的内容都会以${esc(ac.name)}的口吻产出。`}</span></div>
+      <div class="ex-r"><span class="ex-k">你要做的</span><span>先选一种声音来源，再调下面五个参数与口头禅。<b>这一步要在生成影片之前做</b>，否则整批跑完才发现口吻不对，得重来。</span></div>
+    </div>
+
     <div class="persona-hero" style="margin-bottom:16px">
       <div class="pv">${esc(ac.initial || ac.name.slice(0, 1))}</div>
       <div style="flex:1;min-width:240px">
         <div style="font-size:19px;font-weight:750;margin-bottom:4px">${esc(ac.name)}专属数字人 · ${p.version}</div>
-        <div style="font-size:13px;color:var(--txt-2);margin-bottom:12px">形象采集 ${p.trainMin} 分钟 · 语料 ${p.sampleCount} 段 · 声音相似度 ${p.similarity}%</div>
+        <div style="font-size:13px;color:var(--txt-2);margin-bottom:6px">形象采集 ${p.trainMin} 分钟 · 语料 ${p.sampleCount} 段 · 声音相似度 ${p.similarity}%</div>
+        <div style="font-size:11.5px;color:var(--amber);margin-bottom:12px">⚠ 以上三个数字是<b>示范值</b>，不是量出来的——真实来源见下方「这些数字从哪来」</div>
         <div class="chip-list">
-          <span class="tag g"><i class="dot g"></i>形象模型 ${p.avatarStatus}</span>
-          <span class="tag g"><i class="dot g"></i>声音模型 ${p.voiceStatus}</span>
-          <span class="tag v">风格模型 已训练</span>
+          <span class="tag a">形象模型 示范状态</span>
+          <span class="tag a">声音模型 示范状态</span>
+          <span class="tag a">风格模型 示范状态</span>
           <span class="tag c">输出含 AI 生成标识</span>
         </div>
       </div>
@@ -2760,6 +2769,26 @@ window.VIEWS = window.VIEWS || {};
           <div class="ex-r"><span class="ex-k">建议</span><span>正式内容请改用「${esc(STORE.s.account.name)}本人声音」或「配音员声库」。</span></div>
         </div>
         <div style="margin-top:12px"><button class="btn btn-sm" data-act="try-voice" data-id="system">▶ 试听</button></div>`}
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">这些数字从哪来</div>
+          <div class="card-s">目前显示的都是示范值。真实使用时，每一项各有明确来源，不是拍脑袋填的</div></div></div>
+      <table><thead><tr><th style="width:130px">项目</th><th style="width:90px">现在显示</th><th>真实版本从哪来</th></tr></thead><tbody>
+        ${[
+          ['形象采集时长', p.trainMin + ' 分钟', '实际录影的总时长。绿幕或纯色背景、正面平视，越足越稳'],
+          ['语料段数', p.sampleCount + ' 段', '上传的演讲、访谈、文章、旧影片逐字稿，切分后的段落数'],
+          ['声音相似度', p.similarity + '%', '训练完成后，用本人真实录音与合成音比对，由模型算出的分数'],
+          ['讲话速度 / 亲和 / 正式度 / 停顿 / 强调', '手动滑杆', '<b>应该从本人历史发言统计出来</b>，而不是手调。现在开放手调是为了让你先试出想要的感觉'],
+          ['口头禅词库', p.habits.length + ' 句', '从逐字稿跑词频，找出本人真正高频使用的语句，不是编的'],
+          ['价值观与禁语', '预设清单', '与本人确认后写死的硬约束，命中即拦截，属于人工设定'],
+          ['一致性评分', p.similarity + '%', '改写后的稿子送进判别器，比对是否像本人。低于 90 分退回重写']
+        ].map(r => `<tr><td>${r[0]}</td><td><span class="tag a">${r[1]}</span></td><td style="color:var(--txt-2)">${r[2]}</td></tr>`).join('')}
+      </tbody></table>
+      <div class="hint" style="margin-top:12px">
+        换句话说：<b>这一页现在是一个空壳，等真人的资料填进来。</b>
+        要变成真的，需要本人提供录影、录音与历史发言资料，再跑一次训练。
+      </div>
     </div>
 
     <div class="grid g-2-1">
