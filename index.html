@@ -2749,6 +2749,7 @@ window.VIEWS = window.VIEWS || {};
             <div class="hint" style="margin-top:7px;line-height:1.6">${v.gender} · ${v.age}　${v.tone}</div>
             <div class="chip-list" style="margin-top:8px">${v.good.map(g => `<span class="tag">${g}</span>`).join('')}</div>
             <div class="hint" style="margin-top:6px">适合：${v.plat.join(' / ')}</div>
+            <div class="hint vc-sys" data-vid="${v.id}" style="margin-top:6px;font-size:10.5px"></div>
           </div>`).join('')}
         </div>
         <div class="hint" style="margin-top:12px">试听为<b>台湾口音国语</b>模拟不同音色（音高与语速有差异），正式版为真人录制声库，质感差很多。</div>
@@ -3947,6 +3948,53 @@ window.TOUR = (function () {
       || null;
   }
 
+  /* ---- 依性别把可用的中文语音分池 ----
+     六个配音员如果共用同一个语音，只靠音高语速区分，听起来就是同一个人。
+     微软语音命名有规律：曉/晓/Xiao 多为女声，雲/云/Yun 多为男声。 */
+  const FEMALE = /曉|晓|Xiao|Hsiao|雅婷|Yating|涵涵|HanHan|慧慧|Huihui|瑤瑤|瑶瑶|Yaoyao|Tracy|Zhiyu|Female|女/i;
+  const MALE = /雲|云|Yun|志威|Zhiwei|康康|Kangkang|Danny|Male|男/i;
+
+  function voicePool() {
+    let vs = [];
+    try { vs = speechSynthesis.getVoices() || []; } catch (e) { return { male: [], female: [], all: [] }; }
+    const zh = vs.filter(v => !CANTONESE.test(v.lang) && !CANTONESE.test(v.name) && /^zh/i.test(v.lang));
+    // 台湾国语排最前面，其余中文次之
+    const rank = v => (/zh[-_]TW/i.test(v.lang) ? 0 : 1);
+    zh.sort((a, b) => rank(a) - rank(b));
+    return {
+      all: zh,
+      male: zh.filter(v => MALE.test(v.name) && !FEMALE.test(v.name)),
+      female: zh.filter(v => FEMALE.test(v.name) && !MALE.test(v.name))
+    };
+  }
+
+  /* 给某个配音员指派一个实际语音：同性别的池子里依序取，尽量各不相同 */
+  function voiceForActor(id) {
+    const pool = voicePool();
+    const list = DATA.VOICES;
+    const a = list.find(v => v.id === id);
+    if (!a) return pickVoice();
+    const same = list.filter(v => v.gender === a.gender);
+    const idx = Math.max(0, same.findIndex(v => v.id === id));
+    const src = a.gender === '男' ? pool.male : pool.female;
+    if (src.length) return src[idx % src.length];
+    // 该性别没有对应语音，退回任何中文语音（页面会提示）
+    return pool.all[idx % Math.max(1, pool.all.length)] || pickVoice();
+  }
+
+  /* 声库诊断：告诉使用者这台电脑能不能真的区分不同声音 */
+  function libraryDiag() {
+    const pool = voicePool();
+    return {
+      total: pool.all.length, male: pool.male.length, female: pool.female.length,
+      assigned: DATA.VOICES.map(a => {
+        const v = voiceForActor(a.id);
+        return { id: a.id, name: a.name, gender: a.gender, voice: v ? v.name : null, lang: v ? v.lang : null };
+      })
+    };
+  }
+  window.__libraryDiag = libraryDiag;
+
   /* 目前实际用到的系统语音，供人格页显示（各台电脑装的语音不同） */
   function voiceInfo() {
     let vs = [];
@@ -3963,6 +4011,30 @@ window.TOUR = (function () {
 
   /* 把实际用到的系统语音显示在人格页，方便判断是不是台湾国语 */
   function showVoiceInfo() {
+    // 每张配音员卡显示实际指派到的语音
+    const cards = document.querySelectorAll('.vc-sys');
+    if (cards.length) {
+      const d = libraryDiag();
+      cards.forEach(c => {
+        const a = d.assigned.find(x => x.id === c.dataset.vid);
+        c.textContent = a && a.voice ? '系统语音：' + a.voice.replace(/^Microsoft\s*/, '') : '此机无可用语音';
+      });
+      const box = document.getElementById('voice-sys');
+      if (box) {
+        if (d.total <= 1) {
+          box.innerHTML = `⚠ 这台电脑只有 <b>${d.total}</b> 个中文语音，六位配音员会听起来一模一样。<br>
+            装多几个语音才分得出来（Windows 设定 → 时间与语言 → 语言与地区 → 中文（繁体，台湾）→ 语音）。`;
+          box.style.color = 'var(--amber)'; return;
+        }
+        if (!d.male || !d.female) {
+          box.innerHTML = `⚠ 这台电脑的中文语音里${!d.male ? '没有男声' : '没有女声'}（共 ${d.total} 个），
+            ${!d.male ? '男声' : '女声'}配音员只能用现有语音代替，性别听起来会不对。`;
+          box.style.color = 'var(--amber)'; return;
+        }
+        box.innerHTML = `此机可用中文语音 <b>${d.total}</b> 个（男 ${d.male} / 女 ${d.female}），已分别指派给各配音员。`;
+        box.style.color = 'var(--txt-3)'; return;
+      }
+    }
     const el = document.getElementById('voice-sys');
     if (!el) return;
     const v = voiceInfo();
@@ -3996,7 +4068,8 @@ window.TOUR = (function () {
     let rate = 0.75 + (pa.speed / 100) * 0.6, pitch = 1;
     if (pa.voiceMode === 'library') {
       const a = DATA.VOICES.find(v => v.id === pa.voiceActor);
-      if (a) { rate *= a.rate; pitch = a.pitch; }
+      // 音色已由指派的实际语音决定，音高只做小幅微调，压太多会失真
+      if (a) { rate *= a.rate; pitch = 1 + (a.pitch - 1) * 0.4; }
     } else if (pa.voiceMode === 'clone') {
       rate *= 0.97; pitch = 0.95;
     }
@@ -4005,7 +4078,10 @@ window.TOUR = (function () {
 
   function utter(text) {
     const u = new SpeechSynthesisUtterance(T(text).replace(/[【】]/g, ' '));
-    const v = (pv && pv.voice) || pickVoice();
+    const pa = STORE.s.persona;
+    // 配音员声库：每位指派不同的实际语音，不能只靠音高假装
+    const v = (pa.voiceMode === 'library' ? voiceForActor(pa.voiceActor) : null)
+      || (pv && pv.voice) || pickVoice();
     if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'zh-TW';
     const q = voiceParams();
     u.rate = q.rate; u.pitch = q.pitch;
