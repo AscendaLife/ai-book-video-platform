@@ -93,7 +93,11 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .quota-head{display:flex;justify-content:space-between;font-size:11px;color:var(--txt-3);margin-bottom:6px}
 .bar{height:5px;background:var(--panel-2);border-radius:5px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--grad);border-radius:5px;transition:width .6s}
-.user{display:flex;align-items:center;gap:10px;margin-top:14px}
+.user{display:flex;align-items:center;gap:10px;margin-top:14px;padding:6px;margin-left:-6px;margin-right:-6px;
+  border-radius:10px;cursor:pointer;transition:.15s;position:relative}
+.user:hover{background:var(--panel)}
+.user::after{content:"⚙";position:absolute;right:8px;opacity:0;transition:.15s;color:var(--txt-3);font-size:12px}
+.user:hover::after{opacity:1}
 .avatar{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff8a5b,#ff5d8f);display:grid;place-items:center;font-weight:700;color:#fff;font-size:14px}
 .user-name{font-size:13px;font-weight:600}
 .user-role{font-size:11px;color:var(--txt-3)}
@@ -523,11 +527,11 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
         <div class="quota-head"><span>本月生成额度</span><span id="quota-num">—</span></div>
         <div class="bar"><i id="quota-bar" style="width:0%"></i></div>
       </div>
-      <div class="user">
-        <div class="avatar">主</div>
-        <div>
-          <div class="user-name">主理人</div>
-          <div class="user-role">超级管理员</div>
+      <div class="user" id="user-block" title="点击设定显示名称与角色">
+        <div class="avatar" id="user-avatar">主</div>
+        <div style="min-width:0">
+          <div class="user-name" id="user-name">主理人</div>
+          <div class="user-role" id="user-role">超级管理员</div>
         </div>
       </div>
     </div>
@@ -847,6 +851,9 @@ window.I18N = (function () {
  * ========================================================== */
 window.DATA = (function () {
 
+  /* 内容里提到「这个数字人属于谁」时一律取目前登录的帐户名 */
+  const OWNER = () => (window.STORE && STORE.s.account && STORE.s.account.name) || '主理人';
+
   /* ---------- 平台定义 ---------- */
   const PLATFORMS = [
     { key: 'douyin', name: '抖音', color: '#00f2ea', ratio: '9:16', len: '45-60s', tone: '强钩子、快节奏、口语化', cta: '点击左下角购书链接' },
@@ -867,7 +874,7 @@ window.DATA = (function () {
     { key: 'quote', name: '金句版', desc: '一句话立住观点，适合卡点与二创', color: '#7c6cff' },
     { key: 'biz', name: '商业版', desc: '拆解商业逻辑与方法论，转化率高', color: '#22d3ee' },
     { key: 'know', name: '知识版', desc: '结构化讲透一个概念，完播率高', color: '#2ee6a8' },
-    { key: 'excerpt', name: '书摘版', desc: '原文摘录 + 主理人点评，最具书感', color: '#ffb020' },
+    { key: 'excerpt', name: '书摘版', desc: '原文摘录 + 本人点评，最具书感', color: '#ffb020' },
     { key: 'author', name: '作者故事版', desc: '讲作者其人其事，建立信任', color: '#ff5d8f' }
   ];
 
@@ -1039,7 +1046,7 @@ window.DATA = (function () {
   ];
 
   const OPEN_TPL = [
-    '我是主理人，今天聊一本刚拿到手的新书。',
+    '我是{OWNER}，今天聊一本刚拿到手的新书。',   // {OWNER} 在生成时才代入，不能在载入时求值
     '有件事我一直想跟你聊，正好这本书讲透了。',
     '先给你看一句话，看完你再决定要不要听我说完。',
     '这本书放在我桌上一个月了，今天终于讲一讲。',
@@ -1057,7 +1064,13 @@ window.DATA = (function () {
   /* 生成标题 / Hook / 开场 */
   function genTitles(b, n) { return TITLE_TPL.slice(0, n || 20).map((f, i) => ({ id: uid('t'), n: i + 1, text: f(b), score: 62 + Math.floor(Math.random() * 36), tag: rand(['高点击', '高完播', '强争议', '搜索友好', '平台推荐']) })); }
   function genHooks(b, n) { return HOOK_TPL.slice(0, n || 20).map((f, i) => ({ id: uid('h'), n: i + 1, text: f(b), score: 60 + Math.floor(Math.random() * 38), tag: rand(['前3秒', '提问式', '悬念式', '结论前置', '共情式']) })); }
-  function genOpens(b) { return OPEN_TPL.map((t, i) => ({ id: uid('o'), n: i + 1, text: t, score: 58 + Math.floor(Math.random() * 40), tag: '开场' })); }
+  function genOpens(b) {
+    return OPEN_TPL.map((t, i) => ({
+      id: uid('o'), n: i + 1,
+      text: t.replace(/\{OWNER\}/g, OWNER()),
+      score: 58 + Math.floor(Math.random() * 40), tag: '开场'
+    }));
+  }
 
   /* 生成脚本正文（按角度） */
   function genScriptBody(b, angle) {
@@ -1098,7 +1111,7 @@ window.DATA = (function () {
     return Object.assign({}, s, {
       persona: true,
       hook: rand(HABITS) + s.hook,
-      body: s.body.replace(/\n\n/g, () => '\n\n') + `\n\n【主理人收尾】我不劝你一定要买这本书，我只希望你把刚才那句话想清楚。想清楚了，这条视频就没白看。`,
+      body: s.body.replace(/\n\n/g, () => '\n\n') + `\n\n【${OWNER()}收尾】我不劝你一定要买这本书，我只希望你把刚才那句话想清楚。想清楚了，这条视频就没白看。`,
       score: Math.min(99, s.score + 5 + Math.floor(Math.random() * 6))
     });
   }
@@ -1153,7 +1166,7 @@ window.DATA = (function () {
   /* 平台策略评分 */
   function genStrategy(b) {
     return {
-      positioning: `以「${b.tags[0]}」为主锚点，用主理人的一线判断力做信任背书，把《${b.title}》从一本书拆成一套可持续讨论的话题矩阵。`,
+      positioning: `以「${b.tags[0]}」为主锚点，用${OWNER()}的一线判断力做信任背书，把《${b.title}》从一本书拆成一套可持续讨论的话题矩阵。`,
       kpi: [{ k: '单书视频产出', v: '30+ 支' }, { k: '目标总曝光', v: '500 万' }, { k: '目标完播率', v: '≥ 38%' }, { k: '书籍详情页点击', v: '≥ 2.5 万' }],
       platforms: PLATFORMS.map((p, i) => ({
         key: p.key, name: p.name, color: p.color, ratio: p.ratio, len: p.len, tone: p.tone, cta: p.cta,
@@ -1239,7 +1252,7 @@ window.DATA = (function () {
     speed: 62, warmth: 55, formal: 48, pause: 58, emphasis: 66,
     voiceMode: 'clone',        // clone 本人克隆声 / library 配音员声库 / system 系统合成
     voiceActor: 'v02',         // 选用的配音员
-    cloneSamples: [{ name: '主理人_录音样本_01.wav', min: 42 }, { name: '主理人_录音样本_02.wav', min: 86 }],
+    cloneSamples: [{ name: '录音样本_01.wav', min: 42 }, { name: '录音样本_02.wav', min: 86 }],
     habits: ['我讲得直白一点', '你听我说完', '说句实在话', '这里我要停一下', '我自己的体会是'],
     values: ['尊重常识', '不夸大结论', '先讲代价再讲收益', '给具体做法而不是口号'],
     forbid: ['绝对化用语（最/第一/唯一）', '未经证实的数据', '贬低同行或他人', '医疗与投资承诺']
@@ -1329,6 +1342,9 @@ window.STORE = (function () {
   const def = () => ({
     projects: DATA.seedAll(),
     currentId: null,
+    /* 登录帐户：每个使用者有自己的名称与专属数字人、声音。
+       演示环境用中性预设，实际使用时在系统设定改成本人名字。 */
+    account: { name: '主理人', title: '超级管理员', initial: '主' },
     persona: JSON.parse(JSON.stringify(DATA.PERSONA)),
     settings: {
       theme: 'dark',
@@ -1356,6 +1372,8 @@ window.STORE = (function () {
     const d = def();
     state.persona = Object.assign({}, d.persona, state.persona || {});
     state.settings = Object.assign({}, d.settings, state.settings || {});
+    state.account = Object.assign({}, d.account, state.account || {});
+    if (!state.account.name) state.account = d.account;
     if (!Array.isArray(state.persona.cloneSamples)) state.persona.cloneSamples = d.persona.cloneSamples;
     if (!Array.isArray(state.persona.habits)) state.persona.habits = d.persona.habits;
     if (!Array.isArray(state.schedule)) state.schedule = [];
@@ -2107,7 +2125,7 @@ window.VIEWS = window.VIEWS || {};
     return `
     <div class="page-h">
       <div><div class="page-t">工作台</div>
-        <div class="page-d">${new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 主理人，欢迎回来</div></div>
+        <div class="page-d">${new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · ${esc(STORE.s.account.name)}，欢迎回来</div></div>
       <div class="right">
         <button class="btn" data-act="goto" data-route="analytics">查看完整数据 →</button>
         <button class="btn btn-primary" data-act="quick-run">⚡ 一键生产当前项目</button>
@@ -2405,13 +2423,13 @@ window.VIEWS = window.VIEWS || {};
             <div class="label">人格模型状态</div>
             <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                <div class="avatar" style="width:42px;height:42px">主</div>
+                <div class="avatar" style="width:42px;height:42px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
                 <div><div style="font-weight:700">${pa.name} 人格模型 ${pa.version}</div>
                   <div style="font-size:11.5px;color:var(--txt-3)">语料 ${pa.sampleCount} 段 · 相似度 ${pa.similarity}%</div></div>
                 <span class="tag g" style="margin-left:auto"><i class="dot g"></i>就绪</span>
               </div>
               <div style="font-size:12.5px;color:var(--txt-2);line-height:1.9">
-                改写规则：按主理人的语速、语气、逻辑顺序与口头禅重写全部脚本，并做价值观一致性校验；低于 90 分的段落会被标红退回。</div>
+                改写规则：按${esc(STORE.s.account.name)}的语速、语气、逻辑顺序与口头禅重写全部脚本，并做价值观一致性校验；低于 90 分的段落会被标红退回。</div>
             </div>
             <div class="label" style="margin-top:16px">口头禅植入</div>
             <div class="chip-list">${pa.habits.map(h => `<span class="tag v">${esc(h)}</span>`).join('')}</div>
@@ -2434,9 +2452,9 @@ window.VIEWS = window.VIEWS || {};
         <div>
           <div class="label">数字人与声音</div>
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center">
-            <div class="pv" style="width:76px;height:76px;flex:0 0 76px;font-size:26px;border-radius:18px">主</div>
+            <div class="pv" style="width:76px;height:76px;flex:0 0 76px;font-size:26px;border-radius:18px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:6px">主理人数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
+              <div style="font-weight:700;margin-bottom:6px">${esc(STORE.s.account.name)}数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
               <div class="chip-list"><span class="tag g">口型同步</span><span class="tag g">表情驱动</span><span class="tag g">手势匹配</span><span class="tag g">眼神跟随</span></div>
               <div class="wave" style="margin-top:10px">${Array.from({ length: 26 }).map((_, i) => `<i style="animation-delay:${(i * .06).toFixed(2)}s;height:${20 + (i * 7) % 70}%"></i>`).join('')}</div>
             </div></div>
@@ -2531,7 +2549,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="copy-item">
           <div class="ci-h"><span class="ci-n">#${String(s.n).padStart(2, '0')}</span>
             <span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${s.angleName}</span>
-            <span class="tag">${s.platformName}</span>${s.persona ? '<span class="tag g">主理人人格</span>' : ''}
+            <span class="tag">${s.platformName}</span>${s.persona ? '<span class="tag g">${esc(STORE.s.account.name)}人格</span>' : ''}
             <span class="ci-a"><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">详情</button></span></div>
           <div style="font-weight:650;font-size:13.5px;margin-bottom:6px">${esc(s.title)}</div>
           <div style="font-size:12.5px;color:var(--txt-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(s.hook)}</div>
@@ -2582,13 +2600,14 @@ window.VIEWS = window.VIEWS || {};
    * ===================================================== */
   VIEWS.persona = function () {
     const p = STORE.s.persona;
+    const ac = STORE.s.account;          // 数字人属于目前登录的人
     const sliders = [['speed', '讲话速度', '慢 · 沉稳', '快 · 干脆'], ['warmth', '亲和程度', '克制', '亲切'],
       ['formal', '正式程度', '口语', '书面'], ['pause', '停顿密度', '连贯', '多留白'], ['emphasis', '强调强度', '平淡', '有力']];
 
     return `
     <div class="page-h">
       <div><div class="page-t">数字人 · 声音 · 人格</div>
-        <div class="page-d">这里定义「像不像主理人」——所有脚本与视频都会经过这一层</div></div>
+        <div class="page-d">这里定义「像不像${esc(ac.name)}」——所有脚本与视频都会经过这一层</div></div>
       <div class="right">
         <button class="btn" data-act="persona-test">▶ 试听风格样例</button>
         <button class="btn btn-primary" data-act="persona-save">保存人格参数</button>
@@ -2596,9 +2615,9 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div class="persona-hero" style="margin-bottom:16px">
-      <div class="pv">主</div>
+      <div class="pv">${esc(ac.initial || ac.name.slice(0, 1))}</div>
       <div style="flex:1;min-width:240px">
-        <div style="font-size:19px;font-weight:750;margin-bottom:4px">主理人专属数字人 · ${p.version}</div>
+        <div style="font-size:19px;font-weight:750;margin-bottom:4px">${esc(ac.name)}专属数字人 · ${p.version}</div>
         <div style="font-size:13px;color:var(--txt-2);margin-bottom:12px">形象采集 ${p.trainMin} 分钟 · 语料 ${p.sampleCount} 段 · 声音相似度 ${p.similarity}%</div>
         <div class="chip-list">
           <span class="tag g"><i class="dot g"></i>形象模型 ${p.avatarStatus}</span>
@@ -2619,7 +2638,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="right"><span class="tag a">目前预览用的是浏览器内建语音，僵硬是正常的</span></div></div>
 
       <div class="grid g3" style="margin-bottom:16px">
-        ${[['clone', '主理人本人声音', '用本人录音训练的专属声音模型。最像本人，需要录音样本。', '★ 推荐'],
+        ${[['clone', esc(ac.name) + '本人声音', '用本人录音训练的专属声音模型。最像本人，需要录音样本。', '★ 推荐'],
            ['library', '配音员声库', '从专业配音员里挑一个固定声音。品质稳定，立刻可用。', ''],
            ['system', '系统合成音', '通用机器音。免费、无需准备，但听起来生硬。', '']]
           .map(x => `<div class="vsrc ${p.voiceMode === x[0] ? 'on' : ''}" data-act="voice-mode" data-v="${x[0]}">
@@ -2663,7 +2682,7 @@ window.VIEWS = window.VIEWS || {};
       : `
         <div class="explain" style="border-left-color:var(--amber)">
           <div class="ex-r"><span class="ex-k">注意</span><span>系统合成音<b>不建议用于正式发布</b>。它没有情绪起伏、断句机械，观众一听就知道是机器念的，完播率会明显偏低。</span></div>
-          <div class="ex-r"><span class="ex-k">建议</span><span>正式内容请改用「主理人本人声音」或「配音员声库」。</span></div>
+          <div class="ex-r"><span class="ex-k">建议</span><span>正式内容请改用「${esc(STORE.s.account.name)}本人声音」或「配音员声库」。</span></div>
         </div>
         <div style="margin-top:12px"><button class="btn btn-sm" data-act="try-voice" data-id="system">▶ 试听</button></div>`}
     </div>
@@ -2683,7 +2702,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="chip-list" style="margin-bottom:10px">
           ${p.habits.map((h, i) => `<span class="tag v">${esc(h)} <b data-act="del-habit" data-i="${i}" style="cursor:pointer;opacity:.6;margin-left:3px">✕</b></span>`).join('')}
         </div>
-        <div style="display:flex;gap:9px"><input class="input" id="new-habit" placeholder="新增一句主理人常说的话…" style="flex:1">
+        <div style="display:flex;gap:9px"><input class="input" id="new-habit" placeholder="新增一句${esc(ac.name)}常说的话…" style="flex:1">
           <button class="btn" data-act="add-habit">添加</button></div>
 
         <div class="row2" style="margin-top:20px">
@@ -2920,8 +2939,8 @@ window.VIEWS = window.VIEWS || {};
           </div>
           <div class="field"><div class="label">声音模型</div>
             <select class="input" data-act="set" data-k="tts">
-              <option value="zhao-voice-v3" ${st.tts === 'zhao-voice-v3' ? 'selected' : ''}>主理人声音模型 v3（相似度 96.4%）</option>
-              <option value="zhao-voice-v2">主理人声音模型 v2</option>
+              <option value="zhao-voice-v3" ${st.tts === 'zhao-voice-v3' ? 'selected' : ''}>${esc(STORE.s.account.name)}声音模型 v3（相似度 96.4%）</option>
+              <option value="zhao-voice-v2">${esc(STORE.s.account.name)}声音模型 v2</option>
               <option value="generic">通用中文播报音</option>
             </select></div>
           <div class="field"><div class="label">数字人引擎</div>
@@ -2930,7 +2949,7 @@ window.VIEWS = window.VIEWS || {};
 
         <div class="card">
           <div class="card-h"><div class="card-t">自动化开关</div></div>
-          ${sw('autoPersona', '自动套用主理人人格', '写稿完成后自动进入人格改写，无需手动触发')}
+          ${sw('autoPersona', '自动套用' + STORE.s.account.name + '人格', '写稿完成后自动进入人格改写，无需手动触发')}
           ${sw('autoSubtitle', '自动字幕', '自动断句并按平台样式生成字幕')}
           ${sw('autoBroll', '自动 B-roll 匹配', '按语义匹配空镜与素材，提升观感')}
           ${sw('autoBgm', '自动背景音乐', '按情绪匹配 BGM 并做响度平衡')}
@@ -2967,7 +2986,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="card">
           <div class="card-h"><div class="card-t">成员与权限</div></div>
           <table><tbody>
-            ${[['主', '主理人', '超级管理员', 'g'], ['助', '内容助理', '内容运营', 'v'], ['审', '张审核', '审核', 'c'], ['出', '远见文化', '只读', '']]
+            ${[[STORE.s.account.initial || STORE.s.account.name.slice(0,1), STORE.s.account.name, STORE.s.account.title, 'g'], ['助', '内容助理', '内容运营', 'v'], ['审', '张审核', '审核', 'c'], ['出', '远见文化', '只读', '']]
               .map(x => `<tr><td style="width:44px"><div class="avatar" style="width:30px;height:30px;font-size:12px;border-radius:9px">${x[0]}</div></td>
                 <td><b>${x[1]}</b></td><td><span class="tag ${x[3]}">${x[2]}</span></td>
                 <td style="text-align:right"><button class="btn btn-sm">管理</button></td></tr>`).join('')}
@@ -3218,6 +3237,11 @@ window.TOUR = (function () {
     $('#quota-bar').style.width = (st.quotaUsed / st.quotaTotal * 100) + '%';
     const prod = STORE.s.projects.filter(p => p.status === 'producing').length;
     $('#badge-dash').textContent = prod ? prod : '';
+    // 左下角显示目前登录的人，不是写死的
+    const ac = STORE.s.account;
+    $('#user-name').textContent = ac.name;
+    $('#user-role').textContent = ac.title;
+    $('#user-avatar').textContent = ac.initial || ac.name.slice(0, 1);
     if (route === 'pipeline') $('#view').scrollTop = 0;
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
   }
@@ -3237,6 +3261,28 @@ window.TOUR = (function () {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
   $('#btn-tour').addEventListener('click', () => TOUR.start(0));
+  $('#user-block').addEventListener('click', accountModal);
+
+  /* 帐户设定：决定左下角显示谁、数字人属于谁 */
+  function accountModal() {
+    const ac = STORE.s.account;
+    modal('帐户设定', `
+      <div class="explain" style="margin:0 0 16px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">这里改什么</span><span>左下角显示的名字，以及整个系统里「这个数字人属于谁」的称呼。</span></div>
+        <div class="ex-r"><span class="ex-k">为什么要改</span><span>每个使用者有自己的专属数字人与声音模型。填上本人名字后，人格页、影片署名都会跟着变。</span></div>
+      </div>
+      <div class="row2">
+        <div class="field"><div class="label">显示名称 <span style="color:var(--red)">*</span></div>
+          <input class="input" id="ac-name" value="${esc(ac.name)}" placeholder="填本人的名字或称呼"></div>
+        <div class="field"><div class="label">职称 / 角色</div>
+          <input class="input" id="ac-title" value="${esc(ac.title)}" placeholder="例如：超级管理员"></div>
+      </div>
+      <div class="field"><div class="label">头像文字<span class="hint" style="margin-left:8px;font-weight:400">留空就取名字第一个字</span></div>
+        <input class="input" id="ac-initial" value="${esc(ac.initial || '')}" maxlength="2" style="width:120px"></div>
+      <div class="hint">这只是显示设定。真正的数字人形象与声音在「数字人 · 声音 · 人格」页面训练与切换。</div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="save-account">保存</button>`);
+  }
 
   $('#btn-theme').addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme')
@@ -3352,7 +3398,7 @@ window.TOUR = (function () {
       case 'persona-save': { STORE.update(); toast('人格参数已保存，后续生成将立即生效', 'ok'); return; }
       case 'voice-mode': {
         STORE.s.persona.voiceMode = el.dataset.v; STORE.update(); render();
-        toast({ clone: '已改用主理人本人声音', library: '已改用配音员声库', system: '已改用系统合成音' }[el.dataset.v], 'ok');
+        toast({ clone: '已改用' + STORE.s.account.name + '本人声音', library: '已改用配音员声库', system: '已改用系统合成音' }[el.dataset.v], 'ok');
         return;
       }
       case 'pick-voice': {
@@ -3364,7 +3410,7 @@ window.TOUR = (function () {
       case 'try-voice': return tryVoice(el.dataset.id);
       case 'add-sample': {
         const n = STORE.s.persona.cloneSamples.length + 1;
-        STORE.s.persona.cloneSamples.push({ name: `主理人_录音样本_${String(n).padStart(2, '0')}.wav`, min: 20 + Math.floor(Math.random() * 40) });
+        STORE.s.persona.cloneSamples.push({ name: `录音样本_${String(n).padStart(2, '0')}.wav`, min: 20 + Math.floor(Math.random() * 40) });
         STORE.s.persona.similarity = Math.min(99, +(STORE.s.persona.similarity + 0.6).toFixed(1));
         STORE.update(); render(); toast('样本已加入，重新训练后相似度会提升', 'ok');
         return;
@@ -3384,7 +3430,7 @@ window.TOUR = (function () {
             这条视频你要是看到这里了，那我们就把这件事想清楚再走。」</div>
           <div class="wave" style="margin-top:16px">${Array.from({ length: 40 }).map((_, i) => `<i style="animation-delay:${(i * .04).toFixed(2)}s"></i>`).join('')}</div>
           <div class="hint" style="margin-top:12px">当前参数：语速 ${p.speed} · 亲和 ${p.warmth} · 正式度 ${p.formal} · 停顿 ${p.pause} · 强调 ${p.emphasis}。
-          声音来源：<b>${{ clone: '主理人本人声音', library: (DATA.VOICES.find(v => v.id === p.voiceActor) || {}).name, system: '系统合成音' }[p.voiceMode]}</b>。
+          声音来源：<b>${{ clone: STORE.s.account.name + '本人声音', library: (DATA.VOICES.find(v => v.id === p.voiceActor) || {}).name, system: '系统合成音' }[p.voiceMode]}</b>。
           演示环境以浏览器语音代播，正式版由声音模型合成，语气与停顿会自然得多。</div>`);
       }
       case 'rollback': return toast(`已回滚人格模型到 ${el.dataset.v}（演示）`, 'ok');
@@ -3424,6 +3470,16 @@ window.TOUR = (function () {
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'create-proj') createProject();
+    if (a === 'save-account') {
+      const n = ($('#ac-name').value || '').trim();
+      if (!n) return toast('显示名称不能空白', 'warn');
+      STORE.s.account = {
+        name: n,
+        title: ($('#ac-title').value || '').trim() || '成员',
+        initial: ($('#ac-initial').value || '').trim() || n.slice(0, 1)
+      };
+      STORE.update(); closeModal(); render(); toast(`已切换为「${n}」`, 'ok');
+    }
     if (a === 'copy-cap') copy(el.dataset.t);
     if (a === 'pub-one') {
       const it = STORE.s.schedule.find(x => x.id === el.dataset.id);
@@ -3644,7 +3700,7 @@ window.TOUR = (function () {
       <div class="chip-list" style="margin-bottom:14px">
         <span class="tag v">${s.platformName}</span><span class="tag">${s.duration} 秒</span>
         <span class="tag">${s.words} 字</span><span class="tag c">预估评分 ${s.score}</span>
-        ${s.persona ? '<span class="tag g">已套用主理人人格</span>' : '<span class="tag a">未套用人格</span>'}
+        ${s.persona ? '<span class="tag g">已套用'+STORE.s.account.name+'人格</span>' : '<span class="tag a">未套用人格</span>'}
       </div>
       <div class="field"><div class="label">标题</div>
         <div style="font-size:15px;font-weight:680">${esc(s.title)}</div></div>
@@ -3747,7 +3803,7 @@ window.TOUR = (function () {
       u.onerror = u.onend;
       speechSynthesis.speak(u);
       const v = DATA.VOICES.find(x => x.id === id);
-      toast(v ? '试听：' + v.name : id === 'clone' ? '试听：主理人本人声音（演示以系统音代替）' : '试听：系统合成音', 'ok');
+      toast(v ? '试听：' + v.name : id === 'clone' ? '试听：' + STORE.s.account.name + '本人声音（演示以系统音代替）' : '试听：系统合成音', 'ok');
       if (!pickVoice()) toast('这个浏览器没有中文语音，听不到声音', 'warn');
     } catch (e) { toast('这个浏览器不支持语音合成', 'warn'); }
     finally { pa.voiceMode = prev.mode; pa.voiceActor = prev.actor; }
@@ -3956,8 +4012,8 @@ window.TOUR = (function () {
           <div id="mv-sub" class="mv-sub">${esc(first ? first.txt : capFallback)}</div>
           <div id="mv-vis" class="mv-meta" style="margin-top:6px">${first ? first.cam + '　|　' + first.vis : ''}</div>
           <div class="mv-cta" id="mv-cta">📖 ${esc((p && p.title) || '本书')} · 点击左下角购书连结</div>
-          <div class="mv-sign"><div class="avatar" style="width:24px;height:24px;font-size:10px;border-radius:7px">主</div>
-            <span>主理人 · AI 生成</span></div>
+          <div class="mv-sign"><div class="avatar" style="width:24px;height:24px;font-size:10px;border-radius:7px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
+            <span>${esc(STORE.s.account.name)} · AI 生成</span></div>
           <div class="mv-track"><div id="pv-bar"></div></div>
         </div>
 
