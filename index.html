@@ -551,9 +551,9 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
       <div class="nav-group">日常操作</div>
       <a class="nav-item" data-route="dashboard"><span class="ni">◈</span>工作台<span class="ni-badge" id="badge-dash"></span></a>
       <a class="nav-item" data-route="projects"><span class="ni">＋</span>上传一本新书</a>
+      <a class="nav-item" data-route="persona"><span class="ni">◉</span>数字人 / 声音 / 克隆</a>
       <a class="nav-item" data-route="pipeline"><span class="ni">▶</span>一键生成短视频</a>
       <a class="nav-item" data-route="library"><span class="ni">▩</span>内容资产库</a>
-      <a class="nav-item" data-route="persona"><span class="ni">◉</span>数字人 / 声音 / 克隆</a>
       <a class="nav-item" data-route="publish"><span class="ni">▦</span>发布与数据</a>
 
       <details class="nav-more">
@@ -2892,7 +2892,9 @@ window.VIEWS = window.VIEWS || {};
               </div>
               ${x.platform === 'Instagram Reels'
                 ? `<button class="btn btn-sm btn-primary" data-act="ig-publish" data-id="${x.id}" title="真实发布到 Instagram">真实发布</button>`
-                : `<button class="btn btn-sm" data-act="pub-one" data-id="${x.id}">发布</button>`}
+                : x.platform === 'YouTube Shorts'
+                  ? `<button class="btn btn-sm btn-primary" data-act="yt-publish" data-id="${x.id}" title="真实上传到 YouTube">真实上传</button>`
+                  : `<button class="btn btn-sm" data-act="pub-one" data-id="${x.id}">发布</button>`}
             </div>`).join('') : '<div class="hint">暂无待发布内容</div>'}
         </div>
       </div>
@@ -3071,6 +3073,10 @@ window.VIEWS = window.VIEWS || {};
             </div>
             <div class="hint" style="margin-top:6px">需先在 <code>server/</code> 执行 <code>npm install &amp;&amp; npm start</code></div>
           </div>
+          <div class="label" style="margin-top:14px">YouTube Shorts<span class="tag g" style="margin-left:8px">门槛最低</span></div>
+          <div id="yt-panel"><div class="hint">一般 Google 帐号即可，而且可以直接上传影片档案。</div></div>
+
+          <div class="label" style="margin-top:18px">Instagram Reels<span class="tag a" style="margin-left:8px">需商业帐号＋送审</span></div>
           <div id="ig-panel"><div class="hint">按「检测」查看服务与授权状态。</div></div>
         </div>
 
@@ -3236,57 +3242,85 @@ window.VIEWS = window.VIEWS || {};
  * ========================================================== */
 window.TOUR = (function () {
 
+  const OWNER = () => (window.STORE && STORE.s.account && STORE.s.account.name) || '主理人';
+
   const STEPS = [
     {
       center: true, route: 'dashboard',
       title: '欢迎使用书影 BookReel',
-      text: '这是一套把「一本书」变成「几十支短视频」的内容生产系统。<br><br>整个流程有八个步骤，系统全自动跑完，你只需要在关键节点做判断。<br><br><b>接下来 8 步，大约 1 分钟，带你看完怎么用。</b>',
-      note: '演示原型：界面与流程是真实设计，视频与数据为模拟生成。'
+      text: '这是一套把「一本书」变成「几十支短影音」的内容生产系统。<br><br>' +
+            '左边的顺序就是实际的做事顺序：<b>上传书 → 设定声音 → 一键生成 → 挑素材 → 发布</b>。<br><br>' +
+            '<b>接下来 9 步，大约 1 分钟，带你走一遍。</b>',
+      note: '演示原型：介面与流程是真实设计，影片与数据为模拟生成。'
     },
     {
       route: 'dashboard', sel: '#nav',
-      title: '左边是全部功能',
-      text: '九个模块分三类：<br><b>核心工作区</b>——做内容的地方；<br><b>品牌与分发</b>——管人格、排期与数据；<br><b>系统</b>——设置与四份项目文档。<br><br>平时用得最多的是「生产流水线」。'
+      title: '左边分两区',
+      text: '<b>日常操作</b>——每天会用到的六项，照做事顺序排。<br><br>' +
+            '<b>团队 / 管理员</b>——收在下面的折叠区，偶尔才碰：人物引擎、数据分析、文件中心、系统设定。<br><br>' +
+            '点一下折叠区的标题就会展开。'
     },
     {
       route: 'projects', sel: '.book-card',
-      title: '第一步：建一个书籍项目',
-      text: '每一本书就是一条独立的生产线，互不干扰。<br><br>卡片上能直接看到这本书已经产出了多少视频、脚本和标题。<br><br>点右上角「＋ 新建项目」就能加一本新书。'
+      title: '第一步：上传一本新书',
+      text: '每一本书是一条独立生产线，互不干扰。<br><br>' +
+            '进去之后可以直接把 <b>PDF、书封、目录、宣传稿</b>拖进来。' +
+            '资料越全，后面写出来的稿子越准。<br><br>' +
+            '卡片上能看到这本书已经产出多少影片、脚本和标题。'
+    },
+    {
+      route: 'persona', sel: '.card',
+      title: '第二步：先设定声音，再生成',
+      text: '<b>这一步要在生成之前做</b>，否则生成完才发现口吻不对，整批要重跑。<br><br>' +
+            '三种声音来源：<br>' +
+            '<b>本人克隆声</b>——用本人录音训练，最像本人<br>' +
+            '<b>配音员声库</b>——挑一个专业音色，立刻可用<br>' +
+            '<b>系统合成音</b>——免费但生硬，不建议正式用<br><br>' +
+            '下面还能调语速、亲和度、口头禅与禁语。'
     },
     {
       route: 'pipeline', sel: '.pipe',
-      title: '第二步：八步生产流水线',
-      text: '这是系统的核心。从上传资料到多平台输出，一共八步。<br><br><b>点任意一步</b>，下面会用大白话说清楚：这一步在做什么、你需要做什么、会产出什么。<br><br>绿点＝已完成，紫点＝执行中，灰点＝待执行。'
+      title: '第三步：八步生产流水线',
+      text: '这是系统的核心。从上传资料到多平台输出，一共八步。<br><br>' +
+            '<b>点任意一步</b>，下面会用大白话说清楚：这一步在做什么、你需要做什么、会产出什么。<br><br>' +
+            '绿点＝已完成，紫点＝执行中，灰点＝待执行。'
     },
     {
       route: 'pipeline', sel: '[data-act="run-all"], [data-act="stop-run"]',
-      title: '第三步：点这里，一键跑完',
-      text: '点这个按钮，系统会自动依次跑完八个步骤，大约 15 秒。<br><br>右侧会实时滚动执行日志，跑完后自动产出 <b>30 支视频、14 篇脚本、20 个标题、20 个 Hook</b>。<br><br><b>导览结束后，第一件事就试试它。</b>'
+      title: '点这里，一键跑完',
+      text: '点下去，系统自动依序跑完八步，大约 15 秒。<br><br>' +
+            '右侧会实时滚动执行日志，跑完产出 <b>30 支影片、14 篇脚本、20 个标题、20 个 Hook</b>。<br><br>' +
+            '<b>导览结束后第一件事就试试它。</b>'
     },
     {
       route: 'library', sel: '[data-seg="lib-tab"]',
-      title: '第四步：所有产出都在资产库',
-      text: '视频、脚本、标题、Hook、开场白分五个分页收好。<br><br>点视频看数据详情，点脚本能看到<b>完整分镜表</b>（每个镜头拍什么、怎么运镜、多长）。<br><br>右上角可以一次导出全部文案。'
+      title: '第四步：产出都在资产库',
+      text: '影片、脚本、标题、Hook、开场白分五个分页收好。<br><br>' +
+            '点影片可以<b>真的播放预览</b>——有声音、有人物、有画面，按时间轴逐镜播。<br>' +
+            '点脚本能看到完整<b>分镜表</b>：每个镜头讲什么、怎么运镜、几秒。'
     },
     {
-      route: 'persona', sel: '.persona-hero',
-      title: '这里决定「像不像本人」',
-      text: '语速、亲和度、正式程度、停顿、强调五个参数，加上口头禅词库和禁语清单。<br><br>调完之后，<b>后面生成的所有脚本和配音都会照这个风格来</b>。<br><br>一致性低于 90 分的内容会被系统退回。'
+      route: 'publish', sel: '.cal',
+      title: '第五步：发布与数据',
+      text: '月历上一眼看出状态：<b>实心色块＝待发布</b>，<b>虚线打勾＝已发布</b>。<br><br>' +
+            '点任一条目可以预览、改标题、改平台与时间。<br><br>' +
+            '⚠️ <b>Instagram Reels 已接真实发布</b>（需另外启动发布服务并完成授权），' +
+            '其余平台目前仍是演示。'
     },
     {
-      route: 'analytics', sel: '.grid.g4',
-      title: '数据会回流，越用越准',
-      text: '哪个平台、哪种脚本角度表现好，系统会自动分析共性，<b>提高下一轮生成时的权重</b>。<br><br>转化漏斗能看到从曝光到下单每一层掉了多少人，知道该优化哪里。'
-    },
-    {
-      route: 'docs', sel: '.grid.g4',
-      title: '不会用的时候来这里',
-      text: '这里是<b>使用手册</b>：快速上手、八个步骤详解、常见问题、名词解释。<br><br>Hook、完播率、B-roll 这些短视频黑话，名词解释里都有说明。<br><br>每份都能导出 Markdown 或打印成 PDF。'
+      route: 'engine', sel: '.engine-card',
+      title: '一个平台，可以服务多个人',
+      text: '「人物引擎」在管理员区。每个人一份专属风格包，各自训练、各自评分。<br><br>' +
+            '下面还有训练闭环、评分器规划与资料表设计——' +
+            '<b>用得越久，累积的判断越准</b>，这是别人复制不走的部分。'
     },
     {
       center: true, route: 'dashboard',
-      title: '就这些，去试试吧',
-      text: '现在去<b>「生产流水线」</b>点<b>「一键跑完整流程」</b>，15 秒看完全过程。<br><br>右上角的 <b>◐</b> 可以切换深色与浅色显示。<br><br>想重看这份导览，随时点顶栏的<b>「导览」</b>。'
+      title: '最后两件小事',
+      text: '<b>左下角</b>点一下可以改显示名称——系统里所有「这个数字人属于谁」都会跟着变，' +
+            '目前是「{OWNER}」。<br><br>' +   // {OWNER} 在显示时才代入，不能在载入时求值
+            '<b>右上角 ◐</b> 可切换深色与浅色。<br><br>' +
+            '想重看这份导览，随时点顶栏的<b>「导览」</b>。'
     }
   ];
 
@@ -3325,7 +3359,13 @@ window.TOUR = (function () {
       const target = s.center ? null : document.querySelector(s.sel);
       const pad = 8;
 
-      if (target) {
+      // 窄画面时侧栏是收起的（移到画面外），指着它没有意义 → 先打开
+      if (target && target.closest('#sidebar')) {
+        const sb = document.getElementById('sidebar');
+        if (sb && sb.getBoundingClientRect().right <= 0) sb.classList.add('open');
+      }
+
+      if (target && visible(target)) {
         target.scrollIntoView({ block: 'center', behavior: 'smooth' });
         setTimeout(() => place(target, pad), 220);
       } else {
@@ -3336,6 +3376,13 @@ window.TOUR = (function () {
       paint();
       if (window.I18N) I18N.apply(pop);
     }, s.route ? 60 : 0);
+  }
+
+  /* 目标真的看得到吗？看不到就退回置中卡，不要指一个画面外的东西 */
+  function visible(el) {
+    const r = el.getBoundingClientRect();
+    return r.width > 4 && r.height > 4 && r.right > 0 && r.bottom > 0
+      && r.left < innerWidth && r.top < innerHeight;
   }
 
   function place(target, pad) {
@@ -3365,7 +3412,7 @@ window.TOUR = (function () {
         <button class="icon-btn tour-x" data-t="stop" title="关闭导览">✕</button>
       </div>
       <div class="tour-t">${s.title}</div>
-      <div class="tour-b">${s.text}</div>
+      <div class="tour-b">${s.text.replace(/\{OWNER\}/g, OWNER())}</div>
       ${s.note ? `<div class="tour-note">${s.note}</div>` : ''}
       <div class="tour-dots">${STEPS.map((_, i) => `<i class="${i === idx ? 'on' : ''}"></i>`).join('')}</div>
       <div class="tour-f">
@@ -3581,6 +3628,20 @@ window.TOUR = (function () {
       }
       case 'ig-publish': return igPublishModal(el.dataset.id);
 
+      /* ---- YouTube Shorts 真实发布 ---- */
+      case 'yt-save-app': return ytSaveApp();
+      case 'yt-connect': {
+        window.open(igBase() + '/auth/youtube/start', '_blank');
+        toast('已开新分页进行授权，完成后回来按「检测」', 'ok'); return;
+      }
+      case 'yt-disconnect': {
+        fetch(igBase() + '/api/youtube/disconnect', { method: 'POST' })
+          .then(() => { toast('已断开连接', 'ok'); igCheck(); })
+          .catch(() => toast('无法连上发布服务', 'err'));
+        return;
+      }
+      case 'yt-publish': return ytPublishModal(el.dataset.id);
+
       /* ---- 人物引擎（合并自同事版本）---- */
       case 'engine-select': return go('engine', { id: el.dataset.id });
       case 'engine-add': {
@@ -3697,6 +3758,8 @@ window.TOUR = (function () {
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
     if (a === 'ig-open') return igPublishModal(el.dataset.id);
+    if (a === 'yt-do') return ytDoUpload(el.dataset.id, el);
+    if (a === 'yt-open') return ytPublishModal(el.dataset.id);
     if (a === 'save-account') {
       const n = ($('#ac-name').value || '').trim();
       if (!n) return toast('显示名称不能空白', 'warn');
@@ -3800,7 +3863,124 @@ window.TOUR = (function () {
     return j;
   }
 
+  /* YouTube 面板 */
+  async function ytCheck() {
+    const panel = $('#yt-panel');
+    if (!panel) return;
+    panel.innerHTML = '<div class="hint">连线中…</div>';
+    try {
+      const cfg = await igFetch('/api/youtube/config');
+      if (!cfg.configured) {
+        panel.innerHTML = `
+          <div class="explain" style="margin:0 0 12px;border-left-color:var(--amber)">
+            <div class="ex-r"><span class="ex-k">哪里拿</span><span>Google Cloud Console → 建立 OAuth 用户端 ID（网页应用程式），并启用 YouTube Data API v3</span></div>
+            <div class="ex-r"><span class="ex-k">回呼网址</span><span><code>${esc(cfg.redirectUri)}</code></span></div>
+          </div>
+          <div class="row2">
+            <div class="field"><div class="label">Client ID</div><input class="input" id="yt-id" value="${esc(cfg.clientId)}"></div>
+            <div class="field"><div class="label">Client Secret</div><input class="input" id="yt-secret" type="password" placeholder="只存在你本机的服务里"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" data-act="yt-save-app">保存设定</button>`;
+        return;
+      }
+      const st = await igFetch('/api/youtube/status');
+      if (!st.connected) {
+        panel.innerHTML = `<div class="hint" style="margin-bottom:10px">设定完成，尚未授权${st.error ? '（' + esc(st.error) + '）' : ''}。</div>
+          <button class="btn btn-primary btn-sm" data-act="yt-connect">连接 YouTube</button>`;
+        return;
+      }
+      const c = st.channel || {};
+      panel.innerHTML = `
+        <div class="explain" style="margin:0 0 10px;border-left-color:var(--green)">
+          <div class="ex-r"><span class="ex-k">已连接</span><span><b>${esc(c.title || '')}</b>　影片 ${esc(c.videoCount || 0)} 支</span></div>
+          <div class="ex-r"><span class="ex-k">要注意</span><span>专案未通过 YouTube 合规稽核前，<b>上传的影片会被强制设为私人</b>，无法改公开。可以先跑通流程，之后再送审。</span></div>
+        </div>
+        <button class="btn btn-sm" data-act="yt-disconnect">断开连接</button>`;
+    } catch (e) {
+      panel.innerHTML = `<div class="hint" style="color:var(--amber)">连不上发布服务（${esc(e.message)}）</div>`;
+    }
+  }
+
+  async function ytSaveApp() {
+    try {
+      await igFetch('/api/youtube/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: $('#yt-id').value, clientSecret: $('#yt-secret').value })
+      });
+      toast('已保存，接着按「连接 YouTube」', 'ok'); ytCheck();
+    } catch (e) { toast('保存失败：' + e.message, 'err'); }
+  }
+
+  /* YouTube 上传弹窗：直接选本机影片档，不需要公开网址 */
+  function ytPublishModal(schedId) {
+    const it = STORE.s.schedule.find(x => x.id === schedId);
+    if (!it) return;
+    const p = STORE.s.projects.find(x => x.id === it.projectId) || STORE.current;
+    modal('上传到 YouTube Shorts', `
+      <div class="explain" style="margin:0 0 16px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">比 IG 简单在哪</span><span><b>直接选本机档案就好</b>，不必先把影片放到公开网址。</span></div>
+        <div class="ex-r"><span class="ex-k">Shorts 认定</span><span>9:16 直式、<b>60 秒以内</b>，超过会变成一般影片。</span></div>
+        <div class="ex-r"><span class="ex-k">先私人</span><span>专案未过稽核前一律私人，可先跑通流程再送审。</span></div>
+      </div>
+      <div class="field"><div class="label">影片档案 <span style="color:var(--red)">*</span></div>
+        <input class="input" type="file" id="yt-file" accept="video/mp4,video/*"></div>
+      <div class="field"><div class="label">标题</div><input class="input" id="yt-title" value="${esc(it.title)}"></div>
+      <div class="field"><div class="label">说明</div>
+        <textarea class="input" id="yt-desc" style="min-height:88px">${esc((p.hots || []).join(' '))}</textarea></div>
+      <div class="field"><div class="label">发布状态</div>
+        <select class="input" id="yt-privacy">
+          <option value="private">私人（建议先用这个）</option>
+          <option value="unlisted">不公开列出</option>
+          <option value="public">公开（需已通过稽核）</option>
+        </select></div>
+      <div id="yt-progress"></div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="yt-do" data-id="${schedId}">开始上传</button>`, true);
+  }
+
+  async function ytDoUpload(schedId, btn) {
+    const f = $('#yt-file').files[0];
+    if (!f) return toast('请先选一个影片档', 'warn');
+    const box = $('#yt-progress');
+    btn.disabled = true;
+    const line = t => { box.innerHTML += `<div class="hint" style="margin-top:6px">${esc(t)}</div>`; };
+    box.innerHTML = '<div class="label" style="margin-top:14px">上传进度</div>';
+    line(`档案：${f.name}（${(f.size / 1048576).toFixed(1)} MB）`);
+    try {
+      const q = new URLSearchParams({
+        title: $('#yt-title').value, description: $('#yt-desc').value,
+        privacy: $('#yt-privacy').value, mime: f.type || 'video/mp4'
+      });
+      const r = await fetch(igBase() + '/api/youtube/upload?' + q, {
+        method: 'POST', headers: { 'Content-Type': f.type || 'video/mp4' }, body: f
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      let last = '';
+      const timer = setInterval(async () => {
+        try {
+          const s = await igFetch('/api/publish/' + j.jobId);
+          if (s.step !== last) { last = s.step; line('· ' + s.step); }
+          if (s.state === 'done') {
+            clearInterval(timer);
+            line('✔ 已上传，状态：' + (s.privacyStatus || '未知'));
+            if (s.forcedPrivate) line('⚠ 专案尚未过稽核，影片被强制设为私人');
+            box.innerHTML += `<div style="margin-top:8px"><a class="btn btn-sm" href="${esc(s.link)}" target="_blank">在 YouTube 上查看 →</a></div>`;
+            const it = STORE.s.schedule.find(x => x.id === schedId);
+            if (it) { it.status = '已发布'; syncVideoStatus(it, true); STORE.log('ok', `YouTube 上传：${it.title}`); STORE.update(); render(); }
+            toast('已上传到 YouTube', 'ok');
+          }
+          if (s.state === 'error') {
+            clearInterval(timer); btn.disabled = false; line('✘ ' + s.error);
+            if (s.detail) box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px"><code style="font-size:11px">${esc(JSON.stringify(s.detail))}</code></div>`;
+          }
+        } catch (e) { clearInterval(timer); btn.disabled = false; line('✘ ' + e.message); }
+      }, 1500);
+    } catch (e) { btn.disabled = false; line('✘ ' + e.message); }
+  }
+
   async function igCheck() {
+    ytCheck();
     const badge = $('#ig-badge'), panel = $('#ig-panel');
     if (!panel) return;
     STORE.s.settings.pubServer = igBase(); STORE.update();
@@ -4587,6 +4767,8 @@ window.TOUR = (function () {
           ${x.status !== '待发布' ? ''
             : x.platform === 'Instagram Reels'
               ? `<button class="btn btn-sm btn-primary" data-modal-act="ig-open" data-id="${x.id}">真实发布</button>`
+              : x.platform === 'YouTube Shorts'
+                ? `<button class="btn btn-sm btn-primary" data-modal-act="yt-open" data-id="${x.id}">真实上传</button>`
               : `<button class="btn btn-sm btn-primary" data-modal-act="pub-one" data-id="${x.id}" data-day="${d}">发布</button>`}
         </div>`).join('')
         + (pending > 1 ? `<div style="margin-top:14px;text-align:right">
