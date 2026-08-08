@@ -2890,7 +2890,9 @@ window.VIEWS = window.VIEWS || {};
                 <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</div>
                 <div style="font-size:11px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.day} 日 ${x.hour}:00</div>
               </div>
-              <button class="btn btn-sm" data-act="pub-one" data-id="${x.id}">发布</button>
+              ${x.platform === 'Instagram Reels'
+                ? `<button class="btn btn-sm btn-primary" data-act="ig-publish" data-id="${x.id}" title="真实发布到 Instagram">真实发布</button>`
+                : `<button class="btn btn-sm" data-act="pub-one" data-id="${x.id}">发布</button>`}
             </div>`).join('') : '<div class="hint">暂无待发布内容</div>'}
         </div>
       </div>
@@ -3056,6 +3058,20 @@ window.VIEWS = window.VIEWS || {};
             </div>
           </div>
           <div class="hint" style="margin-top:12px">成本按「大模型 + TTS + 数字人渲染 + 存储」综合估算，实际以供应商账单为准。</div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><div><div class="card-t">Instagram Reels 真实发布</div>
+              <div class="card-s">目前只有 Instagram Reels 接了真实发布，其余平台仍是演示</div></div>
+            <div class="right"><span class="tag" id="ig-badge">未检测</span></div></div>
+          <div class="field"><div class="label">发布服务网址</div>
+            <div style="display:flex;gap:9px">
+              <input class="input" id="ig-server" value="${esc(st.pubServer || 'http://localhost:8787')}" style="flex:1">
+              <button class="btn" data-act="ig-check">检测</button>
+            </div>
+            <div class="hint" style="margin-top:6px">需先在 <code>server/</code> 执行 <code>npm install &amp;&amp; npm start</code></div>
+          </div>
+          <div id="ig-panel"><div class="hint">按「检测」查看服务与授权状态。</div></div>
         </div>
 
         <div class="card">
@@ -3549,6 +3565,22 @@ window.TOUR = (function () {
       }
       case 'auth-plat': return toast(`请在「${el.dataset.n}」开放平台完成授权后回到本页`, 'warn');
 
+      /* ---- Instagram Reels 真实发布 ---- */
+      case 'ig-check': return igCheck();
+      case 'ig-save-app': return igSaveApp();
+      case 'ig-connect': {
+        window.open(igBase() + '/auth/start', '_blank');
+        toast('已开新分页进行授权，完成后回来按「检测」', 'ok');
+        return;
+      }
+      case 'ig-disconnect': {
+        fetch(igBase() + '/api/disconnect', { method: 'POST' })
+          .then(() => { toast('已断开连接', 'ok'); igCheck(); })
+          .catch(() => toast('无法连上发布服务', 'err'));
+        return;
+      }
+      case 'ig-publish': return igPublishModal(el.dataset.id);
+
       /* ---- 人物引擎（合并自同事版本）---- */
       case 'engine-select': return go('engine', { id: el.dataset.id });
       case 'engine-add': {
@@ -3663,6 +3695,8 @@ window.TOUR = (function () {
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'create-proj') createProject();
+    if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
+    if (a === 'ig-open') return igPublishModal(el.dataset.id);
     if (a === 'save-account') {
       const n = ($('#ac-name').value || '').trim();
       if (!n) return toast('显示名称不能空白', 'warn');
@@ -3751,6 +3785,142 @@ window.TOUR = (function () {
     } else {
       v.status = '待审核'; v.views = 0; v.watch = 0; v.like = 0; v.share = 0; v.click = 0;
     }
+  }
+
+  /* ============================================================
+   * Instagram Reels 真实发布（透过 server/ 的发布服务）
+   * 权杖只存在服务端，浏览器拿不到；Meta 也不接受网页直接呼叫
+   * ========================================================== */
+  const igBase = () => (($('#ig-server') && $('#ig-server').value) || STORE.s.settings.pubServer || 'http://localhost:8787').replace(/\/+$/, '');
+
+  async function igFetch(p, opt) {
+    const r = await fetch(igBase() + p, opt);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+
+  async function igCheck() {
+    const badge = $('#ig-badge'), panel = $('#ig-panel');
+    if (!panel) return;
+    STORE.s.settings.pubServer = igBase(); STORE.update();
+    panel.innerHTML = '<div class="hint">连线中…</div>';
+    try {
+      const cfg = await igFetch('/api/config');
+      if (!cfg.configured) {
+        badge.textContent = '待设定'; badge.className = 'tag a';
+        panel.innerHTML = `
+          <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+            <div class="ex-r"><span class="ex-k">还缺什么</span><span>${cfg.missing.join('、')}</span></div>
+            <div class="ex-r"><span class="ex-k">哪里拿</span><span>到 developers.facebook.com 建立应用，加入 Instagram 产品后即可取得</span></div>
+            <div class="ex-r"><span class="ex-k">回呼网址</span><span>在 Meta 应用里要填 <code>${esc(cfg.redirectUri)}</code></span></div>
+          </div>
+          <div class="row2">
+            <div class="field"><div class="label">App ID</div><input class="input" id="ig-appid" value="${esc(cfg.appId)}"></div>
+            <div class="field"><div class="label">App Secret</div><input class="input" id="ig-secret" type="password" placeholder="只会存在你本机的服务里"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" data-act="ig-save-app">保存设定</button>`;
+        return;
+      }
+      const st = await igFetch('/api/status');
+      if (!st.connected) {
+        badge.textContent = st.expired ? '授权过期' : '未授权'; badge.className = 'tag a';
+        panel.innerHTML = `<div class="hint" style="margin-bottom:12px">服务正常，尚未授权 Instagram${st.expired ? '（权杖已过期，需重新授权）' : ''}。</div>
+          <button class="btn btn-primary btn-sm" data-act="ig-connect">连接 Instagram</button>`;
+        return;
+      }
+      badge.textContent = '已连接'; badge.className = 'tag g';
+      const q = st.quota || {};
+      panel.innerHTML = `
+        <div class="explain" style="margin:0 0 12px;border-left-color:var(--green)">
+          <div class="ex-r"><span class="ex-k">已连接</span><span><b>@${esc(st.username || '')}</b>（${esc(st.accountType || '')}）</span></div>
+          <div class="ex-r"><span class="ex-k">今日额度</span><span>${q.quota_usage != null ? `已用 ${q.quota_usage} / ${q.config && q.config.quota_total || 100} 篇（每 24 小时）` : '—'}</span></div>
+          <div class="ex-r"><span class="ex-k">授权到期</span><span>${st.expiresAt ? new Date(st.expiresAt).toLocaleDateString('zh-CN') : '—'}</span></div>
+        </div>
+        <button class="btn btn-sm" data-act="ig-disconnect">断开连接</button>`;
+      if (st.accountType && !/BUSINESS/i.test(st.accountType)) {
+        panel.innerHTML += `<div class="hint" style="margin-top:10px;color:var(--amber)">
+          ⚠ 这个帐号是 ${esc(st.accountType)}，<b>Meta 只允许「商业帐号」透过 API 发布</b>，请先在 Instagram 里切换帐号类型。</div>`;
+      }
+    } catch (e) {
+      badge.textContent = '连不上'; badge.className = 'tag r';
+      panel.innerHTML = `<div class="hint" style="color:var(--amber)">
+        连不上发布服务（${esc(e.message)}）。<br>
+        1. 确认已在 <code>server/</code> 执行 <code>npm start</code><br>
+        2. 若你正从 <b>https 网址</b>开启本页，浏览器会挡掉对 http://localhost 的请求——
+           请改用本机版（<code>dist/</code> 里的单档版）或 <code>http://localhost:5173</code>。</div>`;
+    }
+  }
+
+  async function igSaveApp() {
+    try {
+      await igFetch('/api/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId: $('#ig-appid').value, appSecret: $('#ig-secret').value })
+      });
+      toast('已保存，接着按「连接 Instagram」', 'ok'); igCheck();
+    } catch (e) { toast('保存失败：' + e.message, 'err'); }
+  }
+
+  /* 发布弹窗：影片必须先放在公开 https 网址，Meta 是自己去抓 */
+  function igPublishModal(schedId) {
+    const it = STORE.s.schedule.find(x => x.id === schedId);
+    if (!it) return;
+    const p = STORE.s.projects.find(x => x.id === it.projectId) || STORE.current;
+    const caption = it.title + '\n' + (p.hots || []).join(' ');
+    modal('发布到 Instagram Reels', `
+      <div class="explain" style="margin:0 0 16px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">这是真的发布</span><span>按下去会真的送到 Instagram，<b>不可撤回</b>。</span></div>
+        <div class="ex-r"><span class="ex-k">影片怎么给</span><span>Meta 是<b>自己去抓影片</b>，不是你上传档案。所以影片要先放到一个公开的 https 网址。</span></div>
+        <div class="ex-r"><span class="ex-k">规格</span><span>9:16、5–90 秒、H.264 或 HEVC，不符合会被退件。</span></div>
+      </div>
+      <div class="field"><div class="label">影片网址（公开 https）<span style="color:var(--red)">*</span></div>
+        <input class="input" id="ig-video" placeholder="https://…/reel.mp4"></div>
+      <div class="field"><div class="label">封面图网址（可留空）</div>
+        <input class="input" id="ig-cover" placeholder="https://…/cover.jpg"></div>
+      <div class="field"><div class="label">发布文案</div>
+        <textarea class="input" id="ig-caption" style="min-height:96px">${esc(caption)}</textarea></div>
+      <div id="ig-progress"></div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="ig-do" data-id="${schedId}">确认发布</button>`, true);
+  }
+
+  async function igDoPublish(schedId, btn) {
+    const videoUrl = ($('#ig-video').value || '').trim();
+    if (!/^https:\/\//i.test(videoUrl)) return toast('影片网址必须是 https 开头的公开网址', 'warn');
+    const box = $('#ig-progress');
+    btn.disabled = true;
+    const line = (t, cls) => { box.innerHTML += `<div class="${cls || 'hint'}" style="margin-top:6px">${esc(t)}</div>`; };
+    box.innerHTML = '<div class="label" style="margin-top:14px">发布进度</div>';
+    try {
+      const { jobId } = await igFetch('/api/publish/reels', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoUrl, coverUrl: ($('#ig-cover').value || '').trim(),
+          caption: $('#ig-caption').value, shareToFeed: true
+        })
+      });
+      let lastStep = '';
+      const timer = setInterval(async () => {
+        try {
+          const j = await igFetch('/api/publish/' + jobId);
+          if (j.step !== lastStep) { lastStep = j.step; line('· ' + j.step); }
+          if (j.state === 'done') {
+            clearInterval(timer);
+            line('✔ 已发布' + (j.permalink ? '' : '（取不到连结，但已成功）'), 'hint');
+            if (j.permalink) box.innerHTML += `<div style="margin-top:8px"><a class="btn btn-sm" href="${esc(j.permalink)}" target="_blank">在 Instagram 上查看 →</a></div>`;
+            const it = STORE.s.schedule.find(x => x.id === schedId);
+            if (it) { it.status = '已发布'; syncVideoStatus(it, true); STORE.log('ok', `Instagram 真实发布：${it.title}`); STORE.update(); render(); }
+            toast('已发布到 Instagram', 'ok');
+          }
+          if (j.state === 'error') {
+            clearInterval(timer); btn.disabled = false;
+            line('✘ ' + j.error, 'hint');
+            box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px">Meta 回传的原始错误：<br><code style="font-size:11px">${esc(JSON.stringify(j.detail || {}))}</code></div>`;
+          }
+        } catch (e) { clearInterval(timer); btn.disabled = false; line('✘ ' + e.message); }
+      }, 2000);
+    } catch (e) { btn.disabled = false; line('✘ ' + e.message); }
   }
 
   /* ---------------- 弹窗内容 ---------------- */
@@ -4414,9 +4584,10 @@ window.TOUR = (function () {
             <div style="font-size:11.5px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.hour}:00</div></div>
           ${UI.statusTag(x.status)}
           <button class="btn btn-sm" data-modal-act="open-sched" data-id="${x.id}">预览 / 编辑</button>
-          ${x.status === '待发布'
-            ? `<button class="btn btn-sm btn-primary" data-modal-act="pub-one" data-id="${x.id}" data-day="${d}">发布</button>`
-            : ''}
+          ${x.status !== '待发布' ? ''
+            : x.platform === 'Instagram Reels'
+              ? `<button class="btn btn-sm btn-primary" data-modal-act="ig-open" data-id="${x.id}">真实发布</button>`
+              : `<button class="btn btn-sm btn-primary" data-modal-act="pub-one" data-id="${x.id}" data-day="${d}">发布</button>`}
         </div>`).join('')
         + (pending > 1 ? `<div style="margin-top:14px;text-align:right">
              <button class="btn btn-sm" data-modal-act="pub-day" data-day="${d}">发布这一天的全部 ${pending} 条</button></div>` : '')
