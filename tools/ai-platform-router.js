@@ -10,6 +10,7 @@
  *
  * Usage:
  *   node tools/ai-platform-router.js tools/sample-render-job.json --demo
+ *   AI_PLATFORM_API_KEY=... AI_PLATFORM_BASE_URL=https://api.example.com node tools/ai-platform-router.js tools/sample-render-job.json --execute
  */
 
 const fs = require('fs/promises');
@@ -17,13 +18,42 @@ const path = require('path');
 
 const args = process.argv.slice(2);
 const jobPath = args.find(a => !a.startsWith('--'));
+const execute = args.includes('--execute');
 
 if (!jobPath) {
-  console.error('Usage: node tools/ai-platform-router.js ./render-job.json --demo');
+  console.error('Usage: node tools/ai-platform-router.js ./render-job.json --demo|--execute');
   process.exit(1);
 }
 
 const OUT_DIR = path.resolve(process.cwd(), 'ai-platform-output');
+const AI_PLATFORM_CREATE_PATH = process.env.AI_PLATFORM_CREATE_PATH || '/v1/render-jobs';
+const AI_PLATFORM_ROUTE = process.env.AI_PLATFORM_ROUTE || 'bookreel-short-video';
+const AI_PLATFORM_POLL_MS = Number(process.env.AI_PLATFORM_POLL_MS || 5000);
+const AI_PLATFORM_MAX_POLLS = Number(process.env.AI_PLATFORM_MAX_POLLS || 60);
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function joinUrl(base, routePath) {
+  return `${base.replace(/\/+$/, '')}/${routePath.replace(/^\/+/, '')}`;
+}
+
+async function requestJson(url, options) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (err) {
+    throw new Error(`AI Platform request failed before response: ${err.message}. Check AI_PLATFORM_BASE_URL, network access, and route path.`);
+  }
+  const text = await res.text();
+  let body;
+  try { body = text ? JSON.parse(text) : {}; } catch (_) { body = { raw: text }; }
+  if (!res.ok) {
+    const err = new Error(`${res.status} ${res.statusText}: ${text.slice(0, 800)}`);
+    err.response = body;
+    throw err;
+  }
+  return body;
+}
 
 function firstScript(job) {
   if (!job.scripts || !job.scripts.length) throw new Error('Job has no scripts');
@@ -48,10 +78,12 @@ function routeJob(job) {
     project: job.project,
     target: job.target,
     decision: {
-      currentEngine: 'codex-demo-engine',
-      reason: 'Customer-facing MVP should produce a complete production package without spending third-party API cost.',
+      currentEngine: execute ? 'ai-platform-live' : 'codex-demo-engine',
+      reason: execute
+        ? 'Live mode sends the route job to the configured AI Platform backend.'
+        : 'Customer-facing MVP should produce a complete production package without spending third-party API cost.',
       readyForCustomers: true,
-      requiresApiKeys: false,
+      requiresApiKeys: execute,
       canUpgradeToRealGeneration: true
     },
     policy: {
@@ -63,7 +95,7 @@ function routeJob(job) {
     route: [
       {
         node: 'router.intake',
-        engine: 'codex-demo-engine',
+        engine: execute ? 'ai-platform-live' : 'codex-demo-engine',
         output: 'Normalize book data, target platform, duration, style, risk level.'
       },
       {
@@ -98,6 +130,92 @@ function routeJob(job) {
     ],
     package: buildProductionPackage(job, script)
   };
+}
+
+function aiPlatformPayload(job, plan) {
+  return {
+    route: AI_PLATFORM_ROUTE,
+    version: 'bookreel.ai_platform_request.v1',
+    requestId: `bookreel_${Date.now()}`,
+    mode: 'live-generation',
+    job,
+    routerPlan: plan,
+    requestedOutputs: [
+      'avatar_video',
+      'scene_broll',
+      'key_images',
+      'captions',
+      'douyin_9x16_video',
+      'production_package'
+    ],
+    constraints: {
+      ratio: job.target?.ratio || '9:16',
+      durationSeconds: job.target?.durationSeconds || 60,
+      aiDisclosure: true,
+      browserSecretsAllowed: false
+    }
+  };
+}
+
+function getStatusUrl(baseUrl, createResponse) {
+  if (createResponse.status_url) return createResponse.status_url;
+  if (createResponse.statusUrl) return createResponse.statusUrl;
+  if (createResponse.links?.status) return createResponse.links.status;
+
+  const taskId = createResponse.id || createResponse.job_id || createResponse.task_id || createResponse.data?.id;
+  const template = process.env.AI_PLATFORM_STATUS_PATH_TEMPLATE;
+  if (!taskId || !template) return null;
+  return joinUrl(baseUrl, template.replace('{id}', encodeURIComponent(taskId)));
+}
+
+function isDoneStatus(status) {
+  return ['succeeded', 'completed', 'complete', 'done', 'failed', 'error', 'canceled', 'cancelled']
+    .includes(String(status || '').toLowerCase());
+}
+
+async function executeAiPlatform(job, plan) {
+  const baseUrl = process.env.AI_PLATFORM_BASE_URL;
+  const apiKey = process.env.AI_PLATFORM_API_KEY;
+  if (!baseUrl) throw new Error('Missing AI_PLATFORM_BASE_URL');
+  if (!apiKey) throw new Error('Missing AI_PLATFORM_API_KEY');
+
+  const payload = aiPlatformPayload(job, plan);
+  await fs.writeFile(path.join(OUT_DIR, 'ai-platform-request.json'), JSON.stringify({
+    ...payload,
+    note: 'API key is sent only in the Authorization header and is never written to this file.'
+  }, null, 2));
+
+  const created = await requestJson(joinUrl(baseUrl, AI_PLATFORM_CREATE_PATH), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'X-BookReel-Route': AI_PLATFORM_ROUTE
+    },
+    body: JSON.stringify(payload)
+  });
+
+  await fs.writeFile(path.join(OUT_DIR, 'ai-platform-create-response.json'), JSON.stringify(created, null, 2));
+
+  const statusUrl = getStatusUrl(baseUrl, created);
+  if (!statusUrl) return { created, final: null, statusUrl: null };
+
+  let final = null;
+  for (let i = 0; i < AI_PLATFORM_MAX_POLLS; i++) {
+    const current = await requestJson(statusUrl, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'X-BookReel-Route': AI_PLATFORM_ROUTE
+      }
+    });
+    final = current;
+    const status = current.status || current.state || current.data?.status;
+    if (isDoneStatus(status)) break;
+    await sleep(AI_PLATFORM_POLL_MS);
+  }
+
+  await fs.writeFile(path.join(OUT_DIR, 'ai-platform-final-response.json'), JSON.stringify(final, null, 2));
+  return { created, final, statusUrl };
 }
 
 function buildProductionPackage(job, script) {
@@ -199,10 +317,30 @@ async function main() {
   await fs.writeFile(path.join(OUT_DIR, 'route-plan.json'), JSON.stringify(plan, null, 2));
   await fs.writeFile(path.join(OUT_DIR, 'production-package.md'), toMarkdown(plan));
 
+  if (execute) {
+    const result = await executeAiPlatform(job, plan);
+    console.log(JSON.stringify({
+      mode: 'ai-platform-live',
+      output: OUT_DIR,
+      createPath: AI_PLATFORM_CREATE_PATH,
+      route: AI_PLATFORM_ROUTE,
+      statusUrl: result.statusUrl,
+      requiredEnv: ['AI_PLATFORM_API_KEY', 'AI_PLATFORM_BASE_URL']
+    }, null, 2));
+    return;
+  }
+
   console.log(JSON.stringify({
     mode: 'codex-demo-router',
     output: OUT_DIR,
     requiredEnv: [],
+    liveEnv: [
+      'AI_PLATFORM_API_KEY',
+      'AI_PLATFORM_BASE_URL',
+      'AI_PLATFORM_CREATE_PATH',
+      'AI_PLATFORM_ROUTE',
+      'AI_PLATFORM_STATUS_PATH_TEMPLATE'
+    ],
     futureEnv: [
       'OPENAI_API_KEY',
       'HEYGEN_API_KEY',
