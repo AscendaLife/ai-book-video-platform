@@ -84,7 +84,7 @@ node tools/ai-platform-avatar-test.js
 ```
 
 这个测试会直接提交 `task:"avatar"` 与 `task:"lipsync"`，检查平台是否已经支持数字人对嘴并回传 `avatar_video_url`。
-若 avatar 是异步任务，测试会用 `AI_PLATFORM_AVATAR_STATUS_PATH_TEMPLATE=/v1/tasks/{id}` 轮询，直到拿到 `completed_assets.avatar_video_url` 或进入终态。
+若 avatar 是异步任务，测试会用 `AI_PLATFORM_AVATAR_STATUS_PATH_TEMPLATE=/api/playground/avatar/{id}` 轮询，直到拿到 `completed_assets.avatar_video_url` 或进入终态。
 
 AI Platform avatar 目标流程：
 
