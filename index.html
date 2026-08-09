@@ -420,10 +420,24 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .scene-pill{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px}
 .scene-pill b{display:block;font-size:12.5px;margin-bottom:4px}
 .scene-pill span{font-size:11.5px;color:var(--txt-2);line-height:1.5}
+.template-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.template-toolbar .input{max-width:280px}
+.template-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.template-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px;min-height:220px;display:flex;flex-direction:column;gap:10px;transition:.16s}
+.template-card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.template-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.template-ico{width:38px;height:38px;border-radius:12px;background:var(--panel-2);display:grid;place-items:center;font-weight:800;color:var(--cyan);flex:0 0 38px}
+.template-name{font-size:14px;font-weight:760;line-height:1.35}
+.template-meta{display:flex;gap:6px;flex-wrap:wrap}
+.template-desc{font-size:12px;color:var(--txt-2);line-height:1.65}
+.template-roles{font-size:11.5px;color:var(--txt-3);line-height:1.6;margin-top:auto}
+.template-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.custom-scene{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
 @media(max-width:1080px){.creative-hero{grid-template-columns:1fr}.creative-shot{grid-template-columns:58px 1fr}}
 @media(max-width:1080px){.sample-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1080px){.template-grid{grid-template-columns:repeat(2,1fr)}.custom-scene{grid-template-columns:1fr 1fr}}
 @media(max-width:1080px){.creative-shot .asset{grid-column:2}}
-@media(max-width:640px){.creative-shot{grid-template-columns:1fr}.creative-shot .asset{grid-column:auto}.creative-hero{padding:18px}.sample-grid,.scene-strip{grid-template-columns:1fr}}
+@media(max-width:640px){.creative-shot{grid-template-columns:1fr}.creative-shot .asset{grid-column:auto}.creative-hero{padding:18px}.sample-grid,.scene-strip,.template-grid,.custom-scene{grid-template-columns:1fr}}
 
 .persona-hero{
   border-radius:var(--r-xl);padding:26px;background:linear-gradient(135deg,rgba(124,108,255,.22),rgba(34,211,238,.12));
@@ -1186,28 +1200,52 @@ window.DATA = (function () {
     return map[angle] || map.know;
   }
 
+  const SCENE_TEMPLATES = [
+    { id: 'street', ico: '01', cat: '真实', name: '马路街访', tone: '生活化、直接', roles: '主持人 + 作者 / 路人反应', setting: '街道招牌、斑马线、路人经过、交通灯', fit: '痛点开场、读者共鸣', risk: '低', prompt: '用街头采访方式开场，主持人在人行道追问，作者数字人站在街景中回答。' },
+    { id: 'studio', ico: '02', cat: '真实', name: '专业访谈室', tone: '严肃、可信', roles: '主持人 + 作者', setting: '沙发、书架、茶几、补光灯、桌面书封', fit: '商业、管理、知识类书', risk: '低', prompt: '用节目访谈室拍摄，两人同框和交叉剪，书封放在桌面。' },
+    { id: 'car', ico: '03', cat: '真实', name: '车内聊天', tone: '朋友感、陪伴感', roles: '驾驶位主持 + 副驾作者', setting: '车窗城市、副驾视角、仪表台、路灯移动', fit: '成长、疗愈、轻知识', risk: '低', prompt: '两人在车内像朋友聊天，窗外城市移动，结尾自然引导留言书摘。' },
+    { id: 'bookstore', ico: '04', cat: '真实', name: '书店走廊', tone: '新书上市感', roles: '导购型数字人 + 读者', setting: '新书陈列、书封堆头、读者翻书', fit: '新书推荐、书摘', risk: '低', prompt: '在书店新书区开场，数字人拿起书封，读者在旁边追问。' },
+    { id: 'cafe', ico: '05', cat: '真实', name: '咖啡馆圆桌', tone: '松弛、温暖', roles: '两位读者 / 作者旁白', setting: '咖啡、笔记本、窗边自然光', fit: '情感、女性成长、读书会', risk: '低', prompt: '咖啡馆圆桌读书会，像朋友分享一本改变心态的新书。' },
+    { id: 'office', ico: '06', cat: '真实', name: '深夜办公室', tone: '压力、反思', roles: '职场主角 + 未来的自己', setting: '电脑、便利贴、加班灯光、城市夜景', fit: '职场、创业、效率书', risk: '低', prompt: '深夜办公室，疲惫主角遇见未来的自己，用书中观点改变选择。' },
+    { id: 'campus', ico: '07', cat: '真实', name: '校园长椅', tone: '青春、学习', roles: '学生主角 + 导师', setting: '树影、背包、翻开的书、路过学生', fit: '学习法、成长、考试', risk: '低', prompt: '校园长椅上，学生主角被导师数字人点醒，章节变成行动清单。' },
+    { id: 'gym', ico: '08', cat: '运动', name: '健身房挑战', tone: '自律、节奏快', roles: '教练 + 学员', setting: '跑步机、哑铃、计时器、汗水特写', fit: '自律、习惯、行动力', risk: '低', prompt: '健身房训练中讲书，动作组间插入书中方法，字幕像训练计划。' },
+    { id: 'cycling', ico: '09', cat: '运动', name: '城市骑行', tone: '自由、向前', roles: '骑行主角 + 耳机里的作者', setting: '单车、城市道路、风声、路牌', fit: '人生转折、效率、旅行书', risk: '中', prompt: '主角骑车穿过城市，耳机里作者数字人讲出关键观点，注意安全镜头不危险驾驶。' },
+    { id: 'pool', ico: '10', cat: '运动', name: '泳池训练', tone: '清爽、重启', roles: '游泳者 + 池边教练', setting: '泳道、水面反光、计时牌、池边书封', fit: '自我更新、疗愈、习惯', risk: '中', prompt: '泳池训练后在池边对谈，画面清爽健康，不做性感化呈现。' },
+    { id: 'beach', ico: '11', cat: '自然', name: '海滩读书会', tone: '疗愈、开阔', roles: '主持人 + 读者群像', setting: '海浪、沙滩椅、遮阳伞、落日书封', fit: '疗愈、生活方式、亲子', risk: '低', prompt: '海滩落日读书会，海浪当转场，金句写在沙滩和字幕上。' },
+    { id: 'sea', ico: '12', cat: '奇观', name: '海上漂流', tone: '求生、找方向', roles: '漂流主角 + 会说话的书', setting: '小船、海浪、指南针、远处灯塔', fit: '决策、逆境、冒险书', risk: '中', prompt: '主角在海上迷路，书本化身导航员，用章节帮他找方向。' },
+    { id: 'submarine', ico: '13', cat: '奇观', name: '深海潜水', tone: '探索、潜意识', roles: '潜水员 + 深海旁白', setting: '潜水服、珊瑚、深海光束、气泡', fit: '心理、哲学、探索类', risk: '中', prompt: '深海潜水寻找答案，每下潜一层对应书中一个心理层次。' },
+    { id: 'mars', ico: '14', cat: '科幻', name: '火星基地', tone: '未来、生存', roles: '火星指挥官 + AI 助理', setting: '红色荒原、基地舱、氧气警报、星空', fit: '未来、决策、管理', risk: '低', prompt: '火星基地资源有限，书中方法变成生存决策手册。' },
+    { id: 'spaceship', ico: '15', cat: '科幻', name: '太空舱独白', tone: '孤独、宏大', roles: '宇航员 + 地面作者', setting: '舷窗地球、仪表、失重书页', fit: '哲学、孤独、长期主义', risk: '低', prompt: '宇航员在太空舱读书，地面作者用无线电回答他的疑问。' },
+    { id: 'rollercoaster', ico: '16', cat: '夸张', name: '过山车人生', tone: '刺激、搞笑', roles: '尖叫主持 + 冷静作者', setting: '过山车轨道、俯冲、表情特写', fit: '情绪管理、人生起伏', risk: '中', prompt: '两人在过山车上对谈，情绪起伏对应书中人生曲线。' },
+    { id: 'snowmountain', ico: '17', cat: '自然', name: '雪山登顶', tone: '突破、长期主义', roles: '登山者 + 山顶导师', setting: '雪线、绳索、风雪、山顶书封', fit: '成长、毅力、长期主义', risk: '中', prompt: '登山途中每一段坡对应一个章节，山顶用金句收束。' },
+    { id: 'desert', ico: '18', cat: '奇观', name: '沙漠求生', tone: '孤独、资源管理', roles: '求生主角 + 指南针数字人', setting: '沙丘、水壶、地图、烈日', fit: '资源配置、选择、创业', risk: '中', prompt: '沙漠里资源有限，主角用书中判断方法决定取舍。' },
+    { id: 'war-reporter', ico: '19', cat: '敏感', name: '战地记者', tone: '严肃、克制', roles: '战地记者 + 作者连线', setting: '远处警报、临时新闻点、防护背心、地图', fit: '历史、和平、领导力', risk: '高', prompt: '以战地记者连线方式讲书，避免血腥、仇恨和娱乐化战争，只讲选择、韧性与人道视角。' },
+    { id: 'shelter', ico: '20', cat: '敏感', name: '避难所读书会', tone: '温柔、希望', roles: '志愿者 + 读者群像', setting: '临时灯光、毯子、热茶、旧书', fit: '战争反思、心理韧性', risk: '高', prompt: '在避难所里安静读书，用书中观点带出希望与互助，不消费苦难。' },
+    { id: 'hospital', ico: '21', cat: '敏感', name: '医院走廊', tone: '克制、真实', roles: '家属主角 + 医护导师', setting: '走廊灯、候诊椅、病历夹、安静脚步', fit: '生命、心理、陪伴', risk: '高', prompt: '医院走廊里谈书中关于生命和选择的观点，不做医疗承诺。' },
+    { id: 'bathroom', ico: '22', cat: '生活', name: '浴室灵感', tone: '搞笑、突然顿悟', roles: '浴袍主角 + 镜中自己', setting: '镜子雾气、浴袍、泡泡、便签', fit: '创意、习惯、拖延', risk: '中', prompt: '主角洗澡后穿浴袍在镜前突然顿悟，泡泡遮挡，健康搞笑不裸露。' },
+    { id: 'kitchen', ico: '23', cat: '生活', name: '厨房料理', tone: '烟火气、步骤感', roles: '厨师数字人 + 食客', setting: '砧板、锅气、食材、计时器', fit: '方法论、亲子、生活书', risk: '低', prompt: '把一本书讲成一道菜，每个步骤对应一个书中方法。' },
+    { id: 'courtroom', ico: '24', cat: '剧情', name: '法庭辩论', tone: '冲突、证据感', roles: '法官 + 正反双方 + 书本证人', setting: '法槌、证据板、金句投影', fit: '观点争议、商业、心理', risk: '低', prompt: '用法庭辩论验证一本书的观点，主持人当法官，书中金句当证据。' },
+    { id: 'library-maze', ico: '25', cat: '奇幻', name: '图书馆迷宫', tone: '神秘、寻找答案', roles: '读者主角 + 会说话的书架', setting: '巨型书架、旋转楼梯、发光章节门', fit: '知识、哲学、成长', risk: '低', prompt: '巨型图书馆像迷宫，主角每打开一扇章节门就解锁一个观点。' },
+    { id: 'q-animal', ico: '26', cat: 'Q版', name: '动物导读员', tone: '可爱、轻松', roles: '猫狗导读员 + Q 版读者', setting: '软垫、书架、小黑板、表情贴纸', fit: '亲子、疗愈、社群传播', risk: '低', prompt: '用猫狗 Q 版角色导读，动物负责吐槽和提问，书本负责回答。' },
+    { id: 'emotion-monster', ico: '27', cat: 'Q版', name: '情绪怪兽', tone: '可爱但有痛点', roles: '焦虑怪兽 + 清醒的我', setting: '情绪房间、贴纸、夸张表情、能量条', fit: '心理、情绪、内耗', risk: '低', prompt: '把焦虑、拖延、内耗做成 Q 版怪兽，主角用书中方法逐一安抚。' },
+    { id: 'future-self', ico: '28', cat: '剧情', name: '未来的我', tone: '反转、走心', roles: '现在的我 + 未来的我', setting: '时间门、旧照片、未来城市、书页光效', fit: '人生规划、成长、决策', risk: '低', prompt: '未来的我回到现在提醒主角，这本书哪一章会改变关键选择。' },
+    { id: 'villain', ico: '29', cat: '剧情', name: '反派视角', tone: '黑色幽默、警醒', roles: '反派 + 主角 + 旁白', setting: '暗色办公室、计划板、红色警示字幕', fit: '避坑、商业、心理操控', risk: '中', prompt: '用反派讲错误思维，主角用书中观点识破它，避免美化伤害行为。' },
+    { id: 'game-level', ico: '30', cat: '游戏', name: '闯关副本', tone: '游戏化、爽感', roles: '玩家主角 + 系统 NPC', setting: '关卡地图、血条、任务面板、奖励弹窗', fit: '方法论、学习、成长', risk: '低', prompt: '把章节变成游戏关卡，主角完成任务后解锁金句和行动清单。' }
+  ];
+
+  function sceneTemplateLibrary() {
+    return SCENE_TEMPLATES;
+  }
+
   function genSceneDialogue(b, angle, i) {
     const q = (b.quotes && b.quotes[i % b.quotes.length]) || '把力气用在真正会变大的地方。';
     const pain = (b.pains && b.pains[i % b.pains.length]) || '很努力却看不到结果';
     const theme = (b.themes && b.themes[i % b.themes.length]) || '先判断任务的回报结构';
-    const sceneSets = [
-      [
-        { name: '马路街访', visual: '街道招牌、斑马线、路人经过、交通灯闪动', role: '用生活化问题开场' },
-        { name: '专业访谈室', visual: '沙发、书架、茶几、补光灯、桌面书封', role: '讲核心观点与反方追问' },
-        { name: '车内聊天', visual: '车窗城市、副驾视角、仪表台、路灯移动', role: '用朋友语气收尾' }
-      ],
-      [
-        { name: '书店走廊', visual: '新书陈列、读者翻书、书封堆头', role: '建立新书真实感' },
-        { name: '咖啡馆圆桌', visual: '咖啡、笔记本、窗边自然光', role: '让对谈更松弛' },
-        { name: '夜间办公室', visual: '电脑、便利贴、加班灯光、城市夜景', role: '承接读者痛点' }
-      ],
-      [
-        { name: '校园长椅', visual: '树影、背包、翻开的书、路过学生', role: '适合成长与学习主题' },
-        { name: '直播间侧景', visual: '补光、提词器、监视器、桌面书封', role: '适合发布会与专业背书' },
-        { name: '电梯口快问快答', visual: '楼层数字、等待人群、快切字幕', role: '制造短视频速度感' }
-      ]
-    ];
-    const scenes = sceneSets[i % sceneSets.length];
+    const pool = sceneTemplateLibrary();
+    const scenes = [0, 1, 2].map(n => {
+      const t = pool[(i * 3 + n) % pool.length];
+      return { name: t.name, visual: t.setting, role: t.fit };
+    });
     const style = {
       story: '故事感',
       pain: '痛点追问',
@@ -1538,7 +1576,7 @@ window.DATA = (function () {
     PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
-    applyPersona, genShots, genVideos, genStrategy, genAnalytics, uid, rand
+    applyPersona, genShots, genVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
   };
 })();
 
@@ -2773,6 +2811,7 @@ window.VIEWS = window.VIEWS || {};
     const modes = creativeModes(p);
     const cur = modes.find(x => x.key === mode) || modes[0];
     const samples = creativeSamples();
+    const templates = DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : [];
     const quote = ((p.quoteSrc && p.quoteSrc[0] && p.quoteSrc[0].text) || (p.quotes && p.quotes[0]) || '真正有传播力的，不是把书讲完，而是把一个观点讲到人心里。');
     const theme = (p.themes && p.themes[0]) || '把书中最有穿透力的观点转成可传播的短视频';
 
@@ -2835,6 +2874,61 @@ window.VIEWS = window.VIEWS || {};
             <div class="sample-title">${esc(x.title)}</div>
             <div class="sample-desc">${esc(x.desc)}</div>
           </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">30 種數字人場景模板庫</div>
+        <div class="card-s">客戶可以直接選模板，也可以輸入自己的場景；敏感場景會用合規敘事方式呈現</div></div>
+        <div class="right"><button class="btn btn-sm" data-act="copy" data-t="${esc(sceneLibraryPrompt(p, templates.slice(0, 30)))}">复制 30 种模板提示词</button></div></div>
+      <div class="template-toolbar">
+        <span class="tag v">真實</span><span class="tag c">奇觀</span><span class="tag g">Q 版 / 動物</span><span class="tag a">敏感場景需合規</span>
+        <input class="input" id="custom-scene-name" placeholder="自定義場景：例如雨夜便利店、海底列車、古代皇宮">
+        <input class="input" id="custom-scene-role" placeholder="角色：男主角 / 女主角 / 動物 / 反派 / 未來的我">
+        <button class="btn btn-primary" data-act="custom-scene-prompt">生成自定義提示詞</button>
+      </div>
+      <div class="template-grid">
+        ${templates.map(t => `
+          <div class="template-card">
+            <div class="template-top">
+              <div style="display:flex;gap:10px;min-width:0">
+                <div class="template-ico">${esc(t.ico)}</div>
+                <div style="min-width:0">
+                  <div class="template-name">${esc(t.name)}</div>
+                  <div class="template-meta" style="margin-top:6px">
+                    <span class="tag">${esc(t.cat)}</span><span class="tag c">${esc(t.risk)}風險</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="template-desc">${esc(t.setting)}</div>
+            <div class="template-roles"><b>角色</b>：${esc(t.roles)}<br><b>適合</b>：${esc(t.fit)}<br><b>語氣</b>：${esc(t.tone)}</div>
+            <div class="template-actions">
+              <button class="btn btn-sm btn-primary" data-act="apply-scene-template" data-id="${esc(t.id)}">套用</button>
+              <button class="btn btn-sm" data-act="copy-scene-template" data-id="${esc(t.id)}">复制提示词</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">第三方生成工具鏈</div>
+        <div class="card-s">前端只產生任務；API Key 放在服務端環境變數，不暴露給客戶瀏覽器</div></div>
+        <div class="right">
+          <button class="btn btn-sm" data-act="copy-third-party-command">复制服务端命令</button>
+          <button class="btn btn-sm btn-primary" data-act="export-third-party-job">下载渲染任务 JSON</button>
+        </div></div>
+      <div class="grid g4">
+        ${[
+          ['OpenAI Images', '角色圖、場景首幀、Q 版/動物/書中主角概念圖', 'OPENAI_API_KEY'],
+          ['HeyGen Avatar V', '真人數字人、雙聲線、口型同步、作者/主持人出鏡', 'HEYGEN_API_KEY'],
+          ['Runway Gen-4.5', '火星、海上、過山車、深海、戰地記者等奇觀 B-roll', 'RUNWAYML_API_SECRET'],
+          ['Remotion/FFmpeg', '字幕、書封、金句、平台尺寸、最終 9:16 成片合成', '本地 Node']
+        ].map(x => `<div class="visual-card"><b>${x[0]}</b><span>${x[1]}</span><div style="margin-top:10px"><span class="tag">${x[2]}</span></div></div>`).join('')}
+      </div>
+      <div class="explain" style="margin-top:14px;border-left-color:var(--green)">
+        <div class="ex-r"><span class="ex-k">推薦流程</span><span>先用 OpenAI/Runway 做場景圖與奇觀 B-roll，再用 HeyGen 生成人物口型，最後由服務端合成字幕、書封、CTA 和抖音直式輸出。</span></div>
+        <div class="ex-r"><span class="ex-k">為什麼不直接在前端調 API</span><span>第三方 API Key 如果放在瀏覽器會被看見；正式版必須走服務端代理或後台任務。</span></div>
       </div>
     </div>
 
@@ -2964,6 +3058,76 @@ window.VIEWS = window.VIEWS || {};
         desc: '適合做輕鬆、有陪伴感的書摘內容，像朋友在車裡聊一本書。'
       }
     ];
+  }
+
+  function sceneTemplatePrompt(p, t) {
+    const book = p ? `《${p.title}》` : '這本新書';
+    return `请为新书 ${book} 生成一支 60 秒短视频，使用「${t.name}」场景。场景：${t.setting}。角色：${t.roles}。语气：${t.tone}。适合表达：${t.fit}。创意要求：${t.prompt} 必须包含场地大景、数字人/角色出场、书封或章节内容、双人或多角色对谈、插嘴/停顿/反问、金句图卡、结尾 CTA，并标注 AI 生成。风险等级：${t.risk}，如为敏感场景，避免血腥、裸露、仇恨、医疗承诺或消费真实苦难。`;
+  }
+
+  function sceneLibraryPrompt(p, templates) {
+    return (templates || []).map(t => sceneTemplatePrompt(p, t)).join('\n\n---\n\n');
+  }
+
+  function customScenePrompt(p, scene, role) {
+    const book = p ? `《${p.title}》` : '這本新書';
+    const s = scene || '自定义奇观场景';
+    const r = role || '主持人 + 作者数字人 + 书中主角';
+    return `请为新书 ${book} 生成一支 60 秒短视频，使用自定义场景「${s}」。角色配置：${r}。要求：先给场地大景，让观众看清楚环境；再让角色进入剧情，用双人或多角色对谈讲出书中核心心态、经历过程和转变。必须包含：1）场地大景；2）角色出场；3）书封/章节/金句；4）插嘴、停顿、反问；5）主角经历或心理变化；6）结尾 CTA。若场景涉及战争、灾难、医院、浴室、泳池等敏感内容，采用克制、健康、非血腥、非裸露、非猎奇的表达，并标注 AI 生成。`;
+  }
+
+  function thirdPartyRenderJob(p) {
+    const templates = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).slice(0, 6);
+    const scripts = (p.scripts && p.scripts.length ? p.scripts : DATA.genScripts(p, 3)).slice(0, 3);
+    return {
+      version: 'bookreel.third_party_render.v1',
+      createdAt: new Date().toISOString(),
+      project: {
+        title: p.title,
+        author: p.author,
+        publisher: p.publisher,
+        summary: p.summary,
+        themes: p.themes || [],
+        quotes: p.quotes || []
+      },
+      target: {
+        platform: 'douyin',
+        ratio: '9:16',
+        width: 1080,
+        height: 1920,
+        durationSeconds: 60,
+        language: 'zh-TW / zh-CN'
+      },
+      providers: {
+        image: 'openai-images',
+        avatar: 'heygen-avatar-v',
+        sceneVideo: 'runway-gen-4.5',
+        assembly: 'remotion-or-ffmpeg'
+      },
+      compliance: [
+        '标注 AI 生成',
+        '真人肖像/声音必须授权',
+        '战争、灾难、医院等敏感场景避免血腥、仇恨、恐吓或消费真实苦难',
+        '浴室、泳池等场景必须健康呈现，不裸露、不性感化'
+      ],
+      sceneTemplates: templates.map(t => ({
+        id: t.id,
+        name: t.name,
+        category: t.cat,
+        risk: t.risk,
+        prompt: sceneTemplatePrompt(p, t)
+      })),
+      scripts: scripts.map(s => ({
+        id: s.id,
+        title: s.title,
+        sceneMode: s.sceneMode,
+        rhythm: s.rhythm,
+        scenePlan: s.scenePlan,
+        voicePlan: s.voicePlan,
+        dialogue: s.dialogue,
+        shots: DATA.genShots(s, p)
+      }))
+    };
   }
 
   function creativeModes(p) {
@@ -3134,7 +3298,7 @@ window.VIEWS = window.VIEWS || {};
       }
     ];
   }
-  window.CREATIVE = { modes: creativeModes, samples: creativeSamples };
+  window.CREATIVE = { modes: creativeModes, samples: creativeSamples, sceneTemplatePrompt, customScenePrompt, thirdPartyRenderJob };
 
   /* =======================================================
    * 内容资产库
@@ -4146,6 +4310,33 @@ window.TOUR = (function () {
       case 'view-script': return scriptModal(el.dataset.id);
       case 'play': return playerModal(el.dataset.id);
       case 'play-creative': return creativePlayerModal(el.dataset.mode);
+      case 'apply-scene-template': {
+        const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
+        if (!t) return toast('找不到这个场景模板', 'warn');
+        copy(CREATIVE.sceneTemplatePrompt(STORE.current, t));
+        toast(`已套用「${t.name}」并复制提示词`, 'ok');
+        return go('creative', { m: 'scene' });
+      }
+      case 'copy-scene-template': {
+        const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
+        if (!t) return toast('找不到这个场景模板', 'warn');
+        return copy(CREATIVE.sceneTemplatePrompt(STORE.current, t));
+      }
+      case 'custom-scene-prompt': {
+        const scene = ($('#custom-scene-name') && $('#custom-scene-name').value.trim()) || '';
+        const role = ($('#custom-scene-role') && $('#custom-scene-role').value.trim()) || '';
+        if (!scene && !role) return toast('请先输入自定义场景或角色', 'warn');
+        copy(CREATIVE.customScenePrompt(STORE.current, scene, role));
+        return toast('已生成并复制自定义场景提示词', 'ok');
+      }
+      case 'export-third-party-job': {
+        const job = CREATIVE.thirdPartyRenderJob(STORE.current);
+        return download(`${STORE.current.title}_third_party_render_job.json`, JSON.stringify(job, null, 2));
+      }
+      case 'copy-third-party-command': {
+        const cmd = 'OPENAI_API_KEY=... HEYGEN_API_KEY=... RUNWAYML_API_SECRET=... node tools/third-party-render.js ./render-job.json --dry-run';
+        return copy(cmd);
+      }
       case 'pick-file': return $('#file-input').click();
       case 'clear-files': {
         const p = STORE.current;
