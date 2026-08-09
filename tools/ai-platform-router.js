@@ -12,6 +12,7 @@
  * Usage:
  *   node tools/ai-platform-router.js tools/sample-render-job.json --demo
  *   AI_PLATFORM_API_KEY=... AI_PLATFORM_BASE_URL=https://api.example.com node tools/ai-platform-router.js tools/sample-render-job.json --execute
+ *   AI_PLATFORM_API_KEY=... AI_PLATFORM_BASE_URL=https://api.example.com node tools/ai-platform-router.js tools/sample-render-job.json --execute --nodes
  */
 
 const fs = require('fs/promises');
@@ -20,6 +21,7 @@ const path = require('path');
 const args = process.argv.slice(2);
 const jobPath = args.find(a => !a.startsWith('--'));
 const execute = args.includes('--execute');
+const nodeMode = args.includes('--nodes') || process.env.AI_PLATFORM_NODE_MODE === '1';
 
 if (!jobPath) {
   console.error('Usage: node tools/ai-platform-router.js ./render-job.json --demo|--execute');
@@ -56,6 +58,25 @@ async function requestJson(url, options) {
     throw err;
   }
   return body;
+}
+
+function stripMarkdownFence(text) {
+  return String(text || '')
+    .trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+}
+
+function parseMaybeJson(text) {
+  const cleaned = stripMarkdownFence(text);
+  try { return { parsed: JSON.parse(cleaned), cleaned }; } catch (_) { return { parsed: null, cleaned }; }
+}
+
+function compact(value, max = 18000) {
+  const text = JSON.stringify(value, null, 2);
+  return text.length > max ? `${text.slice(0, max)}\n...TRUNCATED_FOR_CONTEXT...` : text;
 }
 
 function firstScript(job) {
@@ -188,6 +209,38 @@ function aiPlatformChatPayload(job, plan) {
   };
 }
 
+function aiPlatformNodeChatPayload(node, job, plan, context) {
+  return {
+    model: AI_PLATFORM_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You are BookReel AI Platform node runner.',
+          'AI Platform has internal image, avatar, deep-video, voice, caption, and assembly capabilities.',
+          'Do not require external generation provider names.',
+          'Return strict JSON only. No markdown fences.',
+          'If media is planned but no URL is actually returned, put it under planned_assets. Only put real URLs under completed_assets.'
+        ].join(' ')
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          route: AI_PLATFORM_ROUTE,
+          node: node.id,
+          nodeName: node.name,
+          expectedJsonShape: node.shape,
+          instruction: node.prompt,
+          job,
+          routerPlan: plan,
+          previousNodeOutputs: context
+        })
+      }
+    ],
+    temperature: node.temperature ?? 0.35
+  };
+}
+
 function extractChatContent(response) {
   return response.choices?.[0]?.message?.content || response.output_text || response.content || null;
 }
@@ -259,6 +312,233 @@ async function executeAiPlatform(job, plan) {
 
   await fs.writeFile(path.join(OUT_DIR, 'ai-platform-final-response.json'), JSON.stringify(final, null, 2));
   return { created, final, statusUrl };
+}
+
+function buildNodePipeline(job, plan) {
+  return [
+    {
+      id: '01_book_intake',
+      name: '書籍理解',
+      shape: {
+        book_core: { audience: [], promise: '', themes: [], conflict: '', transformation: '' },
+        content_angles: []
+      },
+      prompt: '分析書籍定位、目標讀者、核心承諾、主題、讀者痛點與短視頻可講的內容角度。'
+    },
+    {
+      id: '02_avatar_cast',
+      name: '數字人與角色設計',
+      shape: {
+        avatars: [{ id: '', role: '', visualStyle: '', voice: '', personality: '', speakingRules: [] }],
+        bookCharacters: []
+      },
+      prompt: '設計主持人、作者/主角、可選 Q 版或動物角色。每個角色要有聲線、語速、插話規則、表情與出鏡比例。'
+    },
+    {
+      id: '03_scene_worlds',
+      name: '30 種場景與環境',
+      batches: [
+        { id: '03a_scene_worlds_real', range: '1-10', focus: '真實場景、訪談室、車內、街頭、海灘、咖啡廳、圖書館、辦公室、運動、旅途' },
+        { id: '03b_scene_worlds_wonder', range: '11-20', focus: '奇觀場景、火星、太空、水下、沙漠、未來城市、數據空間、魔法書屋、過山車、海上' },
+        { id: '03c_scene_worlds_character', range: '21-30', focus: 'Q 版、動物、書中男主角/女主角、未來的我、戰地新聞合規、醫院合規、泳池合規、舞台、古代、遊戲世界' }
+      ],
+      shape: {
+        scenes: [{ id: '', name: '', category: '', risk: '', environment: '', avatarStyle: '', camera: '', whyItWorks: '', safeNotes: '' }]
+      },
+      prompt: '生成可供客戶選擇的數字人短視頻場景。每個場景欄位要短，整體必須是可解析 JSON。'
+    },
+    {
+      id: '04_dialogue_script',
+      name: '60 秒雙人對談',
+      shape: {
+        dialogue: [{ start: 0, end: 0, speaker: '', voice: '', cue: '', text: '', overlap: false }],
+        rhythmNotes: []
+      },
+      prompt: '寫 60 秒雙人數字人對談。必須有插嘴、接話、停頓、反問、語速差和情緒變化，不要變成旁白。'
+    },
+    {
+      id: '05_shot_timeline',
+      name: '鏡頭表與剪輯節奏',
+      shape: {
+        timeline: [{ start: 0, end: 0, shotType: '', scene: '', camera: '', visual: '', audio: '', caption: '' }]
+      },
+      prompt: '把對談和場景拆成 9:16 的 60 秒鏡頭表，每 3-6 秒有畫面變化，包含場地大景、雙人中景、書封、金句、圖卡和 CTA。'
+    },
+    {
+      id: '06_image_assets',
+      name: '圖像生成需求',
+      shape: {
+        image_assets: [{ id: '', type: '', prompt: '', negativePrompt: '', size: '9:16', usage: '' }],
+        planned_assets: []
+      },
+      prompt: '產生平台內部 image node 所需的圖像生成需求：書封視覺、角色設定圖、場景首幀、Q 版角色、金句圖卡。'
+    },
+    {
+      id: '07_deep_video_assets',
+      name: '深層視頻與數字人生成需求',
+      shape: {
+        avatar_video_assets: [{ id: '', avatarId: '', dialogueRange: '', voiceDirection: '', background: '', expectedUrlField: 'avatar_video_url' }],
+        deep_video_assets: [{ id: '', scene: '', prompt: '', motion: '', duration: 0, expectedUrlField: 'deep_video_url' }],
+        planned_assets: []
+      },
+      prompt: '產生平台內部 avatar node 與 deep-video node 的生成需求。要描述數字人口型/聲線/背景，以及深層場景視頻運鏡。'
+    },
+    {
+      id: '08_compliance_and_assembly',
+      name: '合規檢查與最終合併',
+      shape: {
+        compliance: { aiDisclosure: true, likenessAuthorization: '', sensitiveSceneRules: [], publishWarnings: [] },
+        finalPackage: { title: '', description: '', hashtags: [], editChecklist: [], completed_assets: [], planned_assets: [] }
+      },
+      prompt: '合併前面所有節點，做合規檢查，輸出最終抖音上架包。若沒有真實媒體 URL，只能放 planned_assets，不能放 completed_assets。'
+    }
+  ];
+}
+
+async function executeNodePipeline(job, plan) {
+  const baseUrl = process.env.AI_PLATFORM_BASE_URL;
+  const apiKey = process.env.AI_PLATFORM_API_KEY;
+  if (!baseUrl) throw new Error('Missing AI_PLATFORM_BASE_URL');
+  if (!apiKey) throw new Error('Missing AI_PLATFORM_API_KEY');
+  if (AI_PLATFORM_API_STYLE !== 'openai-chat') {
+    throw new Error('--nodes currently requires AI_PLATFORM_API_STYLE=openai-chat');
+  }
+
+  const nodesDir = path.join(OUT_DIR, 'nodes');
+  await fs.mkdir(nodesDir, { recursive: true });
+
+  const nodeResults = {};
+  const nodeSummaries = [];
+  for (const node of buildNodePipeline(job, plan)) {
+    if (node.batches) {
+      const batchResults = [];
+      for (const batch of node.batches) {
+        const batchNode = {
+          ...node,
+          id: batch.id,
+          name: `${node.name} ${batch.range}`,
+          prompt: `${node.prompt} 這次只生成第 ${batch.range} 種，共 10 種；聚焦：${batch.focus}。id 必須連續使用 s${batch.range.split('-')[0].padStart(2, '0')} 到 s${batch.range.split('-')[1].padStart(2, '0')}。只輸出 {"scenes":[...]}。`,
+          batches: null
+        };
+        batchResults.push(await runPipelineNode(batchNode, job, plan, nodeResults, nodesDir));
+      }
+
+      const scenes = batchResults.flatMap(item => {
+        const parsed = item.parsed;
+        return Array.isArray(parsed?.scenes) ? parsed.scenes : [];
+      });
+      const result = {
+        node: node.id,
+        name: node.name,
+        model: batchResults.map(item => item.model).filter(Boolean).join(', '),
+        finishReason: batchResults.map(item => item.finishReason).filter(Boolean).join(', '),
+        usage: {
+          total_tokens: batchResults.reduce((sum, item) => sum + Number(item.usage?.total_tokens || 0), 0)
+        },
+        jsonParsed: scenes.length >= 30,
+        parsed: { scenes },
+        cleaned: JSON.stringify({ scenes }, null, 2),
+        batches: batchResults.map(item => ({
+          node: item.node,
+          jsonParsed: item.jsonParsed,
+          sceneCount: Array.isArray(item.parsed?.scenes) ? item.parsed.scenes.length : 0
+        }))
+      };
+      nodeResults[node.id] = result;
+      nodeSummaries.push({
+        node: node.id,
+        name: node.name,
+        model: result.model,
+        finishReason: result.finishReason,
+        usage: result.usage,
+        jsonParsed: result.jsonParsed,
+        sceneCount: scenes.length
+      });
+      await fs.writeFile(path.join(nodesDir, `${node.id}-output.json`), JSON.stringify(result, null, 2));
+      continue;
+    }
+
+    const result = await runPipelineNode(node, job, plan, nodeResults, nodesDir);
+    nodeResults[node.id] = result;
+    nodeSummaries.push({
+      node: node.id,
+      name: node.name,
+      model: result.model,
+      finishReason: result.finishReason,
+      usage: result.usage,
+      jsonParsed: result.jsonParsed
+    });
+  }
+
+  const finalPackage = {
+    version: 'bookreel.ai_platform_node_pipeline.v1',
+    createdAt: new Date().toISOString(),
+    route: AI_PLATFORM_ROUTE,
+    project: job.project,
+    target: job.target,
+    nodes: nodeSummaries,
+    outputs: Object.fromEntries(Object.entries(nodeResults).map(([key, value]) => [key, value.parsed || value.cleaned]))
+  };
+
+  await fs.writeFile(path.join(OUT_DIR, 'node-pipeline-summary.json'), JSON.stringify(nodeSummaries, null, 2));
+  await fs.writeFile(path.join(OUT_DIR, 'node-production-package.json'), JSON.stringify(finalPackage, null, 2));
+  await fs.writeFile(path.join(OUT_DIR, 'node-production-package.md'), nodePackageMarkdown(finalPackage));
+
+  return { nodesDir, nodeSummaries };
+}
+
+async function runPipelineNode(node, job, plan, nodeResults, nodesDir) {
+    const baseUrl = process.env.AI_PLATFORM_BASE_URL;
+    const apiKey = process.env.AI_PLATFORM_API_KEY;
+    const context = Object.fromEntries(Object.entries(nodeResults).map(([key, value]) => [key, value.parsed || value.cleaned]));
+    const payload = aiPlatformNodeChatPayload(node, job, plan, context);
+    await fs.writeFile(path.join(nodesDir, `${node.id}-request.json`), JSON.stringify({
+      ...payload,
+      note: 'API key is sent only in the Authorization header and is never written to this file.'
+    }, null, 2));
+
+    const response = await requestJson(joinUrl(baseUrl, AI_PLATFORM_CREATE_PATH), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-BookReel-Route': AI_PLATFORM_ROUTE,
+        'X-BookReel-Node': node.id
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const content = extractChatContent(response) || JSON.stringify(response);
+    const { parsed, cleaned } = parseMaybeJson(content);
+    const result = {
+      node: node.id,
+      name: node.name,
+      model: response.model,
+      finishReason: response.choices?.[0]?.finish_reason,
+      usage: response.usage,
+      jsonParsed: !!parsed,
+      parsed,
+      cleaned
+    };
+    nodeResults[node.id] = result;
+    await fs.writeFile(path.join(nodesDir, `${node.id}-response.json`), JSON.stringify(response, null, 2));
+    await fs.writeFile(path.join(nodesDir, `${node.id}-output.json`), JSON.stringify(result, null, 2));
+    return result;
+}
+
+function nodePackageMarkdown(pkg) {
+  return [
+    `# ${pkg.project?.title || 'BookReel'} AI Platform 8 節點製作包`,
+    '',
+    `Route: ${pkg.route}`,
+    `Created: ${pkg.createdAt}`,
+    '',
+    '## Nodes',
+    ...pkg.nodes.map(node => `- ${node.node} ${node.name}: ${node.jsonParsed ? 'JSON OK' : 'JSON NEEDS REVIEW'}${node.model ? ` (${node.model})` : ''}`),
+    '',
+    '## Final Output',
+    '完整 JSON 請看 ai-platform-output/node-production-package.json。'
+  ].join('\n');
 }
 
 function buildProductionPackage(job, script) {
@@ -361,6 +641,18 @@ async function main() {
   await fs.writeFile(path.join(OUT_DIR, 'production-package.md'), toMarkdown(plan));
 
   if (execute) {
+    if (nodeMode) {
+      const result = await executeNodePipeline(job, plan);
+      console.log(JSON.stringify({
+        mode: 'ai-platform-node-pipeline',
+        output: OUT_DIR,
+        nodesDir: result.nodesDir,
+        nodes: result.nodeSummaries,
+        requiredEnv: ['AI_PLATFORM_API_KEY', 'AI_PLATFORM_BASE_URL']
+      }, null, 2));
+      return;
+    }
+
     const result = await executeAiPlatform(job, plan);
     console.log(JSON.stringify({
       mode: 'ai-platform-live',

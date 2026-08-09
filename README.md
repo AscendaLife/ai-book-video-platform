@@ -52,6 +52,26 @@ AI_PLATFORM_ROUTE=bookreel-short-video \
 node tools/ai-platform-router.js tools/sample-render-job.json --execute
 ```
 
+推荐的 8 节点稳定生成模式：
+
+```bash
+set -a
+source .env.local
+set +a
+node tools/ai-platform-router.js tools/sample-render-job.json --execute --nodes
+```
+
+8 个节点：
+
+1. 书籍理解
+2. 数字人与角色设计
+3. 30 种场景与环境
+4. 60 秒双人对谈
+5. 镜头表与剪辑节奏
+6. 图像生成需求
+7. 深层视频与数字人生成需求
+8. 合规检查与最终合并
+
 如果你的 AI Platform 是任务型 API，才需要任务轮询：
 
 ```bash
@@ -65,5 +85,9 @@ AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
 - `ai-platform-output/ai-platform-request.json`
 - `ai-platform-output/ai-platform-create-response.json`
 - `ai-platform-output/ai-platform-live-package.md`
+- `ai-platform-output/nodes/*-output.json`
+- `ai-platform-output/node-pipeline-summary.json`
+- `ai-platform-output/node-production-package.json`
+- `ai-platform-output/node-production-package.md`
 
 注意：AI Platform Key 不能放在浏览器前端，必须放在服务端环境变量。若 AI Platform 没有回传实际媒体 URL，系统应标示为 planned_assets，而不是宣称已经产出真实影片。

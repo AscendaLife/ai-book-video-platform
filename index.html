@@ -2927,7 +2927,7 @@ window.VIEWS = window.VIEWS || {};
         ].map(x => `<div class="visual-card"><b>${x[0]}</b><span>${x[1]}</span><div style="margin-top:10px"><span class="tag">${x[2]}</span></div></div>`).join('')}
       </div>
       <div class="explain" style="margin-top:14px;border-left-color:var(--green)">
-        <div class="ex-r"><span class="ex-k">現在怎麼用</span><span>前端產生 AI 路由任務，後台用 AI_PLATFORM_API_KEY 送進 AI Platform，由平台內部模型決定圖像、數字人、深層視頻與合成流程。</span></div>
+        <div class="ex-r"><span class="ex-k">現在怎麼用</span><span>前端產生 AI 路由任務，後台用 8 個節點逐步送進 AI Platform：書籍理解、角色、場景、對談、鏡頭、圖像、深層視頻、合規合併。</span></div>
         <div class="ex-r"><span class="ex-k">安全邊界</span><span>Key 不進前端、不進 Git；若平台沒有回傳實際媒體 URL，系統會標示為 planned_assets，而不是宣稱已產出真影片。</span></div>
       </div>
     </div>
@@ -3109,7 +3109,7 @@ window.VIEWS = window.VIEWS || {};
       routerPolicy: {
         requiresApiKeysNow: false,
         browserSecretsAllowed: false,
-        liveMode: 'Set AI_PLATFORM_API_KEY and AI_PLATFORM_BASE_URL on the backend, then run tools/ai-platform-router.js --execute.',
+        liveMode: 'Set AI_PLATFORM_API_KEY and AI_PLATFORM_BASE_URL on the backend, then run tools/ai-platform-router.js --execute --nodes.',
         upgradePath: 'Keep this route job format and let AI Platform route internally across image, avatar, deep-video, and assembly nodes.'
       },
       compliance: [
@@ -4342,7 +4342,7 @@ window.TOUR = (function () {
         return download(`${STORE.current.title}_ai_platform_route_job.json`, JSON.stringify(job, null, 2));
       }
       case 'copy-third-party-command': {
-        const cmd = 'node tools/ai-platform-router.js ./render-job.json --demo';
+        const cmd = 'set -a && source .env.local && set +a && node tools/ai-platform-router.js ./render-job.json --execute --nodes';
         return copy(cmd);
       }
       case 'pick-file': return $('#file-input').click();
