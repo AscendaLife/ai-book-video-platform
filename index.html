@@ -2913,22 +2913,22 @@ window.VIEWS = window.VIEWS || {};
 
     <div class="card" style="margin-bottom:18px">
       <div class="card-h"><div><div class="card-t">AI Platform 智能路由</div>
-        <div class="card-s">可先用 Codex Demo Engine 生成製作包；後台配置 AI Platform Key 後可切到真實生成</div></div>
+        <div class="card-s">後台由 AI Platform 統一路由圖像、數字人、深層視頻與合成節點；不需要另接外部生成工具</div></div>
         <div class="right">
           <button class="btn btn-sm" data-act="copy-third-party-command">复制路由命令</button>
           <button class="btn btn-sm btn-primary" data-act="export-third-party-job">下载 AI 路由任务 JSON</button>
         </div></div>
       <div class="grid g4">
         ${[
-          ['Router', '判斷任務走 Codex Demo、圖像、數字人、深層場景或合成節點', '現在可用'],
-          ['Codex Demo Engine', '生成角色設定、雙人對談、鏡頭表、Runway 式提示詞、抖音文案', '不需 API Key'],
-          ['AI Platform Live', '後台用 AI_PLATFORM_API_KEY 跑真實圖像、數字人、深層視頻或合成路由', '後台 Key'],
-          ['Assembly Layer', '字幕、書封、金句、CTA、9:16 直式成片的合成規格', 'Remotion/FFmpeg']
+          ['Intelligent Router', '判斷任務進入書籍理解、角色、圖像、數字人、深層視頻或合成節點', 'AI Platform'],
+          ['Image Node', '生成書封視覺、場景首幀、Q 版/動物/書中主角概念圖', '平台內部'],
+          ['Avatar Node', '生成主持人、作者、主角等數字人設定、聲線與對談節奏', '平台內部'],
+          ['Video Assembly', '深層場景、字幕、金句、CTA、9:16 直式成片合成規格', '平台內部']
         ].map(x => `<div class="visual-card"><b>${x[0]}</b><span>${x[1]}</span><div style="margin-top:10px"><span class="tag">${x[2]}</span></div></div>`).join('')}
       </div>
       <div class="explain" style="margin-top:14px;border-left-color:var(--green)">
-        <div class="ex-r"><span class="ex-k">現在怎麼用</span><span>前端產生 AI 路由任務，後台路由先用 Codex Demo Engine 產出完整製作包：角色、場景、對談、鏡頭、提示詞、抖音上架文案。</span></div>
-        <div class="ex-r"><span class="ex-k">真實生成</span><span>後台設定 AI_PLATFORM_API_KEY、AI_PLATFORM_BASE_URL 後，同一份任務可用 router 的 --execute 模式送到 AI Platform；Key 不進前端、不進 Git。</span></div>
+        <div class="ex-r"><span class="ex-k">現在怎麼用</span><span>前端產生 AI 路由任務，後台用 AI_PLATFORM_API_KEY 送進 AI Platform，由平台內部模型決定圖像、數字人、深層視頻與合成流程。</span></div>
+        <div class="ex-r"><span class="ex-k">安全邊界</span><span>Key 不進前端、不進 Git；若平台沒有回傳實際媒體 URL，系統會標示為 planned_assets，而不是宣稱已產出真影片。</span></div>
       </div>
     </div>
 
@@ -3100,17 +3100,17 @@ window.VIEWS = window.VIEWS || {};
       },
       providers: {
         router: 'ai-platform-router',
-        currentEngine: 'codex-demo-engine',
-        image: 'codex-prompt-pack-now / openai-images-future',
-        avatar: 'codex-avatar-plan-now / heygen-avatar-v-future',
-        sceneVideo: 'codex-scene-prompt-now / runway-gen-4.5-future',
-        assembly: 'codex-edit-plan-now / remotion-or-ffmpeg-future'
+        currentEngine: 'ai-platform-live-or-codex-demo',
+        image: 'ai-platform-image-node',
+        avatar: 'ai-platform-avatar-node',
+        sceneVideo: 'ai-platform-deep-video-node',
+        assembly: 'ai-platform-assembly-node'
       },
       routerPolicy: {
         requiresApiKeysNow: false,
         browserSecretsAllowed: false,
         liveMode: 'Set AI_PLATFORM_API_KEY and AI_PLATFORM_BASE_URL on the backend, then run tools/ai-platform-router.js --execute.',
-        upgradePath: 'Keep this route job format and switch individual router nodes to AI Platform or provider adapters.'
+        upgradePath: 'Keep this route job format and let AI Platform route internally across image, avatar, deep-video, and assembly nodes.'
       },
       compliance: [
         '标注 AI 生成',

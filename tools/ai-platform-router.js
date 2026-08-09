@@ -4,9 +4,10 @@
  * Current stage:
  *   Codex Demo Engine generates the production package locally.
  *
- * Future stage:
- *   Keep this router contract, then replace selected nodes with OpenAI,
- *   HeyGen, Runway, Remotion, storage, or queue workers.
+ * Live stage:
+ *   AI Platform owns the model routing for image, digital-human,
+ *   deep scene video, and assembly nodes. No external provider key is
+ *   required by this app when AI_PLATFORM_API_KEY is configured.
  *
  * Usage:
  *   node tools/ai-platform-router.js tools/sample-render-job.json --demo
@@ -82,8 +83,8 @@ function routeJob(job) {
     decision: {
       currentEngine: execute ? 'ai-platform-live' : 'codex-demo-engine',
       reason: execute
-        ? 'Live mode sends the route job to the configured AI Platform backend.'
-        : 'Customer-facing MVP should produce a complete production package without spending third-party API cost.',
+        ? 'Live mode sends the route job to AI Platform, which routes internally to image, avatar, deep-video, and assembly capabilities.'
+        : 'Customer-facing MVP can produce a complete production package locally before using live platform capacity.',
       readyForCustomers: true,
       requiresApiKeys: execute,
       canUpgradeToRealGeneration: true
@@ -102,32 +103,28 @@ function routeJob(job) {
       },
       {
         node: 'director.script',
-        engine: 'codex-demo-engine',
+        engine: execute ? 'ai-platform-director' : 'codex-demo-engine',
         output: 'Generate 60-second dialogue script with interruption rhythm and scene beats.'
       },
       {
         node: 'avatar.design',
-        engine: 'codex-demo-engine',
-        futureProvider: 'heygen-avatar-v',
-        output: hasDialogue ? 'Two-avatar speaking plan with different voices.' : 'Single-avatar host plan.'
+        engine: execute ? 'ai-platform-avatar' : 'codex-demo-engine',
+        output: hasDialogue ? 'Route to AI Platform digital-human/avatar capability for two speakers and voice plan.' : 'Route to AI Platform digital-human/avatar capability for host avatar.'
       },
       {
         node: 'image.keyframes',
-        engine: 'codex-demo-engine',
-        futureProvider: 'openai-images',
-        output: 'Prompt pack for character, book cover, scene keyframes, Q-style variants.'
+        engine: execute ? 'ai-platform-image' : 'codex-demo-engine',
+        output: 'Route to AI Platform image capability for character, book cover, scene keyframes, and Q-style variants.'
       },
       {
         node: 'video.scene_broll',
-        engine: 'codex-demo-engine',
-        futureProvider: 'runway-gen-4.5',
-        output: `${sceneCount} vertical scene-video prompts for cinematic B-roll.`
+        engine: execute ? 'ai-platform-deep-video' : 'codex-demo-engine',
+        output: `Route to AI Platform deep-video capability for ${sceneCount} vertical cinematic scene clips.`
       },
       {
         node: 'assembly.short_video',
-        engine: 'codex-demo-engine',
-        futureProvider: 'remotion-or-ffmpeg',
-        output: '9:16 edit decision list with subtitles, CTA, AI label, scene timing.'
+        engine: execute ? 'ai-platform-assembly' : 'codex-demo-engine',
+        output: 'Route to AI Platform assembly capability for 9:16 subtitles, CTA, AI label, and final edit plan.'
       }
     ],
     package: buildProductionPackage(job, script)
@@ -168,10 +165,12 @@ function aiPlatformChatPayload(job, plan) {
       {
         role: 'system',
         content: [
-          'You are BookReel AI Platform, an expert short-video director for book marketing.',
+          'You are BookReel AI Platform, an intelligent multimodal router for book marketing short videos.',
+          'Assume AI Platform has internal capabilities for image generation, digital-human/avatar generation, deep scene video, voice, captions, and final assembly.',
+          'Do not route to or require Runway, HeyGen, OpenAI Images, GPT image, or other external provider names.',
           'Return a detailed Traditional Chinese production package for a real customer-facing 9:16 short video.',
-          'The output must include avatar design, two-person dialogue, scene plan, cinematic visual prompts, image prompts, captions, edit timeline, Douyin title, hashtags, and compliance notes.',
-          'Do not claim that a real video file has been generated unless the platform actually returns a video URL.',
+          'The output must include internal route decisions, avatar design, two-person dialogue, scene plan, image generation requirements, deep-video generation requirements, captions, edit timeline, Douyin title, hashtags, and compliance notes.',
+          'If no actual media URL is returned by AI Platform, mark media outputs as planned_assets rather than completed_assets.',
           'Use JSON format only.'
         ].join(' ')
       },
@@ -179,7 +178,7 @@ function aiPlatformChatPayload(job, plan) {
         role: 'user',
         content: JSON.stringify({
           route: AI_PLATFORM_ROUTE,
-          request: 'Generate a real production package for this AI digital-human book short video.',
+          request: 'Use AI Platform internal capabilities to generate a routed production package for this AI digital-human book short video. Do not depend on external Runway, HeyGen, or GPT image APIs.',
           job,
           routerPlan: plan
         })
@@ -293,7 +292,7 @@ function buildProductionPackage(job, script) {
     scenePrompts: scenes.map((scene, index) => ({
       id: `scene-${index + 1}`,
       name: scene.name,
-      runwayStylePrompt: [
+      deepVideoPrompt: [
         'Vertical 9:16 cinematic short-video scene.',
         `Book: ${project.title || 'new book'}.`,
         `Scene: ${scene.name}.`,
@@ -336,13 +335,13 @@ function toMarkdown(plan) {
     `API keys required now: ${plan.decision.requiresApiKeys ? 'yes' : 'no'}`,
     '',
     '## Route',
-    ...plan.route.map(step => `- ${step.node}: ${step.engine}${step.futureProvider ? ` -> future ${step.futureProvider}` : ''}`),
+    ...plan.route.map(step => `- ${step.node}: ${step.engine}`),
     '',
     '## Avatar Plan',
     ...pkg.avatarPlan.map(role => `- ${role.role}: ${role.voice}`),
     '',
     '## Scene Prompts',
-    ...pkg.scenePrompts.map(scene => `- ${scene.name}: ${scene.runwayStylePrompt}`),
+    ...pkg.scenePrompts.map(scene => `- ${scene.name}: ${scene.deepVideoPrompt}`),
     '',
     '## Dialogue',
     ...pkg.dialogue.map(line => `- ${line.speaker}: ${line.text}`),
@@ -389,13 +388,7 @@ async function main() {
       'AI_PLATFORM_ROUTE',
       'AI_PLATFORM_STATUS_PATH_TEMPLATE'
     ],
-    futureEnv: [
-      'OPENAI_API_KEY',
-      'HEYGEN_API_KEY',
-      'HEYGEN_AVATAR_ID',
-      'HEYGEN_VOICE_ID',
-      'RUNWAYML_API_SECRET'
-    ]
+    futureEnv: []
   }, null, 2));
 }
 

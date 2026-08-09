@@ -19,13 +19,13 @@
 
 ## AI Platform 智能路由
 
-当前版本加入后台智能路由，可先跑 Codex Demo，也可接 AI Platform Key 跑真实生成：
+当前版本加入后台智能路由，可先跑 Codex Demo，也可接 AI Platform Key 跑真实生成。正式路线是由 AI Platform 内部模型统一路由，不需要本应用再接 Runway、HeyGen 或 GPT 图像 API：
 
-- Router：判断任务走 Codex Demo、图像、数字人、深层场景或合成节点
-- Codex Demo Engine：现在生成角色设定、双人对谈、镜头表、Runway 式提示词、抖音文案
-- AI Platform Live：用一个后台 Key 跑真实图像、数字人、深层视频或合成路由
-- Future Adapters：也可再接 OpenAI Images、HeyGen Avatar V、Runway Gen-4.5
-- Assembly Layer：后续用于字幕、书封、金句、CTA 与抖音 9:16 成片合成
+- Intelligent Router：判断任务进入书籍理解、角色、图像、数字人、深层视频或合成节点
+- Image Node：生成书封视觉、场景首帧、Q 版/动物/书中主角概念图
+- Avatar Node：生成主持人、作者、主角等数字人设定、声线与对谈节奏
+- Deep Video Node：生成火星、海上、车内、街头等深层场景视频需求
+- Assembly Node：字幕、书封、金句、CTA 与抖音 9:16 成片合成规格
 
 前端路径：
 
@@ -66,15 +66,4 @@ AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
 - `ai-platform-output/ai-platform-create-response.json`
 - `ai-platform-output/ai-platform-live-package.md`
 
-如果未来要直接调用第三方 API，也可保留同一份 route job，再切换对应 adapter：
-
-```bash
-OPENAI_API_KEY=... \
-HEYGEN_API_KEY=... \
-HEYGEN_AVATAR_ID=... \
-HEYGEN_VOICE_ID=... \
-RUNWAYML_API_SECRET=... \
-node tools/third-party-render.js ./render-job.json --execute
-```
-
-注意：AI Platform Key 和第三方 API Key 都不能放在浏览器前端，必须放在服务端环境变量。
+注意：AI Platform Key 不能放在浏览器前端，必须放在服务端环境变量。若 AI Platform 没有回传实际媒体 URL，系统应标示为 planned_assets，而不是宣称已经产出真实影片。
