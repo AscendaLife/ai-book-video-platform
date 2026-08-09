@@ -33,9 +33,11 @@ const cases = [
       prompt: '一位專業女主持人用自然語氣說：這本書不是叫你更忙，而是讓你做對更少的事。',
       voice: 'female_young_fast',
       ratio: '9:16',
+      engine: 'avatar_iii',
       avatar: {
         type: 'digital_human',
-        style: 'professional_host'
+        style: 'professional_host',
+        source: 'stock_avatar'
       }
     }
   },
