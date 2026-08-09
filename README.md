@@ -84,6 +84,18 @@ node tools/ai-platform-avatar-test.js
 ```
 
 这个测试会直接提交 `task:"avatar"` 与 `task:"lipsync"`，检查平台是否已经支持数字人对嘴并回传 `avatar_video_url`。
+若 avatar 是异步任务，测试会用 `AI_PLATFORM_AVATAR_STATUS_PATH_TEMPLATE=/v1/tasks/{id}` 轮询，直到拿到 `completed_assets.avatar_video_url` 或进入终态。
+
+AI Platform avatar 目标流程：
+
+```text
+BookReel → POST /v1/tasks task:"avatar"
+AI Platform → HeyGen v3 batch API
+HeyGen webhook → AI Platform 验证 token
+AI Platform 用 callback_id 配对工作、扣款、转存 MP4
+BookReel 轮询 /v1/tasks/{id}
+BookReel 拿 completed_assets.avatar_video_url
+```
 
 8 个节点：
 

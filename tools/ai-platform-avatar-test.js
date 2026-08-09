@@ -12,12 +12,17 @@ const path = require('path');
 const baseUrl = (process.env.AI_PLATFORM_BASE_URL || '').replace(/\/+$/, '');
 const apiKey = process.env.AI_PLATFORM_API_KEY;
 const taskPath = process.env.AI_PLATFORM_TASK_PATH || '/v1/tasks';
+const statusTemplate = process.env.AI_PLATFORM_AVATAR_STATUS_PATH_TEMPLATE || process.env.AI_PLATFORM_STATUS_PATH_TEMPLATE || '/v1/tasks/{id}';
+const pollMs = Number(process.env.AI_PLATFORM_AVATAR_POLL_MS || 5000);
+const maxPolls = Number(process.env.AI_PLATFORM_AVATAR_MAX_POLLS || 24);
 const OUT_DIR = path.resolve(process.cwd(), 'ai-platform-output', 'avatar-tests');
 
 if (!baseUrl) throw new Error('Missing AI_PLATFORM_BASE_URL');
 if (!apiKey) throw new Error('Missing AI_PLATFORM_API_KEY');
 
 const endpoint = `${baseUrl}/${taskPath.replace(/^\/+/, '')}`;
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const cases = [
   {
@@ -72,6 +77,49 @@ function hasAnyKey(value, keys) {
   return found;
 }
 
+function firstTaskId(value) {
+  if (!value || typeof value !== 'object') return '';
+  const direct = value.id || value.taskId || value.task_id || value.jobId || value.job_id || value.callback_id;
+  if (typeof direct === 'string') return direct;
+  if (value.data) return firstTaskId(value.data);
+  if (value.result) return firstTaskId(value.result);
+  return '';
+}
+
+function taskStatus(value) {
+  if (!value || typeof value !== 'object') return '';
+  return value.status || value.state || value.data?.status || value.result?.status || '';
+}
+
+function isTerminalStatus(status) {
+  return ['completed', 'complete', 'succeeded', 'success', 'failed', 'error', 'canceled', 'cancelled']
+    .includes(String(status || '').toLowerCase());
+}
+
+function statusUrl(id) {
+  return `${baseUrl}/${statusTemplate.replace(/^\/+/, '').replace('{id}', encodeURIComponent(id))}`;
+}
+
+async function pollTask(id) {
+  const checks = [];
+  for (let i = 0; i < maxPolls; i++) {
+    const res = await fetch(statusUrl(id), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'X-BookReel-Test': 'avatar_poll'
+      }
+    });
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); } catch (_) { body = { raw: text.slice(0, 1200) }; }
+    const status = taskStatus(body);
+    checks.push({ poll: i + 1, httpStatus: res.status, status, body });
+    if (isTerminalStatus(status)) break;
+    await sleep(pollMs);
+  }
+  return checks;
+}
+
 async function checkUrl(url) {
   try {
     const res = await fetch(url, { method: 'HEAD' });
@@ -101,17 +149,28 @@ async function runCase(test) {
   try { body = JSON.parse(text); } catch (_) { body = { raw: text }; }
   const urls = collectUrls(body);
   const urlChecks = await Promise.all(urls.map(item => checkUrl(item.url)));
+  const id = firstTaskId(body);
+  const pollChecks = id && !hasAnyKey(body, ['avatar_video_url']) ? await pollTask(id) : [];
+  const finalBody = pollChecks.length ? pollChecks[pollChecks.length - 1].body : body;
+  const finalUrls = collectUrls(finalBody);
+  const finalUrlChecks = await Promise.all(finalUrls.map(item => checkUrl(item.url)));
 
   return {
     id: test.id,
     httpStatus: res.status,
-    hasTaskId: hasAnyKey(body, ['id', 'taskId', 'task_id', 'jobId', 'job_id']),
-    hasAvatarVideoUrl: hasAnyKey(body, ['avatar_video_url']),
-    hasCompletedAssets: hasAnyKey(body, ['completed_assets']),
-    hasStatus: hasAnyKey(body, ['status']),
-    reachableUrlCount: urlChecks.filter(item => item.ok).length,
+    taskId: id,
+    hasTaskId: !!id || hasAnyKey(body, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id']),
+    hasAvatarVideoUrl: hasAnyKey(finalBody, ['avatar_video_url']),
+    hasCompletedAssets: hasAnyKey(finalBody, ['completed_assets']),
+    hasStatus: hasAnyKey(finalBody, ['status']),
+    finalStatus: taskStatus(finalBody),
+    pollCount: pollChecks.length,
+    reachableUrlCount: finalUrlChecks.filter(item => item.ok).length || urlChecks.filter(item => item.ok).length,
     urls,
     urlChecks,
+    finalUrls,
+    finalUrlChecks,
+    pollChecks,
     body
   };
 }
@@ -131,10 +190,13 @@ async function main() {
     results: results.map(item => ({
       id: item.id,
       httpStatus: item.httpStatus,
+      taskId: item.taskId,
       hasTaskId: item.hasTaskId,
       hasAvatarVideoUrl: item.hasAvatarVideoUrl,
       hasCompletedAssets: item.hasCompletedAssets,
       hasStatus: item.hasStatus,
+      finalStatus: item.finalStatus,
+      pollCount: item.pollCount,
       reachableUrlCount: item.reachableUrlCount
     }))
   };
