@@ -61,6 +61,17 @@ set +a
 node tools/ai-platform-router.js tools/sample-render-job.json --execute --nodes
 ```
 
+媒体能力测试：
+
+```bash
+set -a
+source .env.local
+set +a
+node tools/ai-platform-capability-test.js
+```
+
+这个测试会检查图像、深层视频、avatar/lipsync 是否真的回传可访问的 `image_url`、`deep_video_url`、`avatar_video_url` 或 `final_video_url`。
+
 8 个节点：
 
 1. 书籍理解
