@@ -111,6 +111,32 @@ AI_PLATFORM_LIPSYNC_AUDIO_URL=https://.../new-voice.mp3
 }
 ```
 
+完整链路测试：
+
+```bash
+set -a
+source .env.local
+set +a
+node tools/ai-platform-lipsync-chain-test.js
+```
+
+这个测试会自动跑：
+
+1. `task:"avatar"` 生成一支数字人原始影片
+2. `task:"tts"` 生成一段新配音
+3. `task:"lipsync"` 用前两步的 URL 合成最终对嘴影片
+
+输出目录：
+
+- `ai-platform-output/lipsync-chain/01-avatar.json`
+- `ai-platform-output/lipsync-chain/02-tts.json`
+- `ai-platform-output/lipsync-chain/03-lipsync.json`
+- `ai-platform-output/lipsync-chain/summary.json`
+
+如果 TTS 只回 `data:` 音讯而没有公开 `audio_url`，测试会停止并明确报错，因为 lipsync 需要可公开下载的音讯 URL。
+链路测试默认 `AI_PLATFORM_CHAIN_TTS_QUALITY=premium`，避免 `fast` 模式走到没有额度的 OpenAI TTS。若平台已给 OpenAI TTS 充值，可改回 `fast`。
+如果已经有可公开访问的素材，可用 `AI_PLATFORM_CHAIN_AVATAR_VIDEO_URL` 与 `AI_PLATFORM_CHAIN_TTS_AUDIO_URL` 跳过前两步，直接测 lipsync。
+
 测试脚本会把三个未确认点写进 `ai-platform-output/avatar-tests/summary.json`：
 
 - `taskIdField`：送出后实际命中的任务 ID 栏位，例如 `id`、`taskId`、`job_id`
