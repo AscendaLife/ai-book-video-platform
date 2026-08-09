@@ -83,8 +83,33 @@ set +a
 node tools/ai-platform-avatar-test.js
 ```
 
-这个测试会直接提交 `task:"avatar"` 与 `task:"lipsync"`，检查平台是否已经支持数字人对嘴并回传 `avatar_video_url`。
+这个测试会直接提交 `task:"avatar"` 与 `task:"lipsync"`，检查平台是否已经支持数字人对嘴并回传 `avatar_video_url` 或 `lipsync_video_url`。
 若 avatar 是异步任务，测试会用 `AI_PLATFORM_AVATAR_STATUS_PATH_TEMPLATE=/api/playground/avatar/{id}` 轮询，直到拿到 `completed_assets.avatar_video_url` 或进入终态。
+若 lipsync 需要独立轮询路径，可设置 `AI_PLATFORM_LIPSYNC_STATUS_PATH_TEMPLATE=/api/playground/lipsync/{id}`。
+为了避免误烧真实额度，lipsync 测试必须先填可公开访问的素材 URL：
+
+```bash
+AI_PLATFORM_LIPSYNC_VIDEO_URL=https://.../source-video.mp4
+AI_PLATFORM_LIPSYNC_AUDIO_URL=https://.../new-voice.mp3
+```
+
+目标 lipsync 回传格式：
+
+```json
+{
+  "id": "task_xxx",
+  "task": "lipsync",
+  "status": "completed",
+  "completed_assets": {
+    "lipsync_video_url": "https://media.example.com/lipsync/task_xxx.mp4"
+  },
+  "source_assets": {
+    "provider": "heygen",
+    "stored": true,
+    "provider_video_url_expires": false
+  }
+}
+```
 
 AI Platform avatar 目标流程：
 
@@ -96,6 +121,48 @@ AI Platform 用 callback_id 配对工作、扣款、转存 MP4
 BookReel 轮询 /v1/tasks/{id}
 BookReel 拿 completed_assets.avatar_video_url
 ```
+
+### R2 永久影片储存
+
+HeyGen 的原始影片 URL 会过期。正式上线时，AI Platform 后台应在 webhook 完成后立刻下载 HeyGen MP4，上传到 Cloudflare R2，再把永久 URL 写回任务结果。
+
+需要放在 AI Platform 后台的 5 个 R2 环境变量：
+
+```bash
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=bookreel-media
+R2_PUBLIC_BASE_URL=https://media.example.com
+```
+
+R2 目标回传格式：
+
+```json
+{
+  "status": "completed",
+  "stored": true,
+  "provider_video_url_expires": true,
+  "completed_assets": {
+    "avatar_video_url": "https://media.example.com/avatar/task_xxx.mp4"
+  },
+  "source_assets": {
+    "provider": "heygen",
+    "provider_video_url": "https://..."
+  }
+}
+```
+
+AI Platform 后台上传逻辑：
+
+1. HeyGen webhook 收到完成事件
+2. 用 `callback_id` 找到 BookReel 任务
+3. 下载 HeyGen MP4 临时 URL
+4. 上传到 R2 object key，例如 `avatar/{taskId}.mp4`
+5. 写入 `completed_assets.avatar_video_url`
+6. 回传 `stored:true`
+
+BookReel 端不用直接接 R2，也不要把 R2 key 放到浏览器前端。
 
 8 个节点：
 
