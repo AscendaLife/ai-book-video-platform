@@ -111,6 +111,25 @@ AI_PLATFORM_LIPSYNC_AUDIO_URL=https://.../new-voice.mp3
 }
 ```
 
+测试脚本会把三个未确认点写进 `ai-platform-output/avatar-tests/summary.json`：
+
+- `taskIdField`：送出后实际命中的任务 ID 栏位，例如 `id`、`taskId`、`job_id`
+- `callbackIdField`：是否在送出回应里看到 `callback_id` 或 `callbackId`
+- `webhookEventField`：是否在客户端可见回应里看到 webhook event 名称
+- `contractWarnings`：如果以上任何一项没确认，或完成后没有 `lipsync_video_url`，会列出明确警告并保留原始回应到对应测试 JSON
+
+注意：webhook event 名称通常只出现在 AI Platform 后台日志或 webhook handler，不一定会出现在 BookReel 客户端回应。若 AI Platform 要让 BookReel 自动验收，建议在测试模式回传诊断栏位，例如：
+
+```json
+{
+  "debug": {
+    "provider": "heygen",
+    "webhook_event": "avatar_video.success",
+    "callback_id": "bookreel_task_xxx"
+  }
+}
+```
+
 AI Platform avatar 目标流程：
 
 ```text
