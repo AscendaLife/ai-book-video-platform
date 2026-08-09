@@ -89,5 +89,6 @@ AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
 - `ai-platform-output/node-pipeline-summary.json`
 - `ai-platform-output/node-production-package.json`
 - `ai-platform-output/node-production-package.md`
+- `ai-platform-output/media-url-check.json`
 
 注意：AI Platform Key 不能放在浏览器前端，必须放在服务端环境变量。若 AI Platform 没有回传实际媒体 URL，系统应标示为 planned_assets，而不是宣称已经产出真实影片。

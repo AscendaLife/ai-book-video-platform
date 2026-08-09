@@ -479,12 +479,61 @@ async function executeNodePipeline(job, plan) {
     nodes: nodeSummaries,
     outputs: Object.fromEntries(Object.entries(nodeResults).map(([key, value]) => [key, value.parsed || value.cleaned]))
   };
+  finalPackage.mediaUrlCheck = inspectMediaUrls(finalPackage);
 
   await fs.writeFile(path.join(OUT_DIR, 'node-pipeline-summary.json'), JSON.stringify(nodeSummaries, null, 2));
   await fs.writeFile(path.join(OUT_DIR, 'node-production-package.json'), JSON.stringify(finalPackage, null, 2));
+  await fs.writeFile(path.join(OUT_DIR, 'media-url-check.json'), JSON.stringify(finalPackage.mediaUrlCheck, null, 2));
   await fs.writeFile(path.join(OUT_DIR, 'node-production-package.md'), nodePackageMarkdown(finalPackage));
 
   return { nodesDir, nodeSummaries };
+}
+
+function inspectMediaUrls(pkg) {
+  const wantedFields = ['avatar_video_url', 'deep_video_url', 'final_video_url', 'asset_urls', 'image_url', 'video_url'];
+  const foundFields = [];
+  const urls = [];
+
+  function walk(value, pathName = '') {
+    if (typeof value === 'string') {
+      const matches = value.match(/https?:\/\/[^\s"'<>]+/g) || [];
+      matches.forEach(url => urls.push({ path: pathName, url, bucket: bucketForPath(pathName) }));
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => walk(item, `${pathName}[${index}]`));
+      return;
+    }
+    if (value && typeof value === 'object') {
+      Object.entries(value).forEach(([key, item]) => {
+        const nextPath = pathName ? `${pathName}.${key}` : key;
+        if (wantedFields.includes(key)) foundFields.push({ path: nextPath, valueType: Array.isArray(item) ? 'array' : typeof item });
+        walk(item, nextPath);
+      });
+    }
+  }
+
+  walk(pkg);
+  const completedUrls = urls.filter(item => item.bucket === 'completed');
+  const plannedUrls = urls.filter(item => item.bucket === 'planned');
+  return {
+    hasAvatarVideoUrl: foundFields.some(item => item.path.endsWith('avatar_video_url')),
+    hasDeepVideoUrl: foundFields.some(item => item.path.endsWith('deep_video_url')),
+    hasFinalVideoUrl: foundFields.some(item => item.path.endsWith('final_video_url')),
+    hasAssetUrls: foundFields.some(item => item.path.endsWith('asset_urls')),
+    completedUrlCount: completedUrls.length,
+    plannedUrlCount: plannedUrls.length,
+    completedUrls,
+    plannedUrls,
+    foundFields,
+    verdict: completedUrls.length ? 'completed_media_urls_present' : 'no_completed_media_urls'
+  };
+}
+
+function bucketForPath(pathName) {
+  if (pathName.includes('completed_assets')) return 'completed';
+  if (pathName.includes('planned_assets')) return 'planned';
+  return 'unknown';
 }
 
 async function runPipelineNode(node, job, plan, nodeResults, nodesDir) {
@@ -537,6 +586,7 @@ function nodePackageMarkdown(pkg) {
     ...pkg.nodes.map(node => `- ${node.node} ${node.name}: ${node.jsonParsed ? 'JSON OK' : 'JSON NEEDS REVIEW'}${node.model ? ` (${node.model})` : ''}`),
     '',
     '## Final Output',
+    `Media URL verdict: ${pkg.mediaUrlCheck?.verdict || 'not_checked'}`,
     '完整 JSON 請看 ai-platform-output/node-production-package.json。'
   ].join('\n');
 }
