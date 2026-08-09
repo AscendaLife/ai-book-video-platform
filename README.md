@@ -46,6 +46,7 @@ node tools/ai-platform-router.js tools/sample-render-job.json --demo
 AI_PLATFORM_API_KEY=... \
 AI_PLATFORM_BASE_URL=https://aiplatform-wine.vercel.app \
 AI_PLATFORM_CREATE_PATH=/v1/chat/completions \
+AI_PLATFORM_TASK_PATH=/v1/tasks \
 AI_PLATFORM_API_STYLE=openai-chat \
 AI_PLATFORM_MODEL=auto \
 AI_PLATFORM_ROUTE=bookreel-short-video \
@@ -71,6 +72,7 @@ node tools/ai-platform-capability-test.js
 ```
 
 这个测试会检查图像、深层视频、avatar/lipsync 是否真的回传可访问的 `image_url`、`deep_video_url`、`avatar_video_url` 或 `final_video_url`。
+媒体测试走正式统一入口 `POST /v1/tasks`，请求格式为 `{ task, prompt, quality }`。
 
 8 个节点：
 
