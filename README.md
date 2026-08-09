@@ -116,3 +116,43 @@ AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
 - `ai-platform-output/media-url-check.json`
 
 注意：AI Platform Key 不能放在浏览器前端，必须放在服务端环境变量。若 AI Platform 没有回传实际媒体 URL，系统应标示为 planned_assets，而不是宣称已经产出真实影片。
+
+## 支付系统
+
+当前版本加入 Stripe Checkout 支付后端范例。GitHub Pages 前端不会保存任何金流 Key；付款必须走后端。
+
+环境变量：
+
+```bash
+PAYMENT_PORT=8788
+PAYMENT_ALLOWED_ORIGIN=http://127.0.0.1:8081
+PUBLIC_APP_URL=http://127.0.0.1:8081
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_STARTER=price_...
+STRIPE_PRICE_PRO=price_...
+STRIPE_PRICE_STUDIO=price_...
+```
+
+启动本机支付后端：
+
+```bash
+set -a
+source .env.local
+set +a
+node tools/payment-server.js
+```
+
+前端路径：
+
+1. 打开「支付与方案」
+2. 支付 API Base URL 填 `http://localhost:8788`
+3. 点方案的「前往付款」
+
+后端接口：
+
+- `GET /health`
+- `POST /api/payments/checkout`
+- `POST /api/payments/webhook`
+
+Webhook 收到 `checkout.session.completed` 后，会把订单与方案写入 `payment-output/payment-events.jsonl`。正式上线时应改为写入数据库，并开通客户的 AI Platform 生成额度。

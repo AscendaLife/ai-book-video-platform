@@ -624,6 +624,7 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
       <a class="nav-item" data-route="pipeline"><span class="ni">▶</span>一键生成短视频</a>
       <a class="nav-item" data-route="creative"><span class="ni">✦</span>创意分镜</a>
       <a class="nav-item" data-route="library"><span class="ni">▩</span>内容资产库</a>
+      <a class="nav-item" data-route="billing"><span class="ni">＄</span>支付与方案</a>
       <a class="nav-item" data-route="publish"><span class="ni">▦</span>发布与数据</a>
 
       <details class="nav-more" open>
@@ -1572,8 +1573,42 @@ window.DATA = (function () {
     return { chars, chapters: heads, quotes: quotes.slice(0, 24) };
   }
 
+  const BILLING_PLANS = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: 'US$49',
+      cadence: '每月',
+      quota: '60 支製作包 / 月',
+      desc: '適合單本書測試市場反應，先跑製作包與少量短視頻。',
+      features: ['AI Platform 8 節點製作包', '30 種場景模板', '雙人對談腳本', '基礎發布文案'],
+      stripePriceEnv: 'STRIPE_PRICE_STARTER'
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: 'US$149',
+      cadence: '每月',
+      quota: '240 支製作包 / 月',
+      desc: '適合出版社、作者顧問與內容團隊，能批量測多本書。',
+      features: ['批量書籍製作包', 'AI Platform 圖像/視頻節點路由', '支付後自動開通額度', '團隊審核流程'],
+      stripePriceEnv: 'STRIPE_PRICE_PRO',
+      recommended: true
+    },
+    {
+      id: 'studio',
+      name: 'Studio',
+      price: 'US$499',
+      cadence: '每月',
+      quota: '1000 支製作包 / 月',
+      desc: '適合代運營與短視頻工作室，含高用量、客戶專案與白標交付。',
+      features: ['多客戶專案', '高用量 AI Platform 生成', 'Webhook 開通與用量紀錄', '可接專屬媒體模型'],
+      stripePriceEnv: 'STRIPE_PRICE_STUDIO'
+    }
+  ];
+
   return {
-    PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE,
+    PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
     applyPersona, genShots, genVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
@@ -3867,6 +3902,58 @@ window.VIEWS = window.VIEWS || {};
     <div class="card"><div class="doc" id="doc-body">${DOCS.render(doc.md)}</div></div>`;
   };
 
+  /* =======================================================
+   * 支付与方案
+   * ===================================================== */
+  VIEWS.billing = function () {
+    const st = STORE.s.settings;
+    const plans = DATA.BILLING_PLANS || [];
+    return `
+    <div class="page-h">
+      <div><div class="page-t">支付与方案</div>
+        <div class="page-d">用 Stripe Checkout 收款；付款成功后由 webhook 开通 AI Platform 生成额度</div></div>
+      <div class="right"><span class="tag g">Key 只在后端</span><span class="tag">Stripe Checkout</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">支付服务</div>
+        <div class="card-s">GitHub Pages 不能安全保存金流 key，所以前端只呼叫你的支付后端</div></div>
+        <div class="right"><button class="btn btn-sm" data-act="copy-payment-env">复制环境变量清单</button></div></div>
+      <div class="row2">
+        <div class="field"><div class="label">支付 API Base URL</div>
+          <input class="input" id="payment-server" value="${esc(st.paymentServer || 'http://localhost:8788')}" placeholder="https://your-api.example.com">
+          <div class="hint" style="margin-top:6px">本机测试可运行 <code>node tools/payment-server.js</code>；正式上线请部署到 Vercel / AI Platform 后台。</div>
+        </div>
+        <div class="field"><div class="label">付款后开通内容</div>
+          <div class="explain" style="margin:0;border-left-color:var(--green)">
+            <div class="ex-r"><span class="ex-k">Webhook</span><span>收到 <code>checkout.session.completed</code> 后记录订单并开通额度。</span></div>
+            <div class="ex-r"><span class="ex-k">安全</span><span>Stripe secret key 与 webhook secret 只放后端环境变量。</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g3">
+      ${plans.map(plan => `
+        <div class="card" style="position:relative;min-height:360px;display:flex;flex-direction:column">
+          ${plan.recommended ? '<div class="tag g" style="position:absolute;right:14px;top:14px">推荐</div>' : ''}
+          <div style="font-size:15px;font-weight:800;margin-bottom:8px">${esc(plan.name)}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+            <span style="font-size:30px;font-weight:850">${esc(plan.price)}</span><span class="hint">${esc(plan.cadence)}</span>
+          </div>
+          <div class="card-s" style="min-height:44px">${esc(plan.desc)}</div>
+          <div style="margin:14px 0"><span class="tag v">${esc(plan.quota)}</span></div>
+          <div class="grid" style="gap:8px;margin-bottom:16px">
+            ${plan.features.map(f => `<div class="visual-card" style="padding:9px 10px"><span>${esc(f)}</span></div>`).join('')}
+          </div>
+          <div style="margin-top:auto">
+            <button class="btn btn-primary" style="width:100%" data-act="checkout-plan" data-plan="${esc(plan.id)}">前往付款</button>
+            <div class="hint" style="margin-top:8px">Price ID：后端读取 <code>${esc(plan.stripePriceEnv)}</code></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  };
+
 })();
 
 
@@ -4194,7 +4281,7 @@ window.TOUR = (function () {
   const { $, $$, esc, nf, toast, modal, closeModal, copy, download } = UI;
 
   const TITLES = {
-    dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库',
+    dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
     engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
@@ -4259,6 +4346,33 @@ window.TOUR = (function () {
       <div class="hint">这只是显示设定。真正的数字人形象与声音在「数字人 · 声音 · 人格」页面训练与切换。</div>`,
       `<button class="btn" onclick="UI.closeModal()">取消</button>
        <button class="btn btn-primary" data-modal-act="save-account">保存</button>`);
+  }
+
+  async function checkoutPlan(planId) {
+    const input = $('#payment-server');
+    const base = (input && input.value.trim()) || STORE.s.settings.paymentServer || 'http://localhost:8788';
+    STORE.s.settings.paymentServer = base.replace(/\/+$/, '');
+    STORE.update();
+    const plan = (DATA.BILLING_PLANS || []).find(p => p.id === planId);
+    if (!plan) return toast('找不到这个方案', 'warn');
+    try {
+      toast('正在建立付款页面...', 'ok');
+      const res = await fetch(`${STORE.s.settings.paymentServer}/api/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          projectId: STORE.current && STORE.current.id,
+          customerEmail: STORE.s.account.email || '',
+          customerName: STORE.s.account.name || ''
+        })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) throw new Error(body.error || `HTTP ${res.status}`);
+      location.href = body.url;
+    } catch (err) {
+      toast(`付款服务未就绪：${err.message}`, 'warn');
+    }
   }
 
   $('#btn-theme').addEventListener('click', () => {
@@ -4344,6 +4458,17 @@ window.TOUR = (function () {
       case 'copy-third-party-command': {
         const cmd = 'set -a && source .env.local && set +a && node tools/ai-platform-router.js ./render-job.json --execute --nodes';
         return copy(cmd);
+      }
+      case 'checkout-plan': return checkoutPlan(el.dataset.plan);
+      case 'copy-payment-env': {
+        return copy([
+          'STRIPE_SECRET_KEY=sk_test_...',
+          'STRIPE_WEBHOOK_SECRET=whsec_...',
+          'STRIPE_PRICE_STARTER=price_...',
+          'STRIPE_PRICE_PRO=price_...',
+          'STRIPE_PRICE_STUDIO=price_...',
+          'PUBLIC_APP_URL=http://127.0.0.1:8081'
+        ].join('\n'));
       }
       case 'pick-file': return $('#file-input').click();
       case 'clear-files': {
