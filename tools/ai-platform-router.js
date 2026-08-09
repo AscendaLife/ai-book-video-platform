@@ -28,6 +28,8 @@ if (!jobPath) {
 const OUT_DIR = path.resolve(process.cwd(), 'ai-platform-output');
 const AI_PLATFORM_CREATE_PATH = process.env.AI_PLATFORM_CREATE_PATH || '/v1/render-jobs';
 const AI_PLATFORM_ROUTE = process.env.AI_PLATFORM_ROUTE || 'bookreel-short-video';
+const AI_PLATFORM_API_STYLE = process.env.AI_PLATFORM_API_STYLE || 'router-job';
+const AI_PLATFORM_MODEL = process.env.AI_PLATFORM_MODEL || 'auto';
 const AI_PLATFORM_POLL_MS = Number(process.env.AI_PLATFORM_POLL_MS || 5000);
 const AI_PLATFORM_MAX_POLLS = Number(process.env.AI_PLATFORM_MAX_POLLS || 60);
 
@@ -133,6 +135,8 @@ function routeJob(job) {
 }
 
 function aiPlatformPayload(job, plan) {
+  if (AI_PLATFORM_API_STYLE === 'openai-chat') return aiPlatformChatPayload(job, plan);
+
   return {
     route: AI_PLATFORM_ROUTE,
     version: 'bookreel.ai_platform_request.v1',
@@ -155,6 +159,38 @@ function aiPlatformPayload(job, plan) {
       browserSecretsAllowed: false
     }
   };
+}
+
+function aiPlatformChatPayload(job, plan) {
+  return {
+    model: AI_PLATFORM_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: [
+          'You are BookReel AI Platform, an expert short-video director for book marketing.',
+          'Return a detailed Traditional Chinese production package for a real customer-facing 9:16 short video.',
+          'The output must include avatar design, two-person dialogue, scene plan, cinematic visual prompts, image prompts, captions, edit timeline, Douyin title, hashtags, and compliance notes.',
+          'Do not claim that a real video file has been generated unless the platform actually returns a video URL.',
+          'Use JSON format only.'
+        ].join(' ')
+      },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          route: AI_PLATFORM_ROUTE,
+          request: 'Generate a real production package for this AI digital-human book short video.',
+          job,
+          routerPlan: plan
+        })
+      }
+    ],
+    temperature: 0.7
+  };
+}
+
+function extractChatContent(response) {
+  return response.choices?.[0]?.message?.content || response.output_text || response.content || null;
 }
 
 function getStatusUrl(baseUrl, createResponse) {
@@ -196,6 +232,14 @@ async function executeAiPlatform(job, plan) {
   });
 
   await fs.writeFile(path.join(OUT_DIR, 'ai-platform-create-response.json'), JSON.stringify(created, null, 2));
+
+  if (AI_PLATFORM_API_STYLE === 'openai-chat') {
+    const content = extractChatContent(created);
+    if (content) {
+      await fs.writeFile(path.join(OUT_DIR, 'ai-platform-live-package.md'), content);
+    }
+    return { created, final: null, statusUrl: null };
+  }
 
   const statusUrl = getStatusUrl(baseUrl, created);
   if (!statusUrl) return { created, final: null, statusUrl: null };
@@ -323,6 +367,8 @@ async function main() {
       mode: 'ai-platform-live',
       output: OUT_DIR,
       createPath: AI_PLATFORM_CREATE_PATH,
+      apiStyle: AI_PLATFORM_API_STYLE,
+      model: AI_PLATFORM_MODEL,
       route: AI_PLATFORM_ROUTE,
       statusUrl: result.statusUrl,
       requiredEnv: ['AI_PLATFORM_API_KEY', 'AI_PLATFORM_BASE_URL']
@@ -338,6 +384,8 @@ async function main() {
       'AI_PLATFORM_API_KEY',
       'AI_PLATFORM_BASE_URL',
       'AI_PLATFORM_CREATE_PATH',
+      'AI_PLATFORM_API_STYLE',
+      'AI_PLATFORM_MODEL',
       'AI_PLATFORM_ROUTE',
       'AI_PLATFORM_STATUS_PATH_TEMPLATE'
     ],

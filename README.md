@@ -44,13 +44,15 @@ node tools/ai-platform-router.js tools/sample-render-job.json --demo
 
 ```bash
 AI_PLATFORM_API_KEY=... \
-AI_PLATFORM_BASE_URL=https://your-ai-platform.example.com \
-AI_PLATFORM_CREATE_PATH=/v1/render-jobs \
+AI_PLATFORM_BASE_URL=https://aiplatform-wine.vercel.app \
+AI_PLATFORM_CREATE_PATH=/v1/chat/completions \
+AI_PLATFORM_API_STYLE=openai-chat \
+AI_PLATFORM_MODEL=auto \
 AI_PLATFORM_ROUTE=bookreel-short-video \
 node tools/ai-platform-router.js tools/sample-render-job.json --execute
 ```
 
-如果你的 AI Platform 支持任务轮询，也可以加：
+如果你的 AI Platform 是任务型 API，才需要任务轮询：
 
 ```bash
 AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
@@ -62,7 +64,7 @@ AI_PLATFORM_STATUS_PATH_TEMPLATE=/v1/render-jobs/{id}
 - `ai-platform-output/production-package.md`
 - `ai-platform-output/ai-platform-request.json`
 - `ai-platform-output/ai-platform-create-response.json`
-- `ai-platform-output/ai-platform-final-response.json`
+- `ai-platform-output/ai-platform-live-package.md`
 
 如果未来要直接调用第三方 API，也可保留同一份 route job，再切换对应 adapter：
 
