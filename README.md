@@ -74,6 +74,17 @@ node tools/ai-platform-capability-test.js
 这个测试会检查图像、深层视频、avatar/lipsync 是否真的回传可访问的 `image_url`、`deep_video_url`、`avatar_video_url` 或 `final_video_url`。
 媒体测试走正式统一入口 `POST /v1/tasks`，请求格式为 `{ task, prompt, quality }`。
 
+Avatar / lipsync 最小合约测试：
+
+```bash
+set -a
+source .env.local
+set +a
+node tools/ai-platform-avatar-test.js
+```
+
+这个测试会直接提交 `task:"avatar"` 与 `task:"lipsync"`，检查平台是否已经支持数字人对嘴并回传 `avatar_video_url`。
+
 8 个节点：
 
 1. 书籍理解
