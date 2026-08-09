@@ -74,13 +74,27 @@ function firstStringForKeys(value, keys) {
   return findKeyPaths(value, keys).find(item => typeof item.value === 'string') || null;
 }
 
+function contractResult(value) {
+  return value?.result && typeof value.result === 'object' ? value.result : null;
+}
+
 function taskStatus(value) {
-  if (!value || typeof value !== 'object') return '';
-  return value.status || value.state || value.data?.status || value.result?.status || '';
+  const result = contractResult(value);
+  return typeof result?.status === 'string' ? result.status : '';
 }
 
 function firstTaskId(value) {
-  return firstStringForKeys(value, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id'])?.value || '';
+  const result = contractResult(value);
+  return typeof result?.id === 'string' ? result.id : '';
+}
+
+function resultMediaUrl(value, keys) {
+  const assets = contractResult(value)?.completed_assets;
+  if (!assets || typeof assets !== 'object') return null;
+  for (const key of keys) {
+    if (typeof assets[key] === 'string') return { key, path: `result.completed_assets.${key}`, value: assets[key] };
+  }
+  return null;
 }
 
 function isTerminalStatus(status) {
@@ -123,7 +137,7 @@ async function pollTask(stepId, id, template, expectedKeys) {
     });
     const status = taskStatus(result.body);
     checks.push({ poll: i + 1, httpStatus: result.httpStatus, status, body: result.body });
-    const hasExpected = expectedKeys.some(key => firstStringForKeys(result.body, [key]));
+    const hasExpected = !!resultMediaUrl(result.body, expectedKeys);
     if (hasExpected || isTerminalStatus(status)) break;
     await sleep(pollMs);
   }
@@ -142,10 +156,10 @@ async function checkUrl(url) {
 async function runStep(stepId, body, statusTemplate, expectedKeys) {
   const submit = await submitTask(stepId, body);
   const taskId = firstTaskId(submit.body);
-  const immediateMedia = expectedKeys.map(key => firstStringForKeys(submit.body, [key])).find(Boolean);
+  const immediateMedia = resultMediaUrl(submit.body, expectedKeys);
   const polls = taskId && !immediateMedia ? await pollTask(stepId, taskId, statusTemplate, expectedKeys) : [];
   const finalBody = polls.length ? polls[polls.length - 1].body : submit.body;
-  const mediaField = expectedKeys.map(key => firstStringForKeys(finalBody, [key])).find(Boolean);
+  const mediaField = resultMediaUrl(finalBody, expectedKeys);
   const mediaUrl = mediaField?.value || '';
   const urlChecks = mediaUrl ? [await checkUrl(mediaUrl)] : [];
   const dataUrls = collectDataUrls(finalBody);
@@ -155,17 +169,16 @@ async function runStep(stepId, body, statusTemplate, expectedKeys) {
     requestBody: body,
     httpStatus: submit.httpStatus,
     taskId,
-    taskIdField: firstStringForKeys(submit.body, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id']),
-    callbackIdField: firstStringForKeys(submit.body, ['callback_id', 'callbackId']),
-    webhookEventField: firstStringForKeys(submit.body, ['webhook_event', 'webhookEvent', 'event', 'event_type', 'eventType']),
+    taskIdField: taskId ? { key: 'id', path: 'result.id', value: taskId } : null,
+    statusField: taskStatus(finalBody) ? { key: 'status', path: 'result.status', value: taskStatus(finalBody) } : null,
     finalStatus: taskStatus(finalBody),
     pollCount: polls.length,
     mediaField,
     mediaUrl,
     urlChecks,
     dataUrls,
-    storedField: firstStringForKeys(finalBody, ['stored']),
-    providerExpiryField: firstStringForKeys(finalBody, ['provider_video_url_expires']),
+    storedField: firstStringForKeys(contractResult(finalBody), ['stored']),
+    providerExpiryField: firstStringForKeys(contractResult(finalBody), ['provider_video_url_expires']),
     submitBody: submit.body,
     finalBody,
     polls
@@ -273,8 +286,8 @@ async function main() {
         mediaUrl: lipsync.mediaUrl,
         reachable: lipsync.urlChecks[0]?.ok || false,
         mediaField: lipsync.mediaField ? { key: lipsync.mediaField.key, path: lipsync.mediaField.path } : null,
-        callbackIdField: lipsync.callbackIdField ? { key: lipsync.callbackIdField.key, path: lipsync.callbackIdField.path } : null,
-        webhookEventField: lipsync.webhookEventField ? { key: lipsync.webhookEventField.key, path: lipsync.webhookEventField.path, value: lipsync.webhookEventField.value } : null
+        taskIdField: lipsync.taskIdField ? { key: lipsync.taskIdField.key, path: lipsync.taskIdField.path } : null,
+        statusField: lipsync.statusField ? { key: lipsync.statusField.key, path: lipsync.statusField.path, value: lipsync.statusField.value } : null
       } : null
     },
     pass: failures.length === 0 && !!lipsync?.mediaUrl,

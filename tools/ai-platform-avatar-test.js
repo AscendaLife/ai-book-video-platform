@@ -103,19 +103,32 @@ function findKeyPaths(value, keys, pathName = '', out = []) {
   return out;
 }
 
-function firstStringKeyPath(value, keys) {
-  const matches = findKeyPaths(value, keys);
-  return matches.find(item => typeof item.value === 'string') || matches[0] || null;
+function contractResult(value) {
+  return value?.result && typeof value.result === 'object' ? value.result : null;
 }
 
 function firstTaskId(value) {
-  const match = firstStringKeyPath(value, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id']);
-  return match?.value || '';
+  const result = contractResult(value);
+  return typeof result?.id === 'string' ? result.id : '';
 }
 
 function taskStatus(value) {
-  if (!value || typeof value !== 'object') return '';
-  return value.status || value.state || value.data?.status || value.result?.status || '';
+  const result = contractResult(value);
+  return typeof result?.status === 'string' ? result.status : '';
+}
+
+function resultMediaUrl(value, keys) {
+  const assets = contractResult(value)?.completed_assets;
+  if (!assets || typeof assets !== 'object') return null;
+  for (const key of keys) {
+    if (typeof assets[key] === 'string') return { key, path: `result.completed_assets.${key}`, value: assets[key] };
+  }
+  return null;
+}
+
+function hasResultCompletedAssets(value) {
+  const assets = contractResult(value)?.completed_assets;
+  return !!assets && typeof assets === 'object';
 }
 
 function isTerminalStatus(status) {
@@ -185,44 +198,35 @@ async function runCase(test) {
   try { body = JSON.parse(text); } catch (_) { body = { raw: text }; }
   const urls = collectUrls(body);
   const urlChecks = await Promise.all(urls.map(item => checkUrl(item.url)));
-  const taskIdField = firstStringKeyPath(body, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id']);
-  const callbackIdField = firstStringKeyPath(body, ['callback_id', 'callbackId']);
-  const webhookEventField = firstStringKeyPath(body, ['webhook_event', 'webhookEvent', 'event', 'event_type', 'eventType']);
   const id = firstTaskId(body);
   const expectedUrlKeys = test.expectedUrlKeys || ['avatar_video_url'];
-  const pollChecks = id && !hasAnyKey(body, expectedUrlKeys) ? await pollTask(id, test.statusTemplate) : [];
+  const pollChecks = id && !resultMediaUrl(body, expectedUrlKeys) ? await pollTask(id, test.statusTemplate) : [];
   const finalBody = pollChecks.length ? pollChecks[pollChecks.length - 1].body : body;
   const finalUrls = collectUrls(finalBody);
   const finalUrlChecks = await Promise.all(finalUrls.map(item => checkUrl(item.url)));
-  const expectedUrlFields = findKeyPaths(finalBody, expectedUrlKeys).filter(item => typeof item.value === 'string');
+  const expectedUrlField = resultMediaUrl(finalBody, expectedUrlKeys);
   const contractWarnings = [];
-  if (!id) contractWarnings.push(`No task id found. Tried id, taskId, task_id, jobId, job_id, callback_id.`);
-  if (!expectedUrlFields.length && isTerminalStatus(taskStatus(finalBody))) {
-    contractWarnings.push(`Terminal response did not include expected media URL fields: ${expectedUrlKeys.join(', ')}.`);
-  }
-  if (test.id.includes('lipsync') && !callbackIdField) {
-    contractWarnings.push('No callback_id/callbackId observed in submit response; webhook correlation support is still unconfirmed.');
-  }
-  if (test.id.includes('lipsync') && !webhookEventField) {
-    contractWarnings.push('No webhook event name observed in client-visible response; confirm from AI Platform server logs or diagnostic fields.');
+  if (!id) contractWarnings.push('Missing required contract field: result.id.');
+  if (contractResult(body) && !taskStatus(body)) contractWarnings.push('Missing required contract field: result.status.');
+  if (!expectedUrlField && isTerminalStatus(taskStatus(finalBody))) {
+    contractWarnings.push(`Terminal response did not include required result.completed_assets media field: ${expectedUrlKeys.join(' or ')}.`);
   }
 
   return {
     id: test.id,
     httpStatus: res.status,
     taskId: id,
-    taskIdField: taskIdField ? { key: taskIdField.key, path: taskIdField.path } : null,
-    callbackIdField: callbackIdField ? { key: callbackIdField.key, path: callbackIdField.path } : null,
-    webhookEventField: webhookEventField ? { key: webhookEventField.key, path: webhookEventField.path, value: webhookEventField.value } : null,
-    expectedUrlFields: expectedUrlFields.map(item => ({ key: item.key, path: item.path, url: item.value })),
+    taskIdField: id ? { key: 'id', path: 'result.id' } : null,
+    statusField: taskStatus(finalBody) ? { key: 'status', path: 'result.status', value: taskStatus(finalBody) } : null,
+    expectedUrlFields: expectedUrlField ? [{ key: expectedUrlField.key, path: expectedUrlField.path, url: expectedUrlField.value }] : [],
     contractWarnings,
-    hasTaskId: !!id || hasAnyKey(body, ['id', 'taskId', 'task_id', 'jobId', 'job_id', 'callback_id']),
-    hasAvatarVideoUrl: hasAnyKey(finalBody, ['avatar_video_url']),
-    hasLipsyncVideoUrl: hasAnyKey(finalBody, ['lipsync_video_url']),
-    hasCompletedAssets: hasAnyKey(finalBody, ['completed_assets']),
+    hasTaskId: !!id,
+    hasAvatarVideoUrl: !!resultMediaUrl(finalBody, ['avatar_video_url']),
+    hasLipsyncVideoUrl: !!resultMediaUrl(finalBody, ['lipsync_video_url']),
+    hasCompletedAssets: hasResultCompletedAssets(finalBody),
     hasStoredFlag: hasAnyKey(finalBody, ['stored']),
     hasProviderExpiryFlag: hasAnyKey(finalBody, ['provider_video_url_expires']),
-    hasStatus: hasAnyKey(finalBody, ['status']),
+    hasStatus: !!taskStatus(finalBody),
     finalStatus: taskStatus(finalBody),
     pollCount: pollChecks.length,
     reachableUrlCount: finalUrlChecks.filter(item => item.ok).length || urlChecks.filter(item => item.ok).length,
@@ -254,8 +258,7 @@ async function main() {
       httpStatus: item.httpStatus,
       taskId: item.taskId,
       taskIdField: item.taskIdField,
-      callbackIdField: item.callbackIdField,
-      webhookEventField: item.webhookEventField,
+      statusField: item.statusField,
       expectedUrlFields: item.expectedUrlFields,
       contractWarnings: item.contractWarnings,
       hasTaskId: item.hasTaskId,
