@@ -4894,17 +4894,17 @@ window.TOUR = (function () {
     const panel = $('#hg-avatar-panel');
     if (!panel) return;
     panel.innerHTML = `
-      <div class="grid g3" style="margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:12px">
         ${HG.avatars.slice(0, 6).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
-            style="border:1px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center">
-          ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:6px">` : ''}
-          <div style="font-size:12px;font-weight:600">${esc(a.name || a.id)}</div>
+            style="border:1px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center">
+          ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px">` : ''}
+          <div style="font-size:11.5px;font-weight:600">${esc(a.name || a.id)}</div>
         </div>`).join('')}
         <div class="hg-avatar ${HG.mode === 'image' ? 'on' : ''}" data-act="hg-upload-photo-btn"
-            style="border:1px dashed ${HG.mode === 'image' ? 'var(--violet-2)' : 'var(--line-2)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px">
+            style="border:1px dashed ${HG.mode === 'image' ? 'var(--violet-2)' : 'var(--line-2)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:96px">
           ${HG.mode === 'image' && HG.assetPreview
-            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:6px"><div style="font-size:12px;font-weight:600">你上传的照片</div>`
-            : `<div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:12px;color:var(--txt-2);margin-top:4px">上传照片</div>`}
+            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px"><div style="font-size:11.5px;font-weight:600">你上传的照片</div>`
+            : `<div style="font-size:20px;color:var(--txt-3)">＋</div><div style="font-size:11.5px;color:var(--txt-2);margin-top:3px">上传照片</div>`}
         </div>
       </div>
       <div class="hint">上传照片建议<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」，无法生成。上传本身免费，真正花钱的是下面的「生成」那一步。</div>`;
