@@ -4302,7 +4302,7 @@ window.TOUR = (function () {
     $('#user-role').textContent = ac.title;
     $('#user-avatar').textContent = ac.initial || ac.name.slice(0, 1);
     if (route === 'pipeline') $('#view').scrollTop = 0;
-    if (route === 'persona') showVoiceInfo();
+    if (route === 'persona') { showVoiceInfo(); hgAutoCheck(); }
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
   }
 
@@ -4854,6 +4854,25 @@ window.TOUR = (function () {
     return j;
   }
 
+  let hgTried = false;
+  /* 只有第一次进这个页面才真的去连线；之后这页因为其他操作（比如加一句
+   * 口头禅）整页重画时，直接从快取重画形象/声音，不用每次都重打网络请求，
+   * 也不会打断正在进行中的生成/克隆轮询。要强制重新连线，按「检测」即可。 */
+  function hgAutoCheck() {
+    if (HG.avatars.length || HG.voices.length) {
+      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRepaintStatus();
+      return;
+    }
+    if (hgTried) return;
+    hgTried = true;
+    hgCheck();
+  }
+
+  function hgRepaintStatus() {
+    const status = $('#hg-status');
+    if (status && HG.keyMasked) status.innerHTML = `<div class="hint" style="color:var(--green)">已连接（Key ${esc(HG.keyMasked)}）</div>`;
+  }
+
   async function hgCheck() {
     const status = $('#hg-status');
     if (!status) return;
@@ -4868,6 +4887,7 @@ window.TOUR = (function () {
           <button class="btn btn-primary btn-sm" data-act="hg-save-app">保存设定</button>`;
         return;
       }
+      HG.keyMasked = cfg.apiKeyMasked;
       status.innerHTML = `<div class="hint" style="color:var(--green)">已连接（Key ${esc(cfg.apiKeyMasked)}）</div>`;
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
       HG.avatars = av.avatars || []; HG.voices = vo.voices || [];
