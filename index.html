@@ -2964,45 +2964,6 @@ window.VIEWS = window.VIEWS || {};
       <div id="hg-gen-panel"><div class="hint">先选好上面的形象和声音。</div></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">口吻预览（免费、纯模拟）</div>
-          <div class="card-s">跟上面不一样——这里不花钱，只是用浏览器内建语音听个大概语气，正式生成不会用这个声音</div></div></div>
-      <div class="grid g3" style="margin-bottom:16px">
-        ${[['clone', esc(ac.name) + '本人声音', '模拟训练中的专属声音语气。', ''],
-           ['library', '配音员声库', '模拟几种固定音色，听个大概。', ''],
-           ['system', '系统合成音', '通用机器音，最生硬的那种。', '']]
-          .map(x => `<div class="vsrc ${p.voiceMode === x[0] ? 'on' : ''}" data-act="voice-mode" data-v="${x[0]}">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="vradio"></span><b style="font-size:13.5px">${x[1]}</b></div>
-            <div class="hint" style="margin-top:7px;line-height:1.65">${x[2]}</div></div>`).join('')}
-      </div>
-
-      ${p.voiceMode === 'clone' ? `
-        <div style="margin-top:4px">
-          ${p.cloneSamples.map((s, i) => `<div class="file-item"><div class="file-ico">🎙</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(s.name)}</div>
-              <div style="font-size:11px;color:var(--txt-3)">${s.min} 分钟 · 已用于训练</div></div>
-            <b data-act="del-sample" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px">✕</b></div>`).join('')}
-          <div style="display:flex;gap:9px;margin-top:10px">
-            <button class="btn btn-sm" data-act="add-sample">＋ 上传录音样本（模拟训练）</button>
-            <button class="btn btn-sm" data-act="try-voice" data-id="clone">▶ 试听</button>
-          </div>
-          <div class="hint" id="voice-sys" style="margin-top:6px"></div>
-        </div>`
-      : p.voiceMode === 'library' ? `
-        <div class="grid g3">
-          ${DATA.VOICES.map(v => `<div class="vcard ${p.voiceActor === v.id ? 'on' : ''}" data-act="pick-voice" data-id="${v.id}">
-            <div style="display:flex;align-items:center;gap:9px">
-              <span class="vdot" style="background:${v.color}"></span>
-              <b style="font-size:13px">${v.name}</b>
-              <button class="btn btn-sm" style="margin-left:auto" data-act="try-voice" data-id="${v.id}">▶</button></div>
-            <div class="hint" style="margin-top:7px;line-height:1.6">${v.gender} · ${v.age}　${v.tone}</div>
-            <div class="hint vc-sys" data-vid="${v.id}" style="margin-top:6px;font-size:10.5px"></div>
-          </div>`).join('')}
-        </div>
-        <div class="hint" id="voice-sys" style="margin-top:6px"></div>`
-      : `<div style="margin-top:4px"><button class="btn btn-sm" data-act="try-voice" data-id="system">▶ 试听</button></div>`}
-    </div>
 
     <div class="grid g-2-1">
       <div class="card">
