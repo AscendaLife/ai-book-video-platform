@@ -3011,6 +3011,20 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">数字人开口说话（外部真实数字人生成服务）</div>
+          <div class="card-s">跟上面的语音试听不一样，这里是真的呼叫外部服务，把照片变成会说话的影片</div></div>
+        <div class="right"><span class="tag a">真实串接 · 每次生成都花钱</span></div></div>
+      <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+        <div class="ex-r"><span class="ex-k">跟上面的差别</span><span>上面「试听」是浏览器内建语音，免费、纯模拟；这里是真的连到外部数字人生成服务，会真的产出一支影片，也会真的从你的额度里扣钱（约 US$1-3/支，按秒计费）。</span></div>
+        <div class="ex-r"><span class="ex-k">金钥存哪</span><span>存在你本机跑的发布服务里（<code>server/.env.json</code>），网页前端拿不到，也不会进 Git。</span></div>
+        <div class="ex-r"><span class="ex-k">影片保存</span><span>服务给的影片网址约 <b>7 天后失效</b>，要留着的话请自己下载存档。</span></div>
+      </div>
+      <div class="field"><div class="label">发布服务网址</div><input class="input" id="hg-server" value="http://localhost:8787" placeholder="http://localhost:8787"></div>
+      <div id="hg-panel"><div class="hint">点下面「检测」连线到本机发布服务。</div></div>
+      <button class="btn btn-sm" style="margin-top:10px" data-act="hg-check">检测</button>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
       <div class="card-h"><div><div class="card-t">这些数字从哪来</div>
           <div class="card-s">目前显示的都是示范值。真实使用时，每一项各有明确来源，不是拍脑袋填的</div></div></div>
       <table><thead><tr><th style="width:130px">项目</th><th style="width:90px">现在显示</th><th>真实版本从哪来</th></tr></thead><tbody>
@@ -4555,6 +4569,23 @@ window.TOUR = (function () {
       }
       case 'yt-publish': return ytPublishModal(el.dataset.id);
 
+      /* ---- 数字人开口说话（外部真实数字人生成服务）---- */
+      case 'hg-check': return hgCheck();
+      case 'hg-save-app': return hgSaveApp();
+      case 'hg-pick-avatar': {
+        $$('.hg-avatar').forEach(x => x.classList.toggle('on', x === el));
+        HG.avatarId = el.dataset.id; return;
+      }
+      case 'hg-generate': {
+        const voiceSel = $('#hg-voice'), textEl = $('#hg-text');
+        if (!HG.avatarId || !voiceSel || !textEl || !textEl.value.trim()) return toast('请先选形象、声音，并填台词', 'warn');
+        HG.voiceId = voiceSel.value; HG.text = textEl.value.trim();
+        return modal('确定要真的生成吗？',
+          '<div style="font-size:13.5px">这会真的呼叫外部数字人生成服务产出一支影片，从你的额度扣钱（约 US$1-3，按秒计费），送出后无法撤销、无法退款。</div>',
+          `<button class="btn" onclick="UI.closeModal()">取消</button>
+           <button class="btn btn-primary" data-modal-act="confirm-hg-gen">确认生成（会扣钱）</button>`);
+      }
+
       /* ---- 人物引擎（合并自同事版本）---- */
       case 'engine-select': return go('engine', { id: el.dataset.id });
       case 'engine-add': {
@@ -4668,6 +4699,7 @@ window.TOUR = (function () {
       STORE.log('ok', '批量发布完成'); closeModal(); render(); toast('全部内容已发布', 'ok');
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
+    if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
     if (a === 'ig-open') return igPublishModal(el.dataset.id);
@@ -4823,6 +4855,120 @@ window.TOUR = (function () {
       });
       toast('已保存，接着按「连接 YouTube」', 'ok'); ytCheck();
     } catch (e) { toast('保存失败：' + e.message, 'err'); }
+  }
+
+  /* ============================================================
+   * 数字人开口说话（外部真实数字人生成服务）
+   * 静态 API Key，没有 OAuth 流程；每次生成都是真的花钱，
+   * 所以刻意只做「单支生成」，没有批次按钮。
+   * ========================================================== */
+  const HG = { avatarId: null, voiceId: null, text: '' };
+  const hgBase = () => (($('#hg-server') && $('#hg-server').value) || STORE.s.settings.pubServer || 'http://localhost:8787').replace(/\/+$/, '');
+  async function hgFetch(p, opt) {
+    const r = await fetch(hgBase() + p, opt);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+
+  async function hgCheck() {
+    const panel = $('#hg-panel');
+    if (!panel) return;
+    STORE.s.settings.pubServer = hgBase(); STORE.update();
+    panel.innerHTML = '<div class="hint">连线中…</div>';
+    try {
+      const cfg = await hgFetch('/api/heygen/config');
+      if (!cfg.configured) {
+        panel.innerHTML = `
+          <div class="field"><div class="label">数字人生成服务 API Key</div>
+            <input class="input" id="hg-key" type="password" placeholder="到该服务的开发者后台复制"></div>
+          <button class="btn btn-primary btn-sm" data-act="hg-save-app">保存设定</button>`;
+        return;
+      }
+      panel.innerHTML = `<div class="hint" style="margin-bottom:10px">已设定 Key（${esc(cfg.apiKeyMasked)}），读取数字人形象与声音中…</div>`;
+      const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
+      hgRenderPicker(av.avatars || [], vo.voices || []);
+    } catch (e) {
+      panel.innerHTML = `<div class="hint" style="color:var(--amber)">连不上发布服务或数字人生成服务（${esc(e.message)}）</div>`;
+    }
+  }
+
+  async function hgSaveApp() {
+    try {
+      await hgFetch('/api/heygen/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: $('#hg-key').value })
+      });
+      toast('已保存', 'ok'); hgCheck();
+    } catch (e) { toast('保存失败：' + e.message, 'err'); }
+  }
+
+  function hgRenderPicker(avatars, voices) {
+    const panel = $('#hg-panel');
+    if (!avatars.length) {
+      panel.innerHTML = '<div class="hint" style="color:var(--amber)">这个帐号还没有建好的数字人形象。先去数字人生成服务的网站（Avatar → New Avatar）上传一张照片建一个，再回来按检测。</div>';
+      return;
+    }
+    HG.avatarId = (avatars.find(a => a.id === HG.avatarId) || avatars[0]).id;
+    const zhVoice = voices.find(v => /zh|chinese/i.test(v.language || ''));
+    HG.voiceId = (voices.find(v => v.id === HG.voiceId) || zhVoice || voices[0] || {}).id;
+    panel.innerHTML = `
+      <div class="hint" style="margin-bottom:8px">选一个数字人形象（共 ${avatars.length} 个）：</div>
+      <div class="grid g3" style="margin-bottom:12px">
+        ${avatars.slice(0, 6).map(a => `<div class="hg-avatar ${a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
+            style="border:1px solid ${a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center">
+          ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:6px">` : ''}
+          <div style="font-size:12px;font-weight:600">${esc(a.name || a.id)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="field"><div class="label">声音</div>
+        <select class="input" id="hg-voice">
+          ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === HG.voiceId ? 'selected' : ''}>${esc(v.name)}（${esc(v.language || '')}）</option>`).join('')}
+        </select></div>
+      <div class="field"><div class="label">要说的台词</div>
+        <textarea class="input" id="hg-text" rows="3">你好，我是这本书的数字人主持人。</textarea></div>
+      <div class="hint" style="margin:8px 0;color:var(--amber)">⚠ 按下面按钮会真的呼叫外部服务生成一支影片，大约花费 US$1-3，无法撤回。</div>
+      <button class="btn btn-primary btn-sm" data-act="hg-generate">生成一支测试影片（真的花钱）</button>
+      <div id="hg-result" style="margin-top:14px"></div>`;
+  }
+
+  async function hgDoGenerate() {
+    const result = $('#hg-result');
+    if (!result) return;
+    result.innerHTML = '<div class="hint">送出中…</div>';
+    try {
+      const r = await hgFetch('/api/heygen/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarId: HG.avatarId, voiceId: HG.voiceId, text: HG.text })
+      });
+      result.innerHTML = '<div class="hint">已送出，生成中，通常 1-3 分钟…</div>';
+      hgPoll(r.videoId, result);
+    } catch (e) {
+      result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`;
+    }
+  }
+
+  function hgPoll(videoId, result) {
+    const tick = async () => {
+      if (!document.body.contains(result)) return; // 使用者已离开这一页，停止轮询
+      try {
+        const s = await hgFetch('/api/heygen/status/' + encodeURIComponent(videoId));
+        if (s.status === 'completed' && s.videoUrl) {
+          result.innerHTML = `<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
+            <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`;
+          return;
+        }
+        if (s.status === 'failed') {
+          result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(s.error || '未知原因')}</div>`;
+          return;
+        }
+        result.innerHTML = `<div class="hint">生成中…（${esc(s.status || 'processing')}）</div>`;
+        setTimeout(tick, 5000);
+      } catch (e) {
+        result.innerHTML = `<div class="hint" style="color:var(--amber)">查询失败：${esc(e.message)}</div>`;
+      }
+    };
+    tick();
   }
 
   /* YouTube 上传弹窗：直接选本机影片档，不需要公开网址 */
