@@ -2933,61 +2933,63 @@ window.VIEWS = window.VIEWS || {};
       <div class="ex-r"><span class="ex-k">你要做的</span><span>先选一种声音来源，再调下面五个参数与口头禅。<b>这一步要在生成影片之前做</b>，否则整批跑完才发现口吻不对，得重来。</span></div>
     </div>
 
-    <div class="persona-hero" style="margin-bottom:16px">
-      <div class="pv">${esc(ac.initial || ac.name.slice(0, 1))}</div>
-      <div style="flex:1;min-width:240px">
-        <div style="font-size:19px;font-weight:750;margin-bottom:4px">${esc(ac.name)}专属数字人 · ${p.version}</div>
-        <div style="font-size:13px;color:var(--txt-2);margin-bottom:6px">形象采集 ${p.trainMin} 分钟 · 语料 ${p.sampleCount} 段 · 声音相似度 ${p.similarity}%</div>
-        <div style="font-size:11.5px;color:var(--amber);margin-bottom:12px">⚠ 以上三个数字是<b>示范值</b>，不是量出来的——真实来源见下方「这些数字从哪来」</div>
-        <div class="chip-list">
-          <span class="tag a">形象模型 示范状态</span>
-          <span class="tag a">声音模型 示范状态</span>
-          <span class="tag a">风格模型 示范状态</span>
-          <span class="tag c">输出含 AI 生成标识</span>
-        </div>
-      </div>
-      <div style="flex:0 0 auto">
-        <div class="wave">${Array.from({ length: 30 }).map((_, i) => `<i style="animation-delay:${(i * .05).toFixed(2)}s"></i>`).join('')}</div>
-        <div style="font-size:11px;color:var(--txt-3);text-align:center;margin-top:8px">声纹活跃</div>
-      </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">数字人开口说话</div>
+          <div class="card-s">选一个数字人形象、选一个声音，就能真的生成一支会说话的影片</div></div>
+        <div class="right"><span class="tag a">连的是真实外部服务，会花钱</span></div></div>
+      <div class="field"><div class="label">发布服务网址</div><input class="input" id="hg-server" value="http://localhost:8787" placeholder="http://localhost:8787"></div>
+      <div id="hg-status" style="margin-top:10px"></div>
+      <button class="btn btn-sm" style="margin-top:10px" data-act="hg-check">检测</button>
+    </div>
+
+    <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
+    <input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">数字人形象</div>
+          <div class="card-s">选一个现成的，或上传自己的照片</div></div></div>
+      <div id="hg-avatar-panel"><div class="hint">点上面「检测」连线后读取。</div></div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">声音来源</div>
-          <div class="card-s">决定影片里说话的是谁。选定后，预览与正式合成都用这个声音</div></div>
-        <div class="right"><span class="tag a">目前预览用的是浏览器内建语音，僵硬是正常的</span></div></div>
+      <div class="card-h"><div><div class="card-t">声音</div>
+          <div class="card-s">选一个现成的，或上传一段录音克隆你自己的声音</div></div></div>
+      <div id="hg-voice-panel"><div class="hint">点上面「检测」连线后读取。</div></div>
+    </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">生成一支影片</div>
+          <div class="card-s">用上面选好的形象和声音，真的生成一支会说话的影片</div></div>
+        <div class="right"><span class="tag a">每次生成都花钱，约 US$1-3</span></div></div>
+      <div id="hg-gen-panel"><div class="hint">先选好上面的形象和声音。</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">口吻预览（免费、纯模拟）</div>
+          <div class="card-s">跟上面不一样——这里不花钱，只是用浏览器内建语音听个大概语气，正式生成不会用这个声音</div></div></div>
       <div class="grid g3" style="margin-bottom:16px">
-        ${[['clone', esc(ac.name) + '本人声音', '用本人录音训练的专属声音模型。最像本人，需要录音样本。', '★ 推荐'],
-           ['library', '配音员声库', '从专业配音员里挑一个固定声音。品质稳定，立刻可用。', ''],
-           ['system', '系统合成音', '通用机器音。免费、无需准备，但听起来生硬。', '']]
+        ${[['clone', esc(ac.name) + '本人声音', '模拟训练中的专属声音语气。', ''],
+           ['library', '配音员声库', '模拟几种固定音色，听个大概。', ''],
+           ['system', '系统合成音', '通用机器音，最生硬的那种。', '']]
           .map(x => `<div class="vsrc ${p.voiceMode === x[0] ? 'on' : ''}" data-act="voice-mode" data-v="${x[0]}">
             <div style="display:flex;align-items:center;gap:8px">
-              <span class="vradio"></span><b style="font-size:13.5px">${x[1]}</b>
-              ${x[3] ? `<span class="tag v" style="margin-left:auto">${x[3]}</span>` : ''}</div>
+              <span class="vradio"></span><b style="font-size:13.5px">${x[1]}</b></div>
             <div class="hint" style="margin-top:7px;line-height:1.65">${x[2]}</div></div>`).join('')}
       </div>
 
       ${p.voiceMode === 'clone' ? `
-        <div class="explain" style="border-left-color:var(--green)">
-          <div class="ex-r"><span class="ex-k">目前状态</span><span>已用 <b>${p.cloneSamples.reduce((a, s) => a + s.min, 0)} 分钟</b>录音训练，声音相似度 <b>${p.similarity}%</b></span></div>
-          <div class="ex-r"><span class="ex-k">怎么变更像</span><span>再补一段安静环境、正常语速的朗读录音。<b>30 分钟起步，2 小时以上明显更好</b>；重点是录音干净，不是时间长。</span></div>
-          <div class="ex-r"><span class="ex-k">授权</span><span>克隆本人声音需要本人书面授权，模型加密存放、禁止导出，仅限本平台调用。</span></div>
-        </div>
-        <div style="margin-top:12px">
+        <div style="margin-top:4px">
           ${p.cloneSamples.map((s, i) => `<div class="file-item"><div class="file-ico">🎙</div>
             <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(s.name)}</div>
               <div style="font-size:11px;color:var(--txt-3)">${s.min} 分钟 · 已用于训练</div></div>
             <b data-act="del-sample" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px">✕</b></div>`).join('')}
           <div style="display:flex;gap:9px;margin-top:10px">
-            <button class="btn btn-sm" data-act="add-sample">＋ 上传录音样本</button>
-            <button class="btn btn-sm" data-act="try-voice" data-id="clone">▶ 试听目前效果</button>
+            <button class="btn btn-sm" data-act="add-sample">＋ 上传录音样本（模拟训练）</button>
+            <button class="btn btn-sm" data-act="try-voice" data-id="clone">▶ 试听</button>
           </div>
-          <div class="hint" style="margin-top:9px">演示环境无法播放克隆声，试听会用系统音代替，仅供确认语速与断句。</div>
           <div class="hint" id="voice-sys" style="margin-top:6px"></div>
         </div>`
       : p.voiceMode === 'library' ? `
-        <div class="label">挑一个配音员<span class="hint" style="margin-left:8px;font-weight:400">点卡片选用，点 ▶ 试听</span></div>
         <div class="grid g3">
           ${DATA.VOICES.map(v => `<div class="vcard ${p.voiceActor === v.id ? 'on' : ''}" data-act="pick-voice" data-id="${v.id}">
             <div style="display:flex;align-items:center;gap:9px">
@@ -2995,53 +2997,11 @@ window.VIEWS = window.VIEWS || {};
               <b style="font-size:13px">${v.name}</b>
               <button class="btn btn-sm" style="margin-left:auto" data-act="try-voice" data-id="${v.id}">▶</button></div>
             <div class="hint" style="margin-top:7px;line-height:1.6">${v.gender} · ${v.age}　${v.tone}</div>
-            <div class="chip-list" style="margin-top:8px">${v.good.map(g => `<span class="tag">${g}</span>`).join('')}</div>
-            <div class="hint" style="margin-top:6px">适合：${v.plat.join(' / ')}</div>
             <div class="hint vc-sys" data-vid="${v.id}" style="margin-top:6px;font-size:10.5px"></div>
           </div>`).join('')}
         </div>
-        <div class="hint" style="margin-top:12px">试听为<b>台湾口音国语</b>模拟不同音色（音高与语速有差异），正式版为真人录制声库，质感差很多。</div>
         <div class="hint" id="voice-sys" style="margin-top:6px"></div>`
-      : `
-        <div class="explain" style="border-left-color:var(--amber)">
-          <div class="ex-r"><span class="ex-k">注意</span><span>系统合成音<b>不建议用于正式发布</b>。它没有情绪起伏、断句机械，观众一听就知道是机器念的，完播率会明显偏低。</span></div>
-          <div class="ex-r"><span class="ex-k">建议</span><span>正式内容请改用「${esc(STORE.s.account.name)}本人声音」或「配音员声库」。</span></div>
-        </div>
-        <div style="margin-top:12px"><button class="btn btn-sm" data-act="try-voice" data-id="system">▶ 试听</button></div>`}
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">数字人开口说话（外部真实数字人生成服务）</div>
-          <div class="card-s">跟上面的语音试听不一样，这里是真的呼叫外部服务，把照片变成会说话的影片</div></div>
-        <div class="right"><span class="tag a">真实串接 · 每次生成都花钱</span></div></div>
-      <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
-        <div class="ex-r"><span class="ex-k">跟上面的差别</span><span>上面「试听」是浏览器内建语音，免费、纯模拟；这里是真的连到外部数字人生成服务，会真的产出一支影片，也会真的从你的额度里扣钱（约 US$1-3/支，按秒计费）。</span></div>
-        <div class="ex-r"><span class="ex-k">金钥存哪</span><span>存在你本机跑的发布服务里（<code>server/.env.json</code>），网页前端拿不到，也不会进 Git。</span></div>
-        <div class="ex-r"><span class="ex-k">影片保存</span><span>服务给的影片网址约 <b>7 天后失效</b>，要留着的话请自己下载存档。</span></div>
-      </div>
-      <div class="field"><div class="label">发布服务网址</div><input class="input" id="hg-server" value="http://localhost:8787" placeholder="http://localhost:8787"></div>
-      <div id="hg-panel"><div class="hint">点下面「检测」连线到本机发布服务。</div></div>
-      <button class="btn btn-sm" style="margin-top:10px" data-act="hg-check">检测</button>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">这些数字从哪来</div>
-          <div class="card-s">目前显示的都是示范值。真实使用时，每一项各有明确来源，不是拍脑袋填的</div></div></div>
-      <table><thead><tr><th style="width:130px">项目</th><th style="width:90px">现在显示</th><th>真实版本从哪来</th></tr></thead><tbody>
-        ${[
-          ['形象采集时长', p.trainMin + ' 分钟', '实际录影的总时长。绿幕或纯色背景、正面平视，越足越稳'],
-          ['语料段数', p.sampleCount + ' 段', '上传的演讲、访谈、文章、旧影片逐字稿，切分后的段落数'],
-          ['声音相似度', p.similarity + '%', '训练完成后，用本人真实录音与合成音比对，由模型算出的分数'],
-          ['讲话速度 / 亲和 / 正式度 / 停顿 / 强调', '手动滑杆', '<b>应该从本人历史发言统计出来</b>，而不是手调。现在开放手调是为了让你先试出想要的感觉'],
-          ['口头禅词库', p.habits.length + ' 句', '从逐字稿跑词频，找出本人真正高频使用的语句，不是编的'],
-          ['价值观与禁语', '预设清单', '与本人确认后写死的硬约束，命中即拦截，属于人工设定'],
-          ['一致性评分', p.similarity + '%', '改写后的稿子送进判别器，比对是否像本人。低于 90 分退回重写']
-        ].map(r => `<tr><td>${r[0]}</td><td><span class="tag a">${r[1]}</span></td><td style="color:var(--txt-2)">${r[2]}</td></tr>`).join('')}
-      </tbody></table>
-      <div class="hint" style="margin-top:12px">
-        换句话说：<b>这一页现在是一个空壳，等真人的资料填进来。</b>
-        要变成真的，需要本人提供录影、录音与历史发言资料，再跑一次训练。
-      </div>
+      : `<div style="margin-top:4px"><button class="btn btn-sm" data-act="try-voice" data-id="system">▶ 试听</button></div>`}
     </div>
 
     <div class="grid g-2-1">
@@ -4427,6 +4387,13 @@ window.TOUR = (function () {
   });
 
   /* ---------------- 全局事件委托 ---------------- */
+  /* 上传照片 / 上传录音：檔案 input 的 change 事件，挂在 #view 上做委派，
+   * 这样即使这一页重新渲染，监听器也不会失效（跟下面 click 委派同一招）。 */
+  $('#view').addEventListener('change', e => {
+    if (e.target.id === 'hg-photo-input') return hgUploadPhoto(e.target.files[0]);
+    if (e.target.id === 'hg-audio-input') return hgUploadAudio(e.target.files[0]);
+  });
+
   $('#view').addEventListener('click', e => {
     const seg = e.target.closest('[data-seg] button, [data-seg] [data-v]');
     if (seg) {
@@ -4573,13 +4540,20 @@ window.TOUR = (function () {
       case 'hg-check': return hgCheck();
       case 'hg-save-app': return hgSaveApp();
       case 'hg-pick-avatar': {
-        $$('.hg-avatar').forEach(x => x.classList.toggle('on', x === el));
-        HG.avatarId = el.dataset.id; return;
+        HG.mode = 'avatar'; HG.avatarId = el.dataset.id; HG.assetId = null;
+        hgRenderAvatars(); hgRenderGenerate(); return;
       }
+      case 'hg-pick-voice': {
+        HG.voiceId = el.dataset.id;
+        hgRenderVoices(); hgRenderGenerate(); return;
+      }
+      case 'hg-upload-photo-btn': return $('#hg-photo-input').click();
+      case 'hg-upload-audio-btn': return $('#hg-audio-input').click();
       case 'hg-generate': {
-        const voiceSel = $('#hg-voice'), textEl = $('#hg-text');
-        if (!HG.avatarId || !voiceSel || !textEl || !textEl.value.trim()) return toast('请先选形象、声音，并填台词', 'warn');
-        HG.voiceId = voiceSel.value; HG.text = textEl.value.trim();
+        const textEl = $('#hg-text');
+        const hasSubject = HG.mode === 'image' ? HG.assetId : HG.avatarId;
+        if (!hasSubject || !HG.voiceId || !textEl || !textEl.value.trim()) return toast('请先选好形象、声音，并填台词', 'warn');
+        HG.text = textEl.value.trim();
         return modal('确定要真的生成吗？',
           '<div style="font-size:13.5px">这会真的呼叫外部数字人生成服务产出一支影片，从你的额度扣钱（约 US$1-3，按秒计费），送出后无法撤销、无法退款。</div>',
           `<button class="btn" onclick="UI.closeModal()">取消</button>
@@ -4700,6 +4674,7 @@ window.TOUR = (function () {
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
+    if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
     if (a === 'ig-open') return igPublishModal(el.dataset.id);
@@ -4859,10 +4834,18 @@ window.TOUR = (function () {
 
   /* ============================================================
    * 数字人开口说话（外部真实数字人生成服务）
-   * 静态 API Key，没有 OAuth 流程；每次生成都是真的花钱，
-   * 所以刻意只做「单支生成」，没有批次按钮。
+   * 静态 API Key，没有 OAuth 流程。三种操作、三种花费等级：
+   *   - 查询形象/声音、上传照片/录音本身：免费
+   *   - 克隆一个声音：会花一点钱
+   *   - 生成一支影片：会花比较多钱（约 US$1-3）
+   * 故意不做「一键生成全部」的批次按钮。
    * ========================================================== */
-  const HG = { avatarId: null, voiceId: null, text: '' };
+  const HG = {
+    mode: 'avatar',      // 'avatar' 用现成形象 / 'image' 用刚上传的照片
+    avatarId: null, assetId: null, assetPreview: null,
+    voiceId: null, text: '',
+    avatars: [], voices: []
+  };
   const hgBase = () => (($('#hg-server') && $('#hg-server').value) || STORE.s.settings.pubServer || 'http://localhost:8787').replace(/\/+$/, '');
   async function hgFetch(p, opt) {
     const r = await fetch(hgBase() + p, opt);
@@ -4872,24 +4855,27 @@ window.TOUR = (function () {
   }
 
   async function hgCheck() {
-    const panel = $('#hg-panel');
-    if (!panel) return;
+    const status = $('#hg-status');
+    if (!status) return;
     STORE.s.settings.pubServer = hgBase(); STORE.update();
-    panel.innerHTML = '<div class="hint">连线中…</div>';
+    status.innerHTML = '<div class="hint">连线中…</div>';
     try {
       const cfg = await hgFetch('/api/heygen/config');
       if (!cfg.configured) {
-        panel.innerHTML = `
+        status.innerHTML = `
           <div class="field"><div class="label">数字人生成服务 API Key</div>
             <input class="input" id="hg-key" type="password" placeholder="到该服务的开发者后台复制"></div>
           <button class="btn btn-primary btn-sm" data-act="hg-save-app">保存设定</button>`;
         return;
       }
-      panel.innerHTML = `<div class="hint" style="margin-bottom:10px">已设定 Key（${esc(cfg.apiKeyMasked)}），读取数字人形象与声音中…</div>`;
+      status.innerHTML = `<div class="hint" style="color:var(--green)">已连接（Key ${esc(cfg.apiKeyMasked)}）</div>`;
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
-      hgRenderPicker(av.avatars || [], vo.voices || []);
+      HG.avatars = av.avatars || []; HG.voices = vo.voices || [];
+      if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
+      if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
+      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate();
     } catch (e) {
-      panel.innerHTML = `<div class="hint" style="color:var(--amber)">连不上发布服务或数字人生成服务（${esc(e.message)}）</div>`;
+      status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上发布服务或数字人生成服务（${esc(e.message)}）</div>`;
     }
   }
 
@@ -4903,32 +4889,120 @@ window.TOUR = (function () {
     } catch (e) { toast('保存失败：' + e.message, 'err'); }
   }
 
-  function hgRenderPicker(avatars, voices) {
-    const panel = $('#hg-panel');
-    if (!avatars.length) {
-      panel.innerHTML = '<div class="hint" style="color:var(--amber)">这个帐号还没有建好的数字人形象。先去数字人生成服务的网站（Avatar → New Avatar）上传一张照片建一个，再回来按检测。</div>';
-      return;
-    }
-    HG.avatarId = (avatars.find(a => a.id === HG.avatarId) || avatars[0]).id;
-    const zhVoice = voices.find(v => /zh|chinese/i.test(v.language || ''));
-    HG.voiceId = (voices.find(v => v.id === HG.voiceId) || zhVoice || voices[0] || {}).id;
+  /* ---- 形象：挑现成的，或上传照片 ---- */
+  function hgRenderAvatars() {
+    const panel = $('#hg-avatar-panel');
+    if (!panel) return;
     panel.innerHTML = `
-      <div class="hint" style="margin-bottom:8px">选一个数字人形象（共 ${avatars.length} 个）：</div>
       <div class="grid g3" style="margin-bottom:12px">
-        ${avatars.slice(0, 6).map(a => `<div class="hg-avatar ${a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
-            style="border:1px solid ${a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center">
+        ${HG.avatars.slice(0, 6).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
+            style="border:1px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center">
           ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:6px">` : ''}
           <div style="font-size:12px;font-weight:600">${esc(a.name || a.id)}</div>
         </div>`).join('')}
+        <div class="hg-avatar ${HG.mode === 'image' ? 'on' : ''}" data-act="hg-upload-photo-btn"
+            style="border:1px dashed ${HG.mode === 'image' ? 'var(--violet-2)' : 'var(--line-2)'};border-radius:12px;padding:8px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px">
+          ${HG.mode === 'image' && HG.assetPreview
+            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:6px"><div style="font-size:12px;font-weight:600">你上传的照片</div>`
+            : `<div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:12px;color:var(--txt-2);margin-top:4px">上传照片</div>`}
+        </div>
       </div>
-      <div class="field"><div class="label">声音</div>
-        <select class="input" id="hg-voice">
-          ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === HG.voiceId ? 'selected' : ''}>${esc(v.name)}（${esc(v.language || '')}）</option>`).join('')}
-        </select></div>
+      <div class="hint">上传照片建议<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」，无法生成。上传本身免费，真正花钱的是下面的「生成」那一步。</div>`;
+  }
+
+  async function hgUploadPhoto(file) {
+    if (!file) return;
+    const localPreview = URL.createObjectURL(file);
+    HG.assetPreview = localPreview; HG.mode = 'image'; hgRenderAvatars();
+    try {
+      const buf = await file.arrayBuffer();
+      const r = await fetch(hgBase() + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
+        { method: 'POST', body: buf });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      HG.assetId = j.assetId; HG.avatarId = null;
+      toast('照片已上传', 'ok'); hgRenderGenerate();
+    } catch (e) {
+      toast('上传失败：' + e.message, 'err'); HG.mode = 'avatar'; hgRenderAvatars();
+    }
+  }
+
+  /* ---- 声音：挑现成的，或上传录音克隆 ---- */
+  function hgRenderVoices() {
+    const panel = $('#hg-voice-panel');
+    if (!panel) return;
+    panel.innerHTML = `
+      <div class="grid g3" style="margin-bottom:12px">
+        ${HG.voices.slice(0, 9).map(v => `<div class="hg-avatar ${v.id === HG.voiceId ? 'on' : ''}" data-act="hg-pick-voice" data-id="${esc(v.id)}"
+            style="border:1px solid ${v.id === HG.voiceId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:10px;cursor:pointer">
+          <div style="font-size:13px;font-weight:700">${esc(v.name)}</div>
+          <div class="hint" style="margin-top:3px">${esc(v.language || '')}${v.gender ? ' · ' + esc(v.gender) : ''}</div>
+          ${v.preview ? `<audio src="${esc(v.preview)}" controls style="width:100%;height:28px;margin-top:6px" onclick="event.stopPropagation()"></audio>` : ''}
+        </div>`).join('')}
+        <div class="hg-avatar" data-act="hg-upload-audio-btn"
+            style="border:1px dashed var(--line-2);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90px">
+          <div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:12px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
+        </div>
+      </div>
+      <div class="hint">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音，克隆完成后会自动加进上面的列表。上传免费，<b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
+  }
+
+  async function hgUploadAudio(file) {
+    if (!file) return;
+    let assetId;
+    try {
+      const buf = await file.arrayBuffer();
+      const r = await fetch(hgBase() + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
+        { method: 'POST', body: buf });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      assetId = j.assetId;
+    } catch (e) { return toast('上传失败：' + e.message, 'err'); }
+
+    modal('确定要克隆这段声音吗？',
+      '<div style="font-size:13.5px">录音已经上传好了。按下面「确认克隆」会真的送去训练一个新声音，从你的额度扣一点钱，无法撤销。</div>',
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="confirm-hg-clone" data-asset="${esc(assetId)}">确认克隆（会扣钱）</button>`);
+  }
+
+  async function hgDoCloneVoice(assetId) {
+    const panel = $('#hg-voice-panel');
+    if (panel) panel.insertAdjacentHTML('afterbegin', '<div class="hint" id="hg-clone-status">送出克隆中…</div>');
+    const setStatus = t => { const el = $('#hg-clone-status'); if (el) el.textContent = t; };
+    try {
+      const r = await hgFetch('/api/heygen/clone-voice', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '我的声音 ' + new Date().toLocaleDateString('zh-CN'), assetId })
+      });
+      setStatus('克隆中，通常 1-2 分钟…');
+      const tick = async () => {
+        try {
+          const s = await hgFetch('/api/heygen/voice-status/' + encodeURIComponent(r.voiceCloneId));
+          if (s.status === 'complete') {
+            HG.voices.unshift({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview });
+            HG.voiceId = s.voiceId;
+            toast('声音克隆完成', 'ok'); hgRenderVoices(); hgRenderGenerate();
+            return;
+          }
+          if (s.status === 'failed') { toast('克隆失败', 'err'); hgRenderVoices(); return; }
+          setStatus('克隆中…（' + (s.status || 'processing') + '）'); setTimeout(tick, 5000);
+        } catch (e) { setStatus('查询失败：' + e.message); }
+      };
+      tick();
+    } catch (e) { toast('克隆失败：' + e.message, 'err'); hgRenderVoices(); }
+  }
+
+  /* ---- 生成 ---- */
+  function hgRenderGenerate() {
+    const panel = $('#hg-gen-panel');
+    if (!panel) return;
+    const avName = HG.mode === 'image' ? '你上传的照片' : ((HG.avatars.find(a => a.id === HG.avatarId) || {}).name || '（未选）');
+    const voName = (HG.voices.find(v => v.id === HG.voiceId) || {}).name || '（未选）';
+    panel.innerHTML = `
+      <div class="chip-list" style="margin-bottom:10px"><span class="tag v">形象：${esc(avName)}</span><span class="tag c">声音：${esc(voName)}</span></div>
       <div class="field"><div class="label">要说的台词</div>
-        <textarea class="input" id="hg-text" rows="3">你好，我是这本书的数字人主持人。</textarea></div>
-      <div class="hint" style="margin:8px 0;color:var(--amber)">⚠ 按下面按钮会真的呼叫外部服务生成一支影片，大约花费 US$1-3，无法撤回。</div>
-      <button class="btn btn-primary btn-sm" data-act="hg-generate">生成一支测试影片（真的花钱）</button>
+        <textarea class="input" id="hg-text" rows="3">${esc(HG.text || '你好，我是这本书的数字人主持人。')}</textarea></div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成一支测试影片（真的花钱）</button>
       <div id="hg-result" style="margin-top:14px"></div>`;
   }
 
@@ -4939,7 +5013,7 @@ window.TOUR = (function () {
     try {
       const r = await hgFetch('/api/heygen/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarId: HG.avatarId, voiceId: HG.voiceId, text: HG.text })
+        body: JSON.stringify({ mode: HG.mode, avatarId: HG.avatarId, assetId: HG.assetId, voiceId: HG.voiceId, text: HG.text })
       });
       result.innerHTML = '<div class="hint">已送出，生成中，通常 1-3 分钟…</div>';
       hgPoll(r.videoId, result);
