@@ -370,6 +370,75 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 #pv-play:hover{background:#fff;transform:translate(-50%,-50%) scale(1.06)}
 #pv-play{transition:.15s}
 
+/* 创意分镜 */
+.creative-hero{
+  border:1px solid var(--line-2);border-radius:var(--r-xl);padding:24px;
+  background:linear-gradient(135deg,rgba(124,108,255,.18),rgba(34,211,238,.10) 48%,rgba(255,176,32,.10));
+  display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:center;margin-bottom:18px
+}
+.creative-hero h2{font-size:24px;line-height:1.25;margin-bottom:9px;letter-spacing:0;font-weight:780}
+.creative-hero p{font-size:13.5px;color:var(--txt-2);line-height:1.9;max-width:760px}
+.creative-board{min-height:210px;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:16px;position:relative;overflow:hidden}
+.creative-board::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(124,108,255,.16),transparent 45%),radial-gradient(circle at 82% 20%,rgba(34,211,238,.18),transparent 34%);pointer-events:none}
+.creative-frame{position:relative;z-index:1;border:1px solid var(--line-2);border-radius:14px;min-height:178px;background:var(--bg-2);padding:14px;display:flex;flex-direction:column;justify-content:space-between}
+.frame-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.frame-avatar{width:62px;height:62px;border-radius:18px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:24px;box-shadow:0 12px 30px rgba(124,108,255,.35)}
+.frame-book{width:48px;height:68px;border-radius:6px;background:linear-gradient(150deg,#ff8a5b,#7c6cff);box-shadow:0 12px 24px rgba(0,0,0,.25)}
+.frame-caption{font-size:13px;font-weight:760;line-height:1.55;max-width:260px}
+.creative-mode{border:1px solid var(--line);border-radius:16px;padding:15px;background:var(--panel);cursor:pointer;transition:.16s;min-height:150px}
+.creative-mode:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.creative-mode.on{border-color:rgba(124,108,255,.55);background:linear-gradient(135deg,rgba(124,108,255,.14),rgba(34,211,238,.06))}
+.creative-mode .ico{width:34px;height:34px;border-radius:11px;background:var(--panel-2);display:grid;place-items:center;margin-bottom:10px;font-weight:800;color:var(--violet-2)}
+.creative-mode .name{font-size:14px;font-weight:730;margin-bottom:5px}
+.creative-mode .desc{font-size:12.2px;color:var(--txt-2);line-height:1.65}
+.creative-preview{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;transition:.16s}
+.creative-preview:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.creative-thumb{aspect-ratio:16/9;background:linear-gradient(135deg,#1d2540,#7c6cff 58%,#22d3ee);position:relative;padding:12px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.creative-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(0,0,0,.06),rgba(0,0,0,.68));pointer-events:none}
+.creative-thumb>*{position:relative;z-index:1}
+.creative-thumb .mini-book{width:34px;height:48px;border-radius:5px;background:rgba(255,255,255,.88);box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.creative-thumb .mini-line{height:7px;border-radius:9px;background:rgba(255,255,255,.72);margin-top:6px}
+.creative-preview-b{padding:13px 14px}
+.creative-preview-b .title{font-size:13.5px;font-weight:730;margin-bottom:4px}
+.creative-preview-b .desc{font-size:12px;color:var(--txt-2);line-height:1.6;min-height:38px}
+.creative-shot{display:grid;grid-template-columns:70px 1fr 156px;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
+.creative-shot:last-child{border-bottom:0}
+.creative-shot .time{font-family:"JetBrains Mono",Consolas,monospace;font-size:12px;color:var(--violet-2);font-weight:700}
+.creative-shot .main{font-size:13.5px;font-weight:680;line-height:1.55}
+.creative-shot .sub{font-size:12px;color:var(--txt-3);line-height:1.65;margin-top:4px}
+.creative-shot .asset{font-size:11.5px;color:var(--txt-2);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px;line-height:1.55}
+.visual-card{border:1px solid var(--line);border-radius:14px;background:var(--panel-2);padding:14px;min-height:128px}
+.visual-card b{display:block;font-size:13.5px;margin-bottom:6px}
+.visual-card span{font-size:12px;color:var(--txt-2);line-height:1.65}
+.sample-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.sample-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:12px;overflow:hidden}
+.sample-video{width:100%;aspect-ratio:9/16;border-radius:12px;background:#060912;display:block;object-fit:cover;border:1px solid var(--line)}
+.sample-meta{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 8px}
+.sample-title{font-size:13.5px;font-weight:730;line-height:1.45}
+.sample-desc{font-size:12px;color:var(--txt-2);line-height:1.65;margin-top:4px}
+.scene-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.scene-pill{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px}
+.scene-pill b{display:block;font-size:12.5px;margin-bottom:4px}
+.scene-pill span{font-size:11.5px;color:var(--txt-2);line-height:1.5}
+.template-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.template-toolbar .input{max-width:280px}
+.template-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.template-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px;min-height:220px;display:flex;flex-direction:column;gap:10px;transition:.16s}
+.template-card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.template-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.template-ico{width:38px;height:38px;border-radius:12px;background:var(--panel-2);display:grid;place-items:center;font-weight:800;color:var(--cyan);flex:0 0 38px}
+.template-name{font-size:14px;font-weight:760;line-height:1.35}
+.template-meta{display:flex;gap:6px;flex-wrap:wrap}
+.template-desc{font-size:12px;color:var(--txt-2);line-height:1.65}
+.template-roles{font-size:11.5px;color:var(--txt-3);line-height:1.6;margin-top:auto}
+.template-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.custom-scene{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:1080px){.creative-hero{grid-template-columns:1fr}.creative-shot{grid-template-columns:58px 1fr}}
+@media(max-width:1080px){.sample-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1080px){.template-grid{grid-template-columns:repeat(2,1fr)}.custom-scene{grid-template-columns:1fr 1fr}}
+@media(max-width:1080px){.creative-shot .asset{grid-column:2}}
+@media(max-width:640px){.creative-shot{grid-template-columns:1fr}.creative-shot .asset{grid-column:auto}.creative-hero{padding:18px}.sample-grid,.scene-strip,.template-grid,.custom-scene{grid-template-columns:1fr}}
+
 .persona-hero{
   border-radius:var(--r-xl);padding:26px;background:linear-gradient(135deg,rgba(124,108,255,.22),rgba(34,211,238,.12));
   border:1px solid var(--line-2);display:flex;gap:24px;align-items:center;flex-wrap:wrap
@@ -553,7 +622,9 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
       <a class="nav-item" data-route="projects"><span class="ni">＋</span>上传一本新书</a>
       <a class="nav-item" data-route="persona"><span class="ni">◉</span>数字人 / 声音 / 克隆</a>
       <a class="nav-item" data-route="pipeline"><span class="ni">▶</span>一键生成短视频</a>
+      <a class="nav-item" data-route="creative"><span class="ni">✦</span>创意分镜</a>
       <a class="nav-item" data-route="library"><span class="ni">▩</span>内容资产库</a>
+      <a class="nav-item" data-route="billing"><span class="ni">＄</span>支付与方案</a>
       <a class="nav-item" data-route="publish"><span class="ni">▦</span>发布与数据</a>
 
       <details class="nav-more">
@@ -938,26 +1009,26 @@ window.DATA = (function () {
       you: '看适配度评分，觉得某个平台不想做，后面可以不发。',
       out: '八个平台各自的建议支数、时长、语气和引导语。',
       tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
-    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '标题 / Hook / 文案 / 多版本脚本',
-      why: '不是写一篇，是一次写几十条备选：20 个标题、20 个开场钩子、7 种不同角度的完整脚本（讲故事的、戳痛点的、念金句的…）。',
-      you: '挑你喜欢的，不喜欢的可以让它重写单条。',
-      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇脚本，每条都带一个预估表现分。',
-      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成 7 类版本脚本', '可读性与合规校验'] },
+    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '场地 / 双人对谈 / 插嘴节奏 / 镜头表 / 声音配置',
+      why: '不是写普通旁白稿，而是一次生成可拍、可剪、可交给数字人服务的短视频方案：先决定场地，再写主持人与作者的对谈，还要安排插嘴、停顿、换景和书摘图卡。',
+      you: '挑你喜欢的场景和对谈节奏，不喜欢的可以让它重写单条。',
+      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇场景对谈脚本，每条都带场地、镜头表、双人台词、声音配置与预估表现分。',
+      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成场景真人对谈脚本', '安排插嘴与停顿节奏', '生成镜头表与声音配置', '可读性与合规校验'] },
     { key: 'persona', n: 'STEP 5', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
       why: 'AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式把稿子重写一遍：语速快慢、口气软硬、先讲结论还是先讲故事、习惯用哪些口头禅。',
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
       out: '全部脚本被重写一遍，自然植入口头禅（每支最多 2 处），并打一个「像不像本人」的分数，低于 90 分退回重写。',
       tasks: ['载入人格模型 v3.2', '语气与节奏改写', '口头禅自然植入', '价值观一致性校验'] },
-    { key: 'avatar', n: 'STEP 6', t: '数字人开口说话', d: '口型 / 表情 / 手势 / 眼神',
-      why: '用本人的声音把稿子念出来，再让数字人形象对上口型——包括说话时的表情、眼神和手势，不是一张嘴在动的假人。',
+    { key: 'avatar', n: 'STEP 6', t: '双数字人开口对谈', d: '两种声音 / 插嘴 / 口型 / 表情 / 场景站位',
+      why: '用两套声音把主持人与作者分别合成，再让两个数字人对上口型、表情和插嘴节奏。重点不是一张嘴在动，而是两个人真的像在同一个场地里聊天。',
       you: '不用做什么，等着就行。',
-      out: '一段段带人像的视频素材，口型误差控制在 40 毫秒以内（肉眼看不出）。',
-      tasks: ['声音模型 TTS 合成', '口型对齐（Lip-sync）', '表情与微动作驱动', '手势节拍匹配', '视频帧渲染'] },
-    { key: 'package', n: 'STEP 7', t: '自动剪辑包装', d: '书封 / B-roll / 字幕 / BGM / CTA',
-      why: '相当于一个剪辑师：加字幕、把书封插进画面、金句变成大字、配上背景音乐、片尾加购买引导。',
+      out: '一段段双人对谈素材，包含主持人声线、作者声线、插嘴重叠、口型同步和场景站位。',
+      tasks: ['主持人声音 TTS 合成', '作者声音 TTS 合成', '插嘴重叠时间线', '双人口型对齐（Lip-sync）', '表情与微动作驱动', '场景站位渲染'] },
+    { key: 'package', n: 'STEP 7', t: '自动剪辑包装', d: '场地大景 / 书封 / B-roll / 字幕 / BGM / CTA',
+      why: '相当于一个剪辑师：先给场地大景，再剪双人中景、书封、金句、图卡和 B-roll。观众要看得出是在马路、访谈室、车里，而不是只有棚内人头。',
       you: '想换风格就在下面挑模板，或在系统设置里关掉不想要的元素。',
       out: '可以直接发布的成片，不需要再进剪辑软件。',
-      tasks: ['自动字幕与断句', '书封与作者照插入', '关键词动态大字', 'B-roll 素材匹配', 'BGM 与音量平衡', '品牌片头片尾'] },
+      tasks: ['场地大景与转场', '自动字幕与断句', '书封与作者照插入', '关键词动态大字', 'B-roll 素材匹配', 'BGM 与音量平衡', '品牌片头片尾'] },
     { key: 'export', n: 'STEP 8', t: '导出各平台版本', d: '多尺寸 / 多版本 / 一键分发',
       why: '同一支视频，抖音要竖屏、小红书要 3:4、Facebook 要方的，标题和话题标签也各写一套。这一步一次做完。',
       you: '导出文案包，或直接送进发布排程排时间。',
@@ -1130,18 +1201,107 @@ window.DATA = (function () {
     return map[angle] || map.know;
   }
 
+  /* ---------- 场景模板库（创意分镜：从「单人口播」升级为「场景 + 双人对谈」） ---------- */
+  const SCENE_TEMPLATES = [
+    { id: 'street', ico: '01', cat: '真实', name: '马路街访', tone: '生活化、直接', roles: '主持人 + 作者 / 路人反应', setting: '街道招牌、斑马线、路人经过、交通灯', fit: '痛点开场、读者共鸣', risk: '低', prompt: '用街头采访方式开场，主持人在人行道追问，作者数字人站在街景中回答。' },
+    { id: 'studio', ico: '02', cat: '真实', name: '专业访谈室', tone: '严肃、可信', roles: '主持人 + 作者', setting: '沙发、书架、茶几、补光灯、桌面书封', fit: '商业、管理、知识类书', risk: '低', prompt: '用节目访谈室拍摄，两人同框和交叉剪，书封放在桌面。' },
+    { id: 'car', ico: '03', cat: '真实', name: '车内聊天', tone: '朋友感、陪伴感', roles: '驾驶位主持 + 副驾作者', setting: '车窗城市、副驾视角、仪表台、路灯移动', fit: '成长、疗愈、轻知识', risk: '低', prompt: '两人在车内像朋友聊天，窗外城市移动，结尾自然引导留言书摘。' },
+    { id: 'bookstore', ico: '04', cat: '真实', name: '书店走廊', tone: '新书上市感', roles: '导购型数字人 + 读者', setting: '新书陈列、书封堆头、读者翻书', fit: '新书推荐、书摘', risk: '低', prompt: '在书店新书区开场，数字人拿起书封，读者在旁边追问。' },
+    { id: 'cafe', ico: '05', cat: '真实', name: '咖啡馆圆桌', tone: '松弛、温暖', roles: '两位读者 / 作者旁白', setting: '咖啡、笔记本、窗边自然光', fit: '情感、女性成长、读书会', risk: '低', prompt: '咖啡馆圆桌读书会，像朋友分享一本改变心态的新书。' },
+    { id: 'office', ico: '06', cat: '真实', name: '深夜办公室', tone: '压力、反思', roles: '职场主角 + 未来的自己', setting: '电脑、便利贴、加班灯光、城市夜景', fit: '职场、创业、效率书', risk: '低', prompt: '深夜办公室，疲惫主角遇见未来的自己，用书中观点改变选择。' },
+    { id: 'campus', ico: '07', cat: '真实', name: '校园长椅', tone: '青春、学习', roles: '学生主角 + 导师', setting: '树影、背包、翻开的书、路过学生', fit: '学习法、成长、考试', risk: '低', prompt: '校园长椅上，学生主角被导师数字人点醒，章节变成行动清单。' },
+    { id: 'gym', ico: '08', cat: '运动', name: '健身房挑战', tone: '自律、节奏快', roles: '教练 + 学员', setting: '跑步机、哑铃、计时器、汗水特写', fit: '自律、习惯、行动力', risk: '低', prompt: '健身房训练中讲书，动作组间插入书中方法，字幕像训练计划。' },
+    { id: 'cycling', ico: '09', cat: '运动', name: '城市骑行', tone: '自由、向前', roles: '骑行主角 + 耳机里的作者', setting: '单车、城市道路、风声、路牌', fit: '人生转折、效率、旅行书', risk: '中', prompt: '主角骑车穿过城市，耳机里作者数字人讲出关键观点，注意安全镜头不危险驾驶。' },
+    { id: 'pool', ico: '10', cat: '运动', name: '泳池训练', tone: '清爽、重启', roles: '游泳者 + 池边教练', setting: '泳道、水面反光、计时牌、池边书封', fit: '自我更新、疗愈、习惯', risk: '中', prompt: '泳池训练后在池边对谈，画面清爽健康，不做性感化呈现。' },
+    { id: 'beach', ico: '11', cat: '自然', name: '海滩读书会', tone: '疗愈、开阔', roles: '主持人 + 读者群像', setting: '海浪、沙滩椅、遮阳伞、落日书封', fit: '疗愈、生活方式、亲子', risk: '低', prompt: '海滩落日读书会，海浪当转场，金句写在沙滩和字幕上。' },
+    { id: 'sea', ico: '12', cat: '奇观', name: '海上漂流', tone: '求生、找方向', roles: '漂流主角 + 会说话的书', setting: '小船、海浪、指南针、远处灯塔', fit: '决策、逆境、冒险书', risk: '中', prompt: '主角在海上迷路，书本化身导航员，用章节帮他找方向。' },
+    { id: 'submarine', ico: '13', cat: '奇观', name: '深海潜水', tone: '探索、潜意识', roles: '潜水员 + 深海旁白', setting: '潜水服、珊瑚、深海光束、气泡', fit: '心理、哲学、探索类', risk: '中', prompt: '深海潜水寻找答案，每下潜一层对应书中一个心理层次。' },
+    { id: 'mars', ico: '14', cat: '科幻', name: '火星基地', tone: '未来、生存', roles: '火星指挥官 + AI 助理', setting: '红色荒原、基地舱、氧气警报、星空', fit: '未来、决策、管理', risk: '低', prompt: '火星基地资源有限，书中方法变成生存决策手册。' },
+    { id: 'spaceship', ico: '15', cat: '科幻', name: '太空舱独白', tone: '孤独、宏大', roles: '宇航员 + 地面作者', setting: '舷窗地球、仪表、失重书页', fit: '哲学、孤独、长期主义', risk: '低', prompt: '宇航员在太空舱读书，地面作者用无线电回答他的疑问。' },
+    { id: 'rollercoaster', ico: '16', cat: '夸张', name: '过山车人生', tone: '刺激、搞笑', roles: '尖叫主持 + 冷静作者', setting: '过山车轨道、俯冲、表情特写', fit: '情绪管理、人生起伏', risk: '中', prompt: '两人在过山车上对谈，情绪起伏对应书中人生曲线。' },
+    { id: 'snowmountain', ico: '17', cat: '自然', name: '雪山登顶', tone: '突破、长期主义', roles: '登山者 + 山顶导师', setting: '雪线、绳索、风雪、山顶书封', fit: '成长、毅力、长期主义', risk: '中', prompt: '登山途中每一段坡对应一个章节，山顶用金句收束。' },
+    { id: 'desert', ico: '18', cat: '奇观', name: '沙漠求生', tone: '孤独、资源管理', roles: '求生主角 + 指南针数字人', setting: '沙丘、水壶、地图、烈日', fit: '资源配置、选择、创业', risk: '中', prompt: '沙漠里资源有限，主角用书中判断方法决定取舍。' },
+    { id: 'war-reporter', ico: '19', cat: '敏感', name: '战地记者', tone: '严肃、克制', roles: '战地记者 + 作者连线', setting: '远处警报、临时新闻点、防护背心、地图', fit: '历史、和平、领导力', risk: '高', prompt: '以战地记者连线方式讲书，避免血腥、仇恨和娱乐化战争，只讲选择、韧性与人道视角。' },
+    { id: 'shelter', ico: '20', cat: '敏感', name: '避难所读书会', tone: '温柔、希望', roles: '志愿者 + 读者群像', setting: '临时灯光、毯子、热茶、旧书', fit: '战争反思、心理韧性', risk: '高', prompt: '在避难所里安静读书，用书中观点带出希望与互助，不消费苦难。' },
+    { id: 'hospital', ico: '21', cat: '敏感', name: '医院走廊', tone: '克制、真实', roles: '家属主角 + 医护导师', setting: '走廊灯、候诊椅、病历夹、安静脚步', fit: '生命、心理、陪伴', risk: '高', prompt: '医院走廊里谈书中关于生命和选择的观点，不做医疗承诺。' },
+    { id: 'bathroom', ico: '22', cat: '生活', name: '浴室灵感', tone: '搞笑、突然顿悟', roles: '浴袍主角 + 镜中自己', setting: '镜子雾气、浴袍、泡泡、便签', fit: '创意、习惯、拖延', risk: '中', prompt: '主角洗澡后穿浴袍在镜前突然顿悟，泡泡遮挡，健康搞笑不裸露。' },
+    { id: 'kitchen', ico: '23', cat: '生活', name: '厨房料理', tone: '烟火气、步骤感', roles: '厨师数字人 + 食客', setting: '砧板、锅气、食材、计时器', fit: '方法论、亲子、生活书', risk: '低', prompt: '把一本书讲成一道菜，每个步骤对应一个书中方法。' },
+    { id: 'courtroom', ico: '24', cat: '剧情', name: '法庭辩论', tone: '冲突、证据感', roles: '法官 + 正反双方 + 书本证人', setting: '法槌、证据板、金句投影', fit: '观点争议、商业、心理', risk: '低', prompt: '用法庭辩论验证一本书的观点，主持人当法官，书中金句当证据。' },
+    { id: 'library-maze', ico: '25', cat: '奇幻', name: '图书馆迷宫', tone: '神秘、寻找答案', roles: '读者主角 + 会说话的书架', setting: '巨型书架、旋转楼梯、发光章节门', fit: '知识、哲学、成长', risk: '低', prompt: '巨型图书馆像迷宫，主角每打开一扇章节门就解锁一个观点。' },
+    { id: 'q-animal', ico: '26', cat: 'Q版', name: '动物导读员', tone: '可爱、轻松', roles: '猫狗导读员 + Q 版读者', setting: '软垫、书架、小黑板、表情贴纸', fit: '亲子、疗愈、社群传播', risk: '低', prompt: '用猫狗 Q 版角色导读，动物负责吐槽和提问，书本负责回答。' },
+    { id: 'emotion-monster', ico: '27', cat: 'Q版', name: '情绪怪兽', tone: '可爱但有痛点', roles: '焦虑怪兽 + 清醒的我', setting: '情绪房间、贴纸、夸张表情、能量条', fit: '心理、情绪、内耗', risk: '低', prompt: '把焦虑、拖延、内耗做成 Q 版怪兽，主角用书中方法逐一安抚。' },
+    { id: 'future-self', ico: '28', cat: '剧情', name: '未来的我', tone: '反转、走心', roles: '现在的我 + 未来的我', setting: '时间门、旧照片、未来城市、书页光效', fit: '人生规划、成长、决策', risk: '低', prompt: '未来的我回到现在提醒主角，这本书哪一章会改变关键选择。' },
+    { id: 'villain', ico: '29', cat: '剧情', name: '反派视角', tone: '黑色幽默、警醒', roles: '反派 + 主角 + 旁白', setting: '暗色办公室、计划板、红色警示字幕', fit: '避坑、商业、心理操控', risk: '中', prompt: '用反派讲错误思维，主角用书中观点识破它，避免美化伤害行为。' },
+    { id: 'game-level', ico: '30', cat: '游戏', name: '闯关副本', tone: '游戏化、爽感', roles: '玩家主角 + 系统 NPC', setting: '关卡地图、血条、任务面板、奖励弹窗', fit: '方法论、学习、成长', risk: '低', prompt: '把章节变成游戏关卡，主角完成任务后解锁金句和行动清单。' }
+  ];
+
+  function sceneTemplateLibrary() {
+    return SCENE_TEMPLATES;
+  }
+
+  /* 生成双数字人（主持人 + 作者）的场景对谈脚本：带插嘴、接话、停顿等真人节奏 */
+  function genSceneDialogue(b, angle, i) {
+    const q = (b.quotes && b.quotes[i % b.quotes.length]) || '把力气用在真正会变大的地方。';
+    const pain = (b.pains && b.pains[i % b.pains.length]) || '很努力却看不到结果';
+    const theme = (b.themes && b.themes[i % b.themes.length]) || '先判断任务的回报结构';
+    const pool = sceneTemplateLibrary();
+    const scenes = [0, 1, 2].map(n => {
+      const t = pool[(i * 3 + n) % pool.length];
+      return { name: t.name, visual: t.setting, role: t.fit };
+    });
+    const style = {
+      story: '故事感',
+      pain: '痛点追问',
+      quote: '金句拆解',
+      biz: '专业访谈',
+      know: '知识图解',
+      excerpt: '书摘讨论',
+      author: '作者观察'
+    }[angle] || '场景对谈';
+    const dialogue = [
+      { t: '0.0-3.8s', speaker: '主持人', cue: '快、直接', text: `等一下，先别讲大道理。《${b.title}》普通人为什么要看？` },
+      { t: '3.2-8.8s', speaker: '作者', cue: '稳、先给结论', text: `因为它讲的不是成功学。它讲的是，面对「${pain}」时，你怎么少走弯路。` },
+      { t: '8.2-12.5s', speaker: '主持人', cue: '插嘴、质疑', text: '少走弯路？这个说法有点虚。有没有具体一点？' },
+      { t: '11.8-18.6s', speaker: '作者', cue: '被打断后接住', text: `具体说，就是${theme}。书里有句话很狠：${q}` },
+      { t: '18.0-24.0s', speaker: '主持人', cue: '接话', text: '我插一句，所以不是更努力，而是先看这件事会不会变大？' },
+      { t: '23.4-31.0s', speaker: '作者', cue: '解释', text: '对。低倍数的努力，只会让你越来越忙；高倍数的判断，才会让结果自己长出来。' },
+      { t: '30.2-36.8s', speaker: '主持人', cue: '反方问题', text: '那观众今天看完，能马上做的一件事是什么？别给太复杂的。' },
+      { t: '36.2-45.0s', speaker: '作者', cue: '行动建议', text: '今晚列三栏：消耗、维持、放大。先删掉一个消耗你的任务，再固定一个能放大的动作。' },
+      { t: '44.2-51.5s', speaker: '主持人', cue: '轻松收束', text: '这句像人话。不是鸡汤，是回去就能做。' },
+      { t: '51.0-60.0s', speaker: '作者', cue: 'CTA', text: `想看《${b.title}》第一章书摘，留言「书摘」，下一支直接拆方法。` }
+    ];
+    return {
+      template: '场景真人对谈',
+      style,
+      rhythm: '插嘴、接话、短停顿、反问、语速差',
+      scenePlan: scenes,
+      voicePlan: [
+        { role: '主持人', voice: '年轻女声 / 语速快 / 反应多 / 可插嘴', pace: '205-220 wpm', emotion: '好奇、追问、带一点吐槽' },
+        { role: '作者', voice: '成熟男声 / 语速稳 / 停顿明显', pace: '160-175 wpm', emotion: '专业、耐心、收束观点' }
+      ],
+      dialogue
+    };
+  }
+
   /* 生成完整脚本对象 */
   function genScripts(b, count) {
     const out = [];
     for (let i = 0; i < (count || 10); i++) {
       const a = ANGLES[i % ANGLES.length];
       const p = PLATFORMS[i % PLATFORMS.length];
+      const sceneDialogue = genSceneDialogue(b, a.key, i);
       out.push({
         id: uid('s'), n: i + 1, angle: a.key, angleName: a.name, platform: p.key, platformName: p.name,
         title: TITLE_TPL[i % TITLE_TPL.length](b),
         hook: HOOK_TPL[i % HOOK_TPL.length](b),
         body: genScriptBody(b, a.key),
-        cta: p.cta, duration: 30 + (i % 5) * 10, words: 180 + Math.floor(Math.random() * 160),
+        sceneMode: sceneDialogue.template,
+        sceneStyle: sceneDialogue.style,
+        rhythm: sceneDialogue.rhythm,
+        scenePlan: sceneDialogue.scenePlan,
+        voicePlan: sceneDialogue.voicePlan,
+        dialogue: sceneDialogue.dialogue,
+        cta: p.cta, duration: 60, words: 260 + Math.floor(Math.random() * 90),
         score: 66 + Math.floor(Math.random() * 32), persona: false
       });
     }
@@ -1151,10 +1311,16 @@ window.DATA = (function () {
   /* 人格改写（Step 5） */
   const HABITS = ['我讲得直白一点，', '你听我说完，', '这里我要停一下，', '说句实在话，', '我自己的体会是，'];
   function applyPersona(s) {
+    const dialogue = (s.dialogue || []).map((line, i) => Object.assign({}, line, {
+      text: line.speaker === '作者' && i % 2
+        ? rand(HABITS) + line.text
+        : line.text
+    }));
     return Object.assign({}, s, {
       persona: true,
       hook: rand(HABITS) + s.hook,
       body: s.body.replace(/\n\n/g, () => '\n\n') + `\n\n【${OWNER()}收尾】我不劝你一定要买这本书，我只希望你把刚才那句话想清楚。想清楚了，这条视频就没白看。`,
+      dialogue,
       score: Math.min(99, s.score + 5 + Math.floor(Math.random() * 6))
     });
   }
@@ -1162,6 +1328,23 @@ window.DATA = (function () {
   /* 生成分镜（时间轴按实际片长等比分配，不写死秒数） */
   function genShots(s, b) {
     const D = s.duration || 45;
+    if (s.scenePlan && s.dialogue) {
+      const scenes = s.scenePlan;
+      const lines = s.dialogue;
+      const first = scenes[0] || { name: '马路街访', visual: '街景与路人', role: '开场' };
+      const second = scenes[1] || { name: '专业访谈室', visual: '书架与沙发', role: '观点' };
+      const third = scenes[2] || { name: '车内聊天', visual: '车窗城市', role: '收尾' };
+      return [
+        { t: first.name + '大景', txt: `${first.visual}。主持人先把观众带到真实场地。`, cam: '广角环境镜头，人物只占画面 25%', vis: first.role, t0: 0, t1: 4, dur: '0–4s' },
+        { t: '主持人开问', txt: lines[0] ? `${lines[0].speaker}：${lines[0].text}` : s.hook, cam: '主持人中景，背后仍看得见场地', vis: '问题字幕 + 环境声', t0: 4, t1: 9, dur: '4–9s' },
+        { t: '作者接话 + 插嘴', txt: [lines[1], lines[2]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '双人交叉剪，主持人在话尾插入', vis: '插嘴时间线 + 声波重叠', t0: 9, t1: 16, dur: '9–16s' },
+        { t: '书封与金句', txt: lines[3] ? `${lines[3].speaker}：${lines[3].text}` : rand(b.quotes), cam: '人物让位，切书封、书页划线、金句卡', vis: '书摘图卡 + 引文标注', t0: 16, t1: 24, dur: '16–24s' },
+        { t: second.name + '换场', txt: `${second.visual}。用更专业的场地讲核心观点。`, cam: '场地大景转双人同框', vis: second.role, t0: 24, t1: 31, dur: '24–31s' },
+        { t: '反方追问', txt: [lines[4], lines[5], lines[6]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '主持人侧脸追问，作者停顿后回应', vis: '关键词大字 + 反方问题卡', t0: 31, t1: 42, dur: '31–42s' },
+        { t: third.name + '收尾', txt: [lines[7], lines[8]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '车内双人中景，窗外城市移动', vis: third.role, t0: 42, t1: 52, dur: '42–52s' },
+        { t: 'CTA 与 AI 标识', txt: lines[9] ? `${lines[9].speaker}：${lines[9].text}` : s.cta, cam: '书封 + 双人小窗 + 留言提示', vis: '留言书摘 / 试读 / AI 生成声明', t0: 52, t1: D, dur: `52–${D}s` }
+      ];
+    }
     const parts = [
       { t: '开场特写', txt: s.hook, cam: '数字人正面近景', vis: '书封悬浮入场', w: 0.13 },
       { t: '观点抛出', txt: s.body.split('\n\n')[1] || s.body.slice(0, 60), cam: '中景 + 轻微推镜', vis: '关键词大字动效', w: 0.27 },
@@ -1392,11 +1575,46 @@ window.DATA = (function () {
     return { chars, chapters: heads, quotes: quotes.slice(0, 24) };
   }
 
+  /* ---------- 支付与方案（演示用途：仅展示三档订阅方案，未接入真实收费） ---------- */
+  const BILLING_PLANS = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: 'US$49',
+      cadence: '每月',
+      quota: '60 支制作包 / 月',
+      desc: '适合单本书测试市场反应，先跑制作包与少量短视频。',
+      features: ['8 节点制作包（规划中）', '30 种场景模板', '双人对谈脚本', '基础发布文案'],
+      stripePriceEnv: 'STRIPE_PRICE_STARTER'
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: 'US$149',
+      cadence: '每月',
+      quota: '240 支制作包 / 月',
+      desc: '适合出版社、作者顾问与内容团队，能批量测多本书。',
+      features: ['批量书籍制作包', '图像 / 视频节点路由（规划中）', '支付后自动开通额度', '团队审核流程'],
+      stripePriceEnv: 'STRIPE_PRICE_PRO',
+      recommended: true
+    },
+    {
+      id: 'studio',
+      name: 'Studio',
+      price: 'US$499',
+      cadence: '每月',
+      quota: '1000 支制作包 / 月',
+      desc: '适合代运营与短视频工作室，含高用量、客户专案与白标交付。',
+      features: ['多客户专案', '高用量生成额度', 'Webhook 开通与用量记录', '可接专属媒体模型（规划中）'],
+      stripePriceEnv: 'STRIPE_PRICE_STUDIO'
+    }
+  ];
+
   return {
-    PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE,
+    PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
-    applyPersona, genShots, genVideos, genStrategy, genAnalytics, uid, rand
+    applyPersona, genShots, genVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
   };
 })();
 
@@ -1454,6 +1672,20 @@ window.STORE = (function () {
       if (!Array.isArray(p.materials)) p.materials = [];
       ['titles', 'hooks', 'opens', 'scripts', 'videos'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
       if (!Array.isArray(p.stages)) p.stages = DATA.STAGES.map(s => ({ key: s.key, state: 'todo' }));
+      // 旧版脚本没有场景对谈栏位（scenePlan / dialogue / voicePlan），补生成一份，
+      // 否则「创意分镜」与脚本详情弹窗读到 undefined 会直接崩掉
+      if (p.scripts.length && p.scripts.some(s => !s.scenePlan || !s.dialogue || !s.voicePlan)) {
+        const fresh = DATA.genScripts(p, p.scripts.length);
+        p.scripts = p.scripts.map((s, i) => Object.assign({}, s, {
+          duration: 60,
+          sceneMode: fresh[i].sceneMode,
+          sceneStyle: fresh[i].sceneStyle,
+          rhythm: fresh[i].rhythm,
+          scenePlan: fresh[i].scenePlan,
+          voicePlan: fresh[i].voicePlan,
+          dialogue: fresh[i].dialogue
+        }));
+      }
     });
   })();
 
@@ -1810,10 +2042,10 @@ window.ENGINE = (function () {
       upload: ['4 个文件校验通过', '抽取 86,420 字', '识别图内文字 312 处', '切分 12 章 / 148 段', '向量索引 1,486 条'],
       read: ['摘要 1,200 字', '核心论点 7 条', '金句 32 条', '受众画像 4 类', '匹配热点话题 5 个', '可传播单元 46 个'],
       strategy: ['8 个平台评分完成', '内容矩阵 32 支', '排期跨度 21 天', 'CTA 方案 6 套'],
-      script: ['开场 20 条', 'Hook 20 条', '标题 20 条', '脚本 14 篇 / 7 类', '合规风险 0 项'],
-      persona: ['人格模型载入成功', '改写 14 篇', '口头禅植入 26 处', '一致性 96.4%'],
-      avatar: ['音频 14 段 / 共 9分12秒', '口型对齐误差 <40ms', '表情关键帧 1,240', '手势节拍 386', '渲染 30 支 · 1080P'],
-      package: ['字幕 1,860 行', '书封插入 30 处', '大字动效 240 处', 'B-roll 匹配 96 段', 'BGM 已平衡 -14 LUFS', '片头片尾已套用'],
+      script: ['开场 20 条', 'Hook 20 条', '标题 20 条', '场景对谈脚本 14 篇', '插嘴/停顿时间线 14 条', '镜头表与声音配置已生成', '合规风险 0 项'],
+      persona: ['人格模型载入成功', '改写 14 篇双人台词', '主持/作者语气区分完成', '口头禅植入 26 处', '一致性 96.4%'],
+      avatar: ['主持人音频 14 段', '作者音频 14 段', '插嘴重叠点 42 个', '双人口型对齐误差 <40ms', '表情关键帧 1,240', '场景站位渲染 30 支 · 1080P'],
+      package: ['场地大景 90 段', '字幕 1,860 行', '书封插入 30 处', '大字动效 240 处', 'B-roll 匹配 96 段', 'BGM 已平衡 -14 LUFS', '片头片尾已套用'],
       export: ['转码 3 种分辨率', '字幕样式 7 套', '封面 30 张', '话题标签已写入', '已推送至排程']
     };
     return (m[key] && m[key][i]) ? '（' + m[key][i] + '）' : '';
@@ -2327,6 +2559,7 @@ window.VIEWS = window.VIEWS || {};
         <select class="input" style="width:190px" data-act="switch-proj">
           ${STORE.s.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>《${esc(x.title)}》</option>`).join('')}
         </select>
+        <button class="btn" data-act="goto" data-route="creative">✦ 设计创意分镜</button>
         ${ENGINE.isRunning
           ? `<button class="btn" data-act="stop-run">■ 中止任务</button>`
           : `<button class="btn btn-primary" data-act="run-all">▶ 一键跑完整流程</button>`}
@@ -2461,17 +2694,19 @@ window.VIEWS = window.VIEWS || {};
             `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center">
               <div style="font-size:24px;font-weight:750">${x[1]}</div><div style="font-size:12px;color:var(--txt-3)">${x[0]}</div></div>`).join('')}
         </div>
-        <div class="label">脚本版本（共 ${(p.scripts || []).length} 篇 / ${DATA.ANGLES.length} 类角度）</div>
-        <table><thead><tr><th>#</th><th>角度</th><th>标题</th><th>平台</th><th>时长</th><th>评分</th><th>人格</th><th></th></tr></thead><tbody>
+        <div class="label">场景真人对谈脚本（共 ${(p.scripts || []).length} 篇 / 每篇含场地、双人台词、镜头表、声音配置）</div>
+        <table><thead><tr><th>#</th><th>模板</th><th>标题</th><th>场地</th><th>节奏</th><th>声音</th><th>评分</th><th></th></tr></thead><tbody>
           ${p.scripts.map(s => `<tr>
             <td class="mono">${String(s.n).padStart(2, '0')}</td>
-            <td><span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${s.angleName}</span></td>
+            <td><span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${esc(s.sceneStyle || s.angleName)}</span></td>
             <td style="max-width:280px">${esc(s.title)}</td>
-            <td>${s.platformName}</td><td>${s.duration}s</td><td>${scoreBar(s.score)}</td>
-            <td>${s.persona ? '<span class="tag g">已套用</span>' : '<span class="tag">原始</span>'}</td>
+            <td style="font-size:12px;color:var(--txt-2)">${esc((s.scenePlan || []).map(x => x.name).join(' / ') || '棚内')}</td>
+            <td><span class="tag c">${esc(s.rhythm || '口播')}</span></td>
+            <td style="font-size:12px;color:var(--txt-2)">${(s.voicePlan || []).map(x => esc(x.role)).join(' + ') || '单声线'}</td>
+            <td>${scoreBar(s.score)}</td>
             <td><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">查看</button></td></tr>`).join('')}
         </tbody></table>`
-        : emptyStage('尚未生成脚本', '执行本阶段后，系统会一次性生成开场、Hook、标题与 7 类角度的完整脚本。'),
+        : emptyStage('尚未生成脚本', '执行本阶段后，系统会一次性生成开场、Hook、标题与场景真人对谈脚本。'),
 
       persona: () => {
         const pa = STORE.s.persona, done = (p.scripts || []).some(s => s.persona);
@@ -2522,16 +2757,19 @@ window.VIEWS = window.VIEWS || {};
 
       avatar: () => `<div class="row2">
         <div>
-          <div class="label">数字人与声音</div>
+          <div class="label">双数字人与声音</div>
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center">
-            <div class="pv" style="width:76px;height:76px;flex:0 0 76px;font-size:26px;border-radius:18px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
+            <div style="display:flex;gap:8px;flex:0 0 auto">
+              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px">主</div>
+              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px;background:linear-gradient(150deg,#ff8a5b,#ffb020)">作</div>
+            </div>
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:6px">${esc(STORE.s.account.name)}数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
-              <div class="chip-list"><span class="tag g">口型同步</span><span class="tag g">表情驱动</span><span class="tag g">手势匹配</span><span class="tag g">眼神跟随</span></div>
+              <div style="font-weight:700;margin-bottom:6px">主持人 + 作者数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
+              <div class="chip-list"><span class="tag g">两种声音</span><span class="tag g">插嘴重叠</span><span class="tag g">双人口型同步</span><span class="tag g">场景站位</span></div>
               <div class="wave" style="margin-top:10px">${Array.from({ length: 26 }).map((_, i) => `<i style="animation-delay:${(i * .06).toFixed(2)}s;height:${20 + (i * 7) % 70}%"></i>`).join('')}</div>
             </div></div>
           <div class="grid g3" style="margin-top:14px">
-            ${[['渲染分辨率', '1080P'], ['帧率', '30 fps'], ['口型误差', '<40 ms']].map(x =>
+            ${[['渲染分辨率', '1080P'], ['帧率', '30 fps'], ['双声线', '主持 + 作者'], ['口型误差', '<40 ms'], ['插嘴点', '3-5 个/支'], ['场地', '3 段切换']].map(x =>
               `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
                 <div style="font-size:16px;font-weight:700">${x[1]}</div><div style="font-size:11px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
           </div>
@@ -2542,6 +2780,7 @@ window.VIEWS = window.VIEWS || {};
             <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
               <span class="mono" style="color:var(--txt-3)">${String(i + 1).padStart(2, '0')}</span>
               <span style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
+              <span class="tag c">${esc((s.voicePlan || []).map(v => v.role).join('+') || '双声线')}</span>
               <span class="tag ${(p.videos || []).length ? 'g' : ''}">${(p.videos || []).length ? '已渲染' : '待渲染'}</span>
             </div>`).join('') || '<div class="hint">请先完成写稿阶段</div>'}
         </div></div>`,
@@ -2549,7 +2788,8 @@ window.VIEWS = window.VIEWS || {};
       package: () => `
         <div class="label">包装元素（可在系统设置中统一开关）</div>
         <div class="grid g4">
-          ${[['书封插入', '每支视频 0-3s 与结尾出现', '📕'], ['作者照', '提到作者时自动切入', '👤'],
+          ${[['场地大景', '每段开头先看到马路 / 访谈室 / 车内', '▣'], ['双人中景', '主持人与作者同框或交叉剪', '◫'],
+             ['插嘴字幕', '打断、接话、重叠声音用不同颜色标注', '↯'], ['书封插入', '每支视频 0-3s 与结尾出现', '📕'],
              ['关键词大字', '金句自动放大 + 卡点', '🅰'], ['动态图表', '数据类内容自动生成', '📊'],
              ['B-roll 素材', '按语义匹配空镜', '🎞'], ['智能字幕', '自动断句 + 双语可选', '💬'],
              ['背景音乐', '按情绪匹配 + 响度平衡', '🎵'], ['品牌 Logo 与 CTA', '片尾统一模板', '🏷']
@@ -3264,6 +3504,583 @@ window.VIEWS = window.VIEWS || {};
 })();
 
 
+/* ===== views-creative.js ===== */
+/* ============================================================
+ * views-creative.js — 创意分镜 / 支付与方案
+ * 合并自同事版本：把「单数字人口播」升级成「场景 + 双数字人真人对谈」，
+ * 并新增订阅方案页（演示 UI，未接入真实收费）。
+ * 端口说明：
+ *   - 原始素材里涉及外部 AI Platform 路由与 Stripe 收款的文案，
+ *     一律改成「规划中 / 需自行部署」的诚实框架，不宣称本演示已经
+ *     接上真实的数字人生成或真实收款。
+ *   - 原文里混入的繁体字（雙/場/談/節…）已统一改回简体，
+ *     繁体由 i18n.js 在渲染时统一转换，源码不该手写繁体。
+ * ========================================================== */
+(function () {
+  const { esc } = UI;
+
+  /* =======================================================
+   * 创意分镜
+   * ===================================================== */
+  VIEWS.creative = function (q) {
+    const p = STORE.current;
+    if (!p) return '<div class="card empty">请先创建书籍项目</div>';
+    const mode = (q && q.m) || 'scene';
+    const modes = creativeModes(p);
+    const cur = modes.find(x => x.key === mode) || modes[0];
+    const samples = creativeSamples();
+    const templates = DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : [];
+    const quote = ((p.quoteSrc && p.quoteSrc[0] && p.quoteSrc[0].text) || (p.quotes && p.quotes[0]) || '真正有传播力的，不是把书讲完，而是把一个观点讲到人心里。');
+    const theme = (p.themes && p.themes[0]) || '把书中最有穿透力的观点转成可传播的短视频';
+
+    return `
+    <div class="page-h">
+      <div><div class="page-t">创意分镜</div>
+        <div class="page-d">当前项目：《${esc(p.title)}》 · 不只数字人口播，而是把书变成一组可拍、可剪、可生成的镜头</div></div>
+      <div class="right">
+        <button class="btn" data-act="goto" data-route="pipeline">回到生产流水线</button>
+        <button class="btn btn-primary" data-act="copy" data-t="${esc(cur.prompt(p))}">复制生成提示词</button>
+      </div>
+    </div>
+
+    <div class="creative-hero">
+      <div>
+        <div class="chip-list" style="margin-bottom:12px">
+          <span class="tag v">推荐：${esc(cur.name)}</span>
+          <span class="tag c">先看见场地</span>
+          <span class="tag g">双人真人节奏</span>
+          <span class="tag a">需标注 AI 生成</span>
+        </div>
+        <h2>${esc(cur.headline)}</h2>
+        <p>${esc(cur.lead)}</p>
+        <div class="grid g3" style="margin-top:16px">
+          ${[['数字人占比', cur.avatar], ['场地策略', cur.environment || '棚内 + 插图 + B-roll'], ['对话节奏', cur.rhythm || '口播 / 旁白'], ['适合平台', cur.platform]].map(x => `
+            <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px">
+              <div style="font-size:11.5px;color:var(--txt-3)">${x[0]}</div>
+              <div style="font-size:16px;font-weight:760;margin-top:4px">${esc(x[1])}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="creative-board">
+        <div class="creative-frame">
+          <div class="frame-top">
+            <div class="frame-avatar">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0, 1))}</div>
+            <div class="frame-book"></div>
+          </div>
+          <div>
+            <div class="frame-caption">${esc(cur.preview)}</div>
+            <div class="chip-list" style="margin-top:10px">
+              <span class="tag g">场地大景</span><span class="tag c">插嘴接话</span><span class="tag p">情境插图</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">可直接播放的 60 秒样片</div>
+        <div class="card-s">这里放的是实际 MP4，不是分镜占位：有声音、直式 1080x1920、场地背景与双人对谈节奏</div></div></div>
+      <div class="sample-grid">
+        ${samples.map(x => `
+          <div class="sample-card">
+            <video class="sample-video" src="${esc(x.src)}" controls playsinline preload="metadata"></video>
+            <div class="sample-meta">
+              <span class="tag c">${esc(x.scene)}</span>
+              <span class="tag g">60 秒</span>
+              <span class="tag a">AI 生成标识</span>
+            </div>
+            <div class="sample-title">${esc(x.title)}</div>
+            <div class="sample-desc">${esc(x.desc)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">30 种数字人场景模板库</div>
+        <div class="card-s">可以直接选模板，也可以输入自己的场景；敏感场景会用合规叙事方式呈现</div></div>
+        <div class="right"><button class="btn btn-sm" data-act="copy" data-t="${esc(sceneLibraryPrompt(p, templates.slice(0, 30)))}">复制 30 种模板提示词</button></div></div>
+      <div class="template-toolbar">
+        <span class="tag v">真实</span><span class="tag c">奇观</span><span class="tag g">Q 版 / 动物</span><span class="tag a">敏感场景需合规</span>
+        <input class="input" id="custom-scene-name" placeholder="自定义场景：例如雨夜便利店、海底列车、古代皇宫">
+        <input class="input" id="custom-scene-role" placeholder="角色：男主角 / 女主角 / 动物 / 反派 / 未来的我">
+        <button class="btn btn-primary" data-act="custom-scene-prompt">生成自定义提示词</button>
+      </div>
+      <div class="template-grid">
+        ${templates.map(t => `
+          <div class="template-card">
+            <div class="template-top">
+              <div style="display:flex;gap:10px;min-width:0">
+                <div class="template-ico">${esc(t.ico)}</div>
+                <div style="min-width:0">
+                  <div class="template-name">${esc(t.name)}</div>
+                  <div class="template-meta" style="margin-top:6px">
+                    <span class="tag">${esc(t.cat)}</span><span class="tag c">${esc(t.risk)}风险</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="template-desc">${esc(t.setting)}</div>
+            <div class="template-roles"><b>角色</b>：${esc(t.roles)}<br><b>适合</b>：${esc(t.fit)}<br><b>语气</b>：${esc(t.tone)}</div>
+            <div class="template-actions">
+              <button class="btn btn-sm btn-primary" data-act="apply-scene-template" data-id="${esc(t.id)}">套用</button>
+              <button class="btn btn-sm" data-act="copy-scene-template" data-id="${esc(t.id)}">复制提示词</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">AI Platform 智能路由（规划中）</div>
+        <div class="card-s">这是一套可选的后端脚本方案：自行部署 tools/ai-platform-router.js 后，可把制作包送去外部 AI Platform 服务统一路由图像、数字人、深层视频与合成节点。本演示前端不会直接调用它，也不会宣称已经产出真实影片</div></div>
+        <div class="right">
+          <button class="btn btn-sm" data-act="copy-third-party-command">复制路由命令</button>
+          <button class="btn btn-sm btn-primary" data-act="export-third-party-job">下载 AI 路由任务 JSON</button>
+        </div></div>
+      <div class="grid g4">
+        ${[
+          ['Intelligent Router', '判断任务进入书籍理解、角色、图像、数字人、深层视频或合成节点', '外部服务'],
+          ['Image Node', '生成书封视觉、场景首帧、Q 版/动物/书中主角概念图', '外部服务'],
+          ['Avatar Node', '生成主持人、作者、主角等数字人设定、声线与对谈节奏', '外部服务'],
+          ['Video Assembly', '深层场景、字幕、金句、CTA、9:16 直式成片合成规格', '外部服务']
+        ].map(x => `<div class="visual-card"><b>${x[0]}</b><span>${x[1]}</span><div style="margin-top:10px"><span class="tag">${x[2]}</span></div></div>`).join('')}
+      </div>
+      <div class="explain" style="margin-top:14px;border-left-color:var(--amber)">
+        <div class="ex-r"><span class="ex-k">现在的状态</span><span>这套路由是规划中的对接方案，脚本在 tools/ 目录，需要你自己申请并配置外部 API Key 才能跑；不填 Key 也能跑 Demo 模式看流程。</span></div>
+        <div class="ex-r"><span class="ex-k">安全边界</span><span>Key 不进前端、不进 Git；若外部服务没有回传实际媒体 URL，产物会标示为「规划中的素材」，而不是宣称已产出真实影片。</span></div>
+      </div>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:18px" data-seg="creative-mode">
+      ${modes.map(x => `
+        <div class="creative-mode ${x.key === cur.key ? 'on' : ''}" data-v="${x.key}">
+          <div class="ico">${x.icon}</div>
+          <div class="name">${esc(x.name)}</div>
+          <div class="desc">${esc(x.desc)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">6 种 60 秒模拟成片</div>
+        <div class="card-s">先用分镜播放器模拟节奏、画面与口播，方便比较哪种方向最值得正式生成</div></div>
+        <div class="right"><button class="btn btn-sm btn-primary" data-act="play-creative" data-mode="${cur.key}">播放目前模式</button></div></div>
+      <div class="grid g3">
+        ${modes.map(x => `
+          <div class="creative-preview">
+            <div class="creative-thumb" style="background:${x.cover}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <span class="tag" style="background:rgba(0,0,0,.42);color:#fff;border-color:rgba(255,255,255,.2)">60 秒</span>
+                <div class="mini-book"></div>
+              </div>
+              <div>
+                <div style="color:#fff;font-weight:820;font-size:15px;line-height:1.35;text-shadow:0 3px 14px rgba(0,0,0,.48)">${esc(x.name)}</div>
+                <div class="mini-line" style="width:78%"></div><div class="mini-line" style="width:52%;opacity:.75"></div>
+              </div>
+            </div>
+            <div class="creative-preview-b">
+              <div class="title">${esc(x.name)}</div>
+              <div class="desc">${esc(x.preview)}</div>
+              <div style="display:flex;gap:8px;margin-top:12px;align-items:center;justify-content:space-between">
+                <span class="tag">${esc(x.platform)}</span>
+                <button class="btn btn-sm btn-primary" data-act="play-creative" data-mode="${x.key}">播放</button>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="grid g-2-1">
+      <div class="card">
+        <div class="card-h"><div><div class="card-t">${esc(cur.name)} · 60 秒分镜表</div>
+          <div class="card-s">让数字人、书中内容、插图、B-roll 和字幕一起工作</div></div></div>
+        ${cur.shots.map((s, i) => `
+          <div class="creative-shot">
+            <div class="time">${esc(s.t)}</div>
+            <div>
+              <div class="main">${esc(s.m)}</div>
+              <div class="sub">${esc(s.d)}</div>
+            </div>
+            <div class="asset">${esc(s.a)}</div>
+          </div>`).join('')}
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><div><div class="card-t">内容钩子</div><div class="card-s">这支影片不要只说「新书上市」</div></div></div>
+          <div class="copy-item" style="margin-bottom:10px">
+            <div class="ci-h"><span class="tag v">核心观点</span></div>
+            <div class="copy-txt">${esc(theme)}</div>
+          </div>
+          <div class="copy-item">
+            <div class="ci-h"><span class="tag c">金句</span></div>
+            <div class="copy-txt">${esc(quote)}</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-h"><div><div class="card-t">场地与镜头规则</div><div class="card-s">避免只看到一个人头在棚内口播</div></div></div>
+          <div class="scene-strip">
+            ${(cur.scenes || [
+              ['开场大景', '先交代在哪里，让观众一秒知道场景。'],
+              ['双人中景', '两个人同框或交叉剪，能看见互动。'],
+              ['内容特写', '书封、金句、图卡、插图补足信息。']
+            ]).map(x => `<div class="scene-pill"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><div class="card-t">视觉素材包</div><div class="card-s">生成前要准备或自动生成</div></div></div>
+          <div class="grid" style="gap:10px">
+            ${cur.assets.map(x => `<div class="visual-card"><b>${esc(x.k)}</b><span>${esc(x.v)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div class="card-h"><div><div class="card-t">角色配置</div><div class="card-s">数字人可以是主持、作者、读者或 Q 版角色</div></div></div>
+        <table><thead><tr><th>角色</th><th>作用</th><th>出镜比例</th></tr></thead><tbody>
+          ${cur.roles.map(r => `<tr><td><b>${esc(r.n)}</b></td><td style="color:var(--txt-2);font-size:12.5px">${esc(r.d)}</td><td>${esc(r.p)}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><div class="card-t">生成提示词</div><div class="card-s">可给视频生成、图像生成或剪辑团队使用</div></div>
+          <div class="right"><button class="btn btn-sm" data-act="copy" data-t="${esc(cur.prompt(p))}">复制</button></div></div>
+        <div class="log" style="max-height:none;white-space:pre-wrap">${esc(cur.prompt(p))}</div>
+      </div>
+    </div>`;
+  };
+
+  function creativeSamples() {
+    return [
+      {
+        title: '场地明显版：街头、访谈室、车内三段切换',
+        scene: '三场景',
+        src: 'assets/samples/visible-environment-dialogue.mp4',
+        desc: '先给环境大景，再进双人对谈，避免背景被字幕和人物吃掉。'
+      },
+      {
+        title: '真人节奏版：插嘴、接话、语速差',
+        scene: '访谈室',
+        src: 'assets/samples/human-rhythm-dialogue.mp4',
+        desc: '主持人会打断、作者会接话，比固定轮流讲更接近真人访谈。'
+      },
+      {
+        title: '马路街访版：街景、路人、交通元素',
+        scene: '马路',
+        src: 'assets/samples/street-dialogue.mp4',
+        desc: '适合做比较生活化的读书推荐，像路上聊天而不是坐棚念稿。'
+      },
+      {
+        title: '车内聊天版：副驾对谈、路上场景',
+        scene: '车内',
+        src: 'assets/samples/car-dialogue.mp4',
+        desc: '适合做轻松、有陪伴感的书摘内容，像朋友在车里聊一本书。'
+      }
+    ];
+  }
+
+  function sceneTemplatePrompt(p, t) {
+    const book = p ? `《${p.title}》` : '这本新书';
+    return `请为新书 ${book} 生成一支 60 秒短视频，使用「${t.name}」场景。场景：${t.setting}。角色：${t.roles}。语气：${t.tone}。适合表达：${t.fit}。创意要求：${t.prompt} 必须包含场地大景、数字人/角色出场、书封或章节内容、双人或多角色对谈、插嘴/停顿/反问、金句图卡、结尾 CTA，并标注 AI 生成。风险等级：${t.risk}，如为敏感场景，避免血腥、裸露、仇恨、医疗承诺或消费真实苦难。`;
+  }
+
+  function sceneLibraryPrompt(p, templates) {
+    return (templates || []).map(t => sceneTemplatePrompt(p, t)).join('\n\n---\n\n');
+  }
+
+  function customScenePrompt(p, scene, role) {
+    const book = p ? `《${p.title}》` : '这本新书';
+    const s = scene || '自定义奇观场景';
+    const r = role || '主持人 + 作者数字人 + 书中主角';
+    return `请为新书 ${book} 生成一支 60 秒短视频，使用自定义场景「${s}」。角色配置：${r}。要求：先给场地大景，让观众看清楚环境；再让角色进入剧情，用双人或多角色对谈讲出书中核心心态、经历过程和转变。必须包含：1）场地大景；2）角色出场；3）书封/章节/金句；4）插嘴、停顿、反问；5）主角经历或心理变化；6）结尾 CTA。若场景涉及战争、灾难、医院、浴室、泳池等敏感内容，采用克制、健康、非血腥、非裸露、非猎奇的表达，并标注 AI 生成。`;
+  }
+
+  function thirdPartyRenderJob(p) {
+    const templates = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).slice(0, 6);
+    const scripts = (p.scripts && p.scripts.length ? p.scripts : DATA.genScripts(p, 3)).slice(0, 3);
+    return {
+      version: 'bookreel.ai_platform_route_job.v1',
+      createdAt: new Date().toISOString(),
+      project: {
+        title: p.title,
+        author: p.author,
+        publisher: p.publisher,
+        summary: p.summary,
+        themes: p.themes || [],
+        quotes: p.quotes || []
+      },
+      target: {
+        platform: 'douyin',
+        ratio: '9:16',
+        width: 1080,
+        height: 1920,
+        durationSeconds: 60,
+        language: 'zh-TW / zh-CN'
+      },
+      providers: {
+        router: 'ai-platform-router（需自行部署，见 tools/ 目录）',
+        currentEngine: 'demo-mode-or-external-ai-platform',
+        image: 'ai-platform-image-node（规划中）',
+        avatar: 'ai-platform-avatar-node（规划中）',
+        sceneVideo: 'ai-platform-deep-video-node（规划中）',
+        assembly: 'ai-platform-assembly-node（规划中）'
+      },
+      routerPolicy: {
+        requiresApiKeysNow: false,
+        browserSecretsAllowed: false,
+        liveMode: '在后端设置 AI_PLATFORM_API_KEY 与 AI_PLATFORM_BASE_URL，再执行 tools/ai-platform-router.js --execute --nodes。',
+        upgradePath: '保留这份任务 JSON 的格式，交给你自己部署的 AI Platform 路由服务，在图像、数字人、深层视频与合成节点之间路由。'
+      },
+      compliance: [
+        '标注 AI 生成',
+        '真人肖像/声音必须授权',
+        '战争、灾难、医院等敏感场景避免血腥、仇恨、恐吓或消费真实苦难',
+        '浴室、泳池等场景必须健康呈现，不裸露、不性感化'
+      ],
+      sceneTemplates: templates.map(t => ({
+        id: t.id,
+        name: t.name,
+        category: t.cat,
+        risk: t.risk,
+        prompt: sceneTemplatePrompt(p, t)
+      })),
+      scripts: scripts.map(s => ({
+        id: s.id,
+        title: s.title,
+        sceneMode: s.sceneMode,
+        rhythm: s.rhythm,
+        scenePlan: s.scenePlan,
+        voicePlan: s.voicePlan,
+        dialogue: s.dialogue,
+        shots: DATA.genShots(s, p)
+      }))
+    };
+  }
+
+  function creativeModes(p) {
+    const book = `《${p.title}》`;
+    const author = p.author || STORE.s.account.name;
+    const baseAssets = [
+      { k: '书籍素材', v: '书封正面、章节标题、目录页、作者照片或作者数字人形象。' },
+      { k: '内容素材', v: '摘要、三条核心观点、三句金句、目标读者痛点与 CTA。' },
+      { k: '合规素材', v: '片尾或描述区加入 AI 生成标识，真实人物肖像与声音需授权。' }
+    ];
+    const promptBase = name => `请为新书 ${book} 设计一支 ${name} 短视频。作者：${author}。要求：不是单一数字人口播；每 3-5 秒切换镜头；包含书封、书中金句、内容图卡、情境插图、字幕、音乐节奏与 CTA；如使用逼真数字人或声音克隆，需标注 AI 生成。`;
+    return [
+      {
+        key: 'scene', icon: '00', name: '场景真人对谈', platform: '抖音 / 小红书 / Reels', avatar: '55%',
+        cover: 'linear-gradient(135deg,#101827,#22d3ee 32%,#2ee6a8 58%,#ffb020)',
+        headline: '先让观众看见场地，再让两个人像真人一样聊天',
+        lead: '这是目前最适合正式开工的方向。影片不是单一播音室口播，而是开场先展示马路、访谈室、车内等环境，再切入主持人和作者数字人对谈，过程中保留插嘴、接话、停顿、反问和不同语速。',
+        desc: '场地明显、两人对谈、有插话节奏，适合做抖音可上架版本。',
+        preview: `主持人：等一下，先别讲大道理。${book} 普通人为什么要看？`,
+        environment: '马路 / 访谈室 / 车内',
+        rhythm: '插嘴、停顿、接话',
+        shots: [
+          { t: '0-4s', m: '场地大景开场', d: '先用 1-2 秒看清楚是在街头、访谈室或车内，人物不要立刻塞满画面。', a: '马路招牌 / 访谈室沙发 / 车窗城市' },
+          { t: '4-9s', m: '主持人用真人语气开问', d: '不是「欢迎收看」，而是直接问痛点，像真正在聊天。', a: '主持人中景 + 问题字幕' },
+          { t: '9-16s', m: '作者回答被插嘴', d: '作者讲到一半，主持人用「等一下」「我插一句」接入。', a: '双人交叉剪 + 声音重叠' },
+          { t: '16-24s', m: '书封与金句插入', d: '人物不要一直占满画面，切到书封、书页划线、金句卡。', a: '书封特写 + 引文卡' },
+          { t: '24-34s', m: '换场景到访谈室', d: '同一个主题在更专业的场地讲，提升可信度。', a: '灯光 / 书架 / 沙发双人中景' },
+          { t: '34-44s', m: '主持人质疑', d: '让主持人代表观众反问，避免像广告。', a: '反方问题大字 + 作者反应' },
+          { t: '44-54s', m: '换场景到车内', d: '用更生活化的语气收束，像朋友给建议。', a: '车窗 / 仪表台 / 副驾对谈' },
+          { t: '54-60s', m: '下一集 CTA', d: '自然引导留言书摘、试读或下一章拆解。', a: '留言 CTA + AI 生成标识' }
+        ],
+        assets: baseAssets.concat([
+          { k: '场景素材', v: '至少三类：街头、访谈室、车内。每类要有大景、中景、物件特写。' },
+          { k: '真人节奏脚本', v: '每 6-8 秒安排一次插话、接话、短停顿、反问或笑点，不写成朗读稿。' }
+        ]),
+        scenes: [
+          ['马路街访', '招牌、斑马线、路人、交通灯，适合生活化问题开场。'],
+          ['专业访谈室', '书架、沙发、补光、桌面书封，适合讲核心观点。'],
+          ['车内聊天', '车窗城市、仪表台、副驾视角，适合朋友式收尾。']
+        ],
+        roles: [
+          { n: '主持人数字人', d: '负责追问、打断、代表观众吐槽，声音语速较快。', p: '28%' },
+          { n: '作者数字人', d: '负责回答和收束，语气较稳，但不能像念稿。', p: '27%' },
+          { n: '场地镜头', d: '每段都先给环境，让画面有真实场域感。', p: '25%' },
+          { n: '书摘图卡', d: '补充书封、金句、章节和行动清单。', p: '20%' }
+        ],
+        prompt: p => promptBase('场景真人对谈型') + ' 必须包含三类场景：马路街访、专业访谈室、车内聊天；每段开头先给环境大景。两位数字人必须用不同声音，对话要有插嘴、接话、短停顿、反问和语速差，不要写成旁白朗读。'
+      },
+      {
+        key: 'launch', icon: '01', name: '正式新书发表', platform: '官网 / YouTube / 发布会', avatar: '35%',
+        cover: 'linear-gradient(135deg,#151b31,#7c6cff 52%,#ffb020)',
+        headline: '用数字人主持发布会，但让书本身成为主角',
+        lead: '适合主视觉影片。数字人负责开场与关键转折，画面穿插书封、章节、金句、发布会舞台、读者痛点和 CTA，整体像一支新书预告片。',
+        desc: '舞台感、品牌感强，适合放在官网首页与发布活动。',
+        preview: `${book} 不是一本只拿来看的书，而是一套可以被反复使用的行动地图。`,
+        shots: [
+          { t: '0-3s', m: '冷开场：一句强问题', d: '数字人正面看镜头，直接说出读者痛点。', a: '数字人近景 + 大字标题' },
+          { t: '3-8s', m: '书封登场', d: '书封从暗场中被灯光扫过，出现书名与作者。', a: '书封 3D 转场' },
+          { t: '8-16s', m: '为什么现在要读', d: '用 2 个社会/行业场景说明这本书切中的问题。', a: '情境 B-roll / 插图' },
+          { t: '16-28s', m: '第一核心观点', d: '数字人只讲 1 个观点，字幕拆成三段。', a: '观点图卡 + 关键词动画' },
+          { t: '28-40s', m: '金句爆点', d: '书中金句放大，搭配翻页、划线、光效。', a: '金句卡 / 书页特写' },
+          { t: '40-52s', m: '读完之后会改变什么', d: '展示读者从困惑到采取行动的画面。', a: '前后对比镜头' },
+          { t: '52-60s', m: '预约 / 购买 / 加入读书会', d: '数字人收尾，出现二维码或按钮文案。', a: 'CTA + AI 标识' }
+        ],
+        assets: baseAssets,
+        roles: [
+          { n: '主数字人', d: '担任发布会主持，不负责整支影片独白。', p: '30-40%' },
+          { n: '书本', d: '以 3D 书封、翻页、章节卡成为主要视觉对象。', p: '25%' },
+          { n: '读者场景', d: '用情境镜头表现痛点和读后改变。', p: '35%' }
+        ],
+        prompt: p => promptBase('正式新书发表型')
+      },
+      {
+        key: 'dialogue', icon: '02', name: '双人对谈', platform: 'YouTube / 小红书 / 播客切片', avatar: '65%',
+        cover: 'linear-gradient(135deg,#102337,#22d3ee 48%,#7c6cff)',
+        headline: '两个人讲，比一个人念更自然',
+        lead: '一个主持人负责问观众心里的问题，一个作者数字人负责回答。对谈能制造节奏、冲突和好奇心，特别适合解释一本书到底解决什么问题。',
+        desc: '主持人提问，作者数字人回答，适合做系列内容。',
+        preview: `主持人：${book} 到底要解决什么问题？作者：它先解决一个误会。`,
+        shots: [
+          { t: '0-4s', m: '主持人抛问题', d: '问题要尖锐，不要礼貌寒暄。', a: '主持人半身 + 问题字幕' },
+          { t: '4-10s', m: '作者数字人回应', d: '先给结论，再补背景。', a: '作者数字人 + 书封角标' },
+          { t: '10-18s', m: '插入书中观点', d: '主持人追问「书里怎么说？」', a: '章节卡 / 引文卡' },
+          { t: '18-30s', m: '生活例子', d: '用一个读者熟悉的场景验证观点。', a: '情境插图 / B-roll' },
+          { t: '30-42s', m: '反方疑问', d: '主持人提出质疑，让内容不单薄。', a: '双人分屏' },
+          { t: '42-54s', m: '作者给行动建议', d: '给 1 个具体可做的步骤。', a: '步骤图卡' },
+          { t: '54-60s', m: '下一集预告', d: '预告下一个问题，鼓励关注。', a: '片尾卡 + CTA' }
+        ],
+        assets: baseAssets.concat([{ k: '对谈脚本', v: '至少 3 问 3 答：痛点问题、书中答案、反方疑问、行动建议。' }]),
+        roles: [
+          { n: '主持人数字人', d: '代表读者发问，负责制造节奏和冲突。', p: '35%' },
+          { n: '作者数字人', d: '回答问题，语气像本人，不像 AI 念稿。', p: '35%' },
+          { n: '图卡 / 插图', d: '每个回答后补一个视觉证据。', p: '30%' }
+        ],
+        prompt: p => promptBase('双人对谈型') + ' 结构为主持人提问、作者回答、主持人追问、书中观点图卡、生活案例、行动建议。'
+      },
+      {
+        key: 'cute', icon: '03', name: 'Q 版动画导读', platform: 'Shorts / Reels / 抖音', avatar: '45%',
+        cover: 'linear-gradient(135deg,#ff8a5b,#ff5d8f 48%,#ffdf7e)',
+        headline: '把严肃的新书内容变成可爱、好懂、可分享的小故事',
+        lead: '适合年轻受众和社群传播。用 Q 版作者、Q 版读者和手绘场景讲一个书中观点，风格可以是温暖手绘、柔和水彩、日系童话感，但避免直接仿特定工作室。',
+        desc: '可爱角色 + 手绘插图 + 一条观点，适合高频短视频。',
+        preview: `Q 版读者抱着 ${book}：原来我卡住，不是因为不努力。`,
+        shots: [
+          { t: '0-3s', m: 'Q 版角色遇到问题', d: '用夸张表情表现读者痛点。', a: 'Q 版读者动画' },
+          { t: '3-8s', m: '书本跳出来', d: '书封拟人化或发光登场。', a: 'Q 版书封' },
+          { t: '8-16s', m: '作者小老师解释', d: 'Q 版作者拿小黑板讲一个观点。', a: '手绘黑板图卡' },
+          { t: '16-28s', m: '错误做法 vs 正确做法', d: '左右分屏，用动作说明差异。', a: '对比动画' },
+          { t: '28-42s', m: '金句变成画面', d: '把抽象金句变成具体可看见的隐喻。', a: '水彩插图 + 字幕' },
+          { t: '42-54s', m: '角色开始行动', d: '展示读者照着书中建议做第一步。', a: '行动清单动画' },
+          { t: '54-60s', m: '可爱 CTA', d: '邀请收藏、留言、领取书摘。', a: '贴纸式 CTA' }
+        ],
+        assets: baseAssets.concat([{ k: '角色设定', v: 'Q 版作者、Q 版读者、会发光的书本、三个常用表情。' }]),
+        roles: [
+          { n: 'Q 版作者', d: '负责把书中观点讲得亲切。', p: '25%' },
+          { n: 'Q 版读者', d: '负责演出痛点和转变。', p: '35%' },
+          { n: '书本角色', d: '像一个引导者，把章节与金句带出来。', p: '20%' }
+        ],
+        prompt: p => promptBase('Q 版动画导读型') + ' 视觉风格：温暖手绘动画、柔和水彩、日系童话感、可爱 Q 版角色，不直接模仿特定动画工作室。'
+      },
+      {
+        key: 'diagram', icon: '04', name: '书摘图解', platform: '知识频道 / LinkedIn / B 站', avatar: '20%',
+        cover: 'linear-gradient(135deg,#0e1a2d,#2ee6a8 48%,#22d3ee)',
+        headline: '用图表和结构让观众觉得「这本书有料」',
+        lead: '适合商业书、管理书、成长书。数字人少说，重点放在框架图、流程图、关键词、章节脉络和行动清单。',
+        desc: '内容密度高，适合建立专业感和信任。',
+        preview: `${book} 可以拆成三层：问题、判断、行动。`,
+        shots: [
+          { t: '0-4s', m: '一句话结论', d: '直接给出这本书最值得看的框架。', a: '大字结论卡' },
+          { t: '4-12s', m: '三层结构图', d: '把全书拆成 3 个模块。', a: '动态结构图' },
+          { t: '12-22s', m: '第一模块', d: '用图标和短句讲清楚。', a: '模块图卡' },
+          { t: '22-32s', m: '第二模块', d: '加入一个真实应用场景。', a: '场景 + 箭头注释' },
+          { t: '32-44s', m: '第三模块', d: '做成行动清单。', a: 'Checklist 动画' },
+          { t: '44-54s', m: '金句总结', d: '用书中一句话收束。', a: '引文卡' },
+          { t: '54-60s', m: '下载书摘', d: 'CTA 指向书摘、读书会或购买页。', a: '资料包 CTA' }
+        ],
+        assets: baseAssets.concat([{ k: '图解组件', v: '流程图、三层框架、行动清单、关键词高亮、章节进度条。' }]),
+        roles: [
+          { n: '旁白数字人', d: '只在开头和结尾出现，避免遮挡图表。', p: '20%' },
+          { n: '动态信息图', d: '承担主要解释功能。', p: '55%' },
+          { n: '书摘卡', d: '展示真实金句和章节来源。', p: '25%' }
+        ],
+        prompt: p => promptBase('书摘图解型') + ' 画面以信息图、结构图、章节卡和行动清单为主，数字人只做开头和结尾。'
+      },
+      {
+        key: 'trailer', icon: '05', name: '电影预告感', platform: '发布会 / 广告投放 / 官网首屏', avatar: '15%',
+        cover: 'linear-gradient(135deg,#06070c,#2f2a37 45%,#a48bff)',
+        headline: '把新书做成一支有情绪、有悬念的预告片',
+        lead: '适合重要发布。用电影感旁白、强音乐、书封、城市/办公室/人生场景、快切字幕制造期待，数字人只在最后出现背书。',
+        desc: '情绪强、记忆点强，适合主打品牌形象。',
+        preview: `有些书，不是回答问题，而是把你带到一个更大的问题面前。`,
+        shots: [
+          { t: '0-5s', m: '黑场旁白', d: '用一句有悬念的话开场。', a: '黑场 + 低频音乐' },
+          { t: '5-12s', m: '现实困境快切', d: '连续 3 个生活或商业压力镜头。', a: '电影感 B-roll' },
+          { t: '12-20s', m: '书封首次出现', d: '不要太早讲卖点，先建立气氛。', a: '书封慢推镜头' },
+          { t: '20-34s', m: '三句关键词', d: '用节奏点打出核心主题。', a: '大字快切' },
+          { t: '34-46s', m: '章节画面化', d: '把目录变成一段旅程。', a: '章节路径动画' },
+          { t: '46-55s', m: '数字人一句话背书', d: '作者数字人只说最关键一句。', a: '数字人特写' },
+          { t: '55-60s', m: '发布信息', d: '上市日期、预约、购买入口。', a: '片尾发布卡' }
+        ],
+        assets: baseAssets.concat([{ k: '声音设计', v: '低频氛围、鼓点、转场音效、翻页声、片尾品牌音。' }]),
+        roles: [
+          { n: '旁白', d: '主导情绪和节奏，可以是真人声或授权克隆声。', p: '40%' },
+          { n: '电影感镜头', d: '用场景承接书中主题。', p: '45%' },
+          { n: '作者数字人', d: '只在最后出现，增加记忆点。', p: '15%' }
+        ],
+        prompt: p => promptBase('电影预告感型') + ' 节奏像新书预告片：悬念开场、现实困境快切、书封慢推、章节路径、作者数字人一句话、发布 CTA。'
+      }
+    ];
+  }
+  window.CREATIVE = { modes: creativeModes, samples: creativeSamples, sceneTemplatePrompt, customScenePrompt, thirdPartyRenderJob };
+
+  /* =======================================================
+   * 支付与方案（演示 UI，未接入真实收费）
+   * ===================================================== */
+  VIEWS.billing = function () {
+    const st = STORE.s.settings;
+    const plans = DATA.BILLING_PLANS || [];
+    return `
+    <div class="page-h">
+      <div><div class="page-t">支付与方案</div>
+        <div class="page-d">演示三档订阅方案；如需真正收款，可自行部署 tools/payment-server.js 对接 Stripe Checkout</div></div>
+      <div class="right"><span class="tag g">Key 只在后端</span><span class="tag a">演示 / 需自行部署</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">支付服务（可选，需自行部署）</div>
+        <div class="card-s">GitHub Pages 这类纯静态托管不能安全保存金流 key，所以前端只呼叫你自己部署的支付后端；不部署也可以正常浏览方案</div></div>
+        <div class="right"><button class="btn btn-sm" data-act="copy-payment-env">复制环境变量清单</button></div></div>
+      <div class="row2">
+        <div class="field"><div class="label">支付 API Base URL</div>
+          <input class="input" id="payment-server" value="${esc(st.paymentServer || 'http://localhost:8788')}" placeholder="https://your-api.example.com">
+          <div class="hint" style="margin-top:6px">本机测试可运行 <code>node tools/payment-server.js</code>；不运行的话，点「前往付款」只会提示服务未就绪。</div>
+        </div>
+        <div class="field"><div class="label">付款后开通内容（规划）</div>
+          <div class="explain" style="margin:0;border-left-color:var(--amber)">
+            <div class="ex-r"><span class="ex-k">Webhook</span><span>收到 <code>checkout.session.completed</code> 后记录订单并开通额度——这部分逻辑在 tools/payment-server.js 示例里，需要你自己部署和接上正式数据库。</span></div>
+            <div class="ex-r"><span class="ex-k">安全</span><span>Stripe secret key 与 webhook secret 只放后端环境变量，绝不进前端或 Git。</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g3">
+      ${plans.map(plan => `
+        <div class="card" style="position:relative;min-height:360px;display:flex;flex-direction:column">
+          ${plan.recommended ? '<div class="tag g" style="position:absolute;right:14px;top:14px">推荐</div>' : ''}
+          <div style="font-size:15px;font-weight:800;margin-bottom:8px">${esc(plan.name)}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+            <span style="font-size:30px;font-weight:850">${esc(plan.price)}</span><span class="hint">${esc(plan.cadence)}</span>
+          </div>
+          <div class="card-s" style="min-height:44px">${esc(plan.desc)}</div>
+          <div style="margin:14px 0"><span class="tag v">${esc(plan.quota)}</span></div>
+          <div class="grid" style="gap:8px;margin-bottom:16px">
+            ${plan.features.map(f => `<div class="visual-card" style="padding:9px 10px"><span>${esc(f)}</span></div>`).join('')}
+          </div>
+          <div style="margin-top:auto">
+            <button class="btn btn-primary" style="width:100%" data-act="checkout-plan" data-plan="${esc(plan.id)}">前往付款</button>
+            <div class="hint" style="margin-top:8px">Price ID：后端读取 <code>${esc(plan.stripePriceEnv)}</code></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  };
+
+})();
+
+
 /* ===== tour.js ===== */
 /* ============================================================
  * tour.js — 新手导览（聚光灯式分步引导）
@@ -3487,7 +4304,7 @@ window.TOUR = (function () {
   const { $, $$, esc, nf, toast, modal, closeModal, copy, download } = UI;
 
   const TITLES = {
-    dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', library: '内容资产库',
+    dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
     engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
@@ -3554,6 +4371,34 @@ window.TOUR = (function () {
        <button class="btn btn-primary" data-modal-act="save-account">保存</button>`);
   }
 
+  /* 支付与方案：呼叫本机/自建的支付后端建立 Checkout（前端不保存任何金流 Key） */
+  async function checkoutPlan(planId) {
+    const input = $('#payment-server');
+    const base = (input && input.value.trim()) || STORE.s.settings.paymentServer || 'http://localhost:8788';
+    STORE.s.settings.paymentServer = base.replace(/\/+$/, '');
+    STORE.update();
+    const plan = (DATA.BILLING_PLANS || []).find(p => p.id === planId);
+    if (!plan) return toast('找不到这个方案', 'warn');
+    try {
+      toast('正在建立付款页面...', 'ok');
+      const res = await fetch(`${STORE.s.settings.paymentServer}/api/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          projectId: STORE.current && STORE.current.id,
+          customerEmail: STORE.s.account.email || '',
+          customerName: STORE.s.account.name || ''
+        })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) throw new Error(body.error || `HTTP ${res.status}`);
+      location.href = body.url;
+    } catch (err) {
+      toast(`付款服务未就绪：${err.message}`, 'warn');
+    }
+  }
+
   $('#btn-theme').addEventListener('click', () => {
     const cur = document.documentElement.getAttribute('data-theme')
       || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -3570,12 +4415,13 @@ window.TOUR = (function () {
 
   /* ---------------- 全局事件委托 ---------------- */
   $('#view').addEventListener('click', e => {
-    const seg = e.target.closest('[data-seg] button');
+    const seg = e.target.closest('[data-seg] button, [data-seg] [data-v]');
     if (seg) {
-      const name = seg.parentElement.dataset.seg;
+      const name = seg.closest('[data-seg]').dataset.seg;
       if (name === 'proj-filter') return go('projects', { f: seg.dataset.v });
       if (name === 'lib-tab') return go('library', { t: seg.dataset.v });
       if (name === 'ana-scope') return go('analytics', { sc: seg.dataset.v });
+      if (name === 'creative-mode') return go('creative', { m: seg.dataset.v });
     }
 
     const el = e.target.closest('[data-act]');
@@ -3609,6 +4455,45 @@ window.TOUR = (function () {
 
       case 'view-script': return scriptModal(el.dataset.id);
       case 'play': return playerModal(el.dataset.id);
+      case 'play-creative': return creativePlayerModal(el.dataset.mode);
+      case 'apply-scene-template': {
+        const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
+        if (!t) return toast('找不到这个场景模板', 'warn');
+        copy(CREATIVE.sceneTemplatePrompt(STORE.current, t));
+        toast(`已套用「${t.name}」并复制提示词`, 'ok');
+        return go('creative', { m: 'scene' });
+      }
+      case 'copy-scene-template': {
+        const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
+        if (!t) return toast('找不到这个场景模板', 'warn');
+        return copy(CREATIVE.sceneTemplatePrompt(STORE.current, t));
+      }
+      case 'custom-scene-prompt': {
+        const scene = ($('#custom-scene-name') && $('#custom-scene-name').value.trim()) || '';
+        const role = ($('#custom-scene-role') && $('#custom-scene-role').value.trim()) || '';
+        if (!scene && !role) return toast('请先输入自定义场景或角色', 'warn');
+        copy(CREATIVE.customScenePrompt(STORE.current, scene, role));
+        return toast('已生成并复制自定义场景提示词', 'ok');
+      }
+      case 'export-third-party-job': {
+        const job = CREATIVE.thirdPartyRenderJob(STORE.current);
+        return download(`${STORE.current.title}_ai_platform_route_job.json`, JSON.stringify(job, null, 2));
+      }
+      case 'copy-third-party-command': {
+        const cmd = 'set -a && source .env.local && set +a && node tools/ai-platform-router.js ./render-job.json --execute --nodes';
+        return copy(cmd);
+      }
+      case 'checkout-plan': return checkoutPlan(el.dataset.plan);
+      case 'copy-payment-env': {
+        return copy([
+          'STRIPE_SECRET_KEY=sk_test_...',
+          'STRIPE_WEBHOOK_SECRET=whsec_...',
+          'STRIPE_PRICE_STARTER=price_...',
+          'STRIPE_PRICE_PRO=price_...',
+          'STRIPE_PRICE_STUDIO=price_...',
+          'PUBLIC_APP_URL=http://127.0.0.1:8081'
+        ].join('\n'));
+      }
       case 'pick-file': return $('#file-input').click();
       case 'clear-files': {
         const p = STORE.current;
@@ -3800,6 +4685,7 @@ window.TOUR = (function () {
       STORE.update(); closeModal(); render(); toast(`已切换为「${n}」`, 'ok');
     }
     if (a === 'copy-cap') copy(el.dataset.t);
+    if (a === 'creative-goto') { closeModal(); return go('creative', { m: el.dataset.mode }); }
     if (a === 'pub-one') {
       const it = STORE.s.schedule.find(x => x.id === el.dataset.id);
       if (it) {
@@ -4267,19 +5153,28 @@ window.TOUR = (function () {
     STORE.s.projects.forEach(x => (x.scripts || []).forEach(y => { if (y.id === id) { s = y; p = x; } }));
     if (!s) return;
     const shots = DATA.genShots(s, p);
-    const full = `【标题】${s.title}\n【平台】${s.platformName} · ${s.angleName} · ${s.duration}s\n\n【开场 Hook】\n${s.hook}\n\n【正文】\n${s.body}\n\n【CTA】\n${s.cta}`;
-    modal(`脚本详情 · ${esc(s.angleName)}`, `
+    const dialogueText = (s.dialogue || []).map(x => `【${x.t}｜${x.speaker}｜${x.cue}】\n${x.text}`).join('\n\n');
+    const sceneText = (s.scenePlan || []).map(x => `【${x.name}】${x.visual}；用途：${x.role}`).join('\n');
+    const voiceText = (s.voicePlan || []).map(x => `【${x.role}】${x.voice}；${x.pace}；${x.emotion}`).join('\n');
+    const full = `【标题】${s.title}\n【平台】${s.platformName} · ${s.sceneMode || s.angleName} · ${s.duration}s\n\n【场地计划】\n${sceneText}\n\n【声音配置】\n${voiceText}\n\n【双人对谈脚本】\n${dialogueText}\n\n【CTA】\n${s.cta}`;
+    modal(`脚本详情 · ${esc(s.sceneMode || s.angleName)}`, `
       <div class="chip-list" style="margin-bottom:14px">
         <span class="tag v">${s.platformName}</span><span class="tag">${s.duration} 秒</span>
-        <span class="tag">${s.words} 字</span><span class="tag c">预估评分 ${s.score}</span>
+        <span class="tag">${s.words} 字</span><span class="tag c">${esc(s.rhythm || '对谈节奏')}</span><span class="tag c">预估评分 ${s.score}</span>
         ${s.persona ? '<span class="tag g">已套用'+STORE.s.account.name+'人格</span>' : '<span class="tag a">未套用人格</span>'}
       </div>
       <div class="field"><div class="label">标题</div>
         <div style="font-size:15px;font-weight:680">${esc(s.title)}</div></div>
       <div class="field"><div class="label">开场 Hook（前 3 秒）</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;line-height:1.8">${esc(s.hook)}</div></div>
-      <div class="field"><div class="label">脚本正文</div>
-        <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.95;white-space:pre-wrap">${esc(s.body)}</div></div>
+      <div class="row2">
+        <div class="field"><div class="label">场地计划</div>
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.9;white-space:pre-wrap">${esc(sceneText || '未配置')}</div></div>
+        <div class="field"><div class="label">声音配置</div>
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.9;white-space:pre-wrap">${esc(voiceText || '未配置')}</div></div>
+      </div>
+      <div class="field"><div class="label">双人对谈脚本（含插嘴与语气提示）</div>
+        <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.95;white-space:pre-wrap">${esc(dialogueText || s.body)}</div></div>
       <div class="field"><div class="label">结尾 CTA</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(s.cta)}</div></div>
       <div class="label" style="margin-top:18px">分镜表</div>
@@ -4498,7 +5393,7 @@ window.TOUR = (function () {
     finally { pa.voiceMode = prev.mode; pa.voiceActor = prev.actor; }
   }
 
-  const SCENE = ['open', 'point', 'broll', 'quote', 'cta'];
+  const SCENE = ['open', 'point', 'broll', 'quote', 'point', 'broll', 'cta'];
 
   function pvApplyShot(i) {
     const el = id => document.getElementById(id);
@@ -4652,6 +5547,83 @@ window.TOUR = (function () {
       ${shots.length ? `<div class="label" style="margin-top:20px">分镜表（播放时会同步高亮）</div>${shotList(shots)}` : ''}`, '', true);
 
     // 必须在 modal() 之后建立：开启弹窗会触发关闭钩子，那会清掉播放状态
+    pvInit(v, shots);
+  }
+
+  /* ============================================================
+   * 创意分镜：60 秒模拟成片播放（用分镜时间轴模拟节奏，不是真实渲染影片）
+   * ========================================================== */
+  function creativePreviewData(modeKey) {
+    const p = STORE.current;
+    const modes = (window.CREATIVE && CREATIVE.modes) ? CREATIVE.modes(p) : [];
+    const mode = modes.find(x => x.key === modeKey) || modes[0];
+    if (!p || !mode) return null;
+    const seg = Math.floor(60 / mode.shots.length);
+    let end = 0;
+    const shots = mode.shots.map((s, i) => {
+      const start = end;
+      end = i === mode.shots.length - 1 ? 60 : end + seg;
+      return {
+        t: `${start}-${end}s`,
+        t0: start,
+        t1: end,
+        txt: `${s.m}。${s.d}`,
+        cam: s.a,
+        vis: mode.name,
+        dur: `${end - start}s`
+      };
+    });
+    const v = {
+      id: 'creative-' + mode.key,
+      title: `${mode.name} · 60 秒模拟成片`,
+      caption: mode.preview,
+      platformName: mode.platform,
+      angle: mode.name,
+      ratio: '9:16 / 16:9 可切换',
+      duration: 60,
+      color: mode.key === 'cute' ? '#ff5d8f' : mode.key === 'dialogue' ? '#22d3ee' : mode.key === 'diagram' ? '#2ee6a8' : mode.key === 'trailer' ? '#a48bff' : '#7c6cff',
+      cover: mode.cover,
+      status: '模拟'
+    };
+    return { p, mode, v, shots };
+  }
+
+  function creativePlayerModal(modeKey) {
+    const data = creativePreviewData(modeKey);
+    if (!data) return toast('找不到可播放的创意模式', 'warn');
+    const { p, mode, v, shots } = data;
+    stopPreview();
+    modal('60 秒模拟成片 · ' + mode.name, `
+      <div style="display:flex;gap:22px;flex-wrap:wrap">
+        <div style="flex:0 0 232px">
+          ${phoneFrame(v, shots, v.caption, p)}
+          <div class="hint" style="margin-top:10px;text-align:center;line-height:1.6">这是<b>创意模拟片</b>，用分镜、字幕、口播和动态画面先验证节奏。<br>不是最终渲染影片。</div>
+        </div>
+        <div style="flex:1;min-width:260px">
+          <div style="font-size:16px;font-weight:760;line-height:1.5">${esc(mode.headline)}</div>
+          <div class="chip-list" style="margin:12px 0">
+            <span class="tag v">${esc(mode.name)}</span>
+            <span class="tag">60 秒</span>
+            <span class="tag c">${esc(mode.platform)}</span>
+            <span class="tag a">模拟成片</span>
+          </div>
+          <div class="explain" style="margin:0 0 14px;border-left-color:var(--cyan)">
+            <div class="ex-r"><span class="ex-k">影片目的</span><span>${esc(mode.lead)}</span></div>
+            <div class="ex-r"><span class="ex-k">数字人占比</span><span>${esc(mode.avatar)}，其余交给书封、金句、图卡、情境镜头和 CTA。</span></div>
+            <div class="ex-r"><span class="ex-k">怎么判断</span><span>先看前 10 秒有没有吸引力，再看 30 秒处是否还有新画面，最后看 CTA 是否自然。</span></div>
+          </div>
+          <div class="label">角色配置</div>
+          <table><thead><tr><th>角色</th><th>作用</th><th>比例</th></tr></thead><tbody>
+            ${mode.roles.map(r => `<tr><td><b>${esc(r.n)}</b></td><td style="color:var(--txt-2);font-size:12.5px">${esc(r.d)}</td><td>${esc(r.p)}</td></tr>`).join('')}
+          </tbody></table>
+          <div class="label" style="margin-top:16px">下一步</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" data-modal-act="copy-cap" data-t="${esc(mode.prompt(p))}">复制生成提示词</button>
+            <button class="btn btn-sm btn-primary" data-modal-act="creative-goto" data-mode="${mode.key}">回到此模式分镜</button>
+          </div>
+        </div>
+      </div>
+      <div class="label" style="margin-top:20px">60 秒分镜时间轴（播放时同步高亮）</div>${shotList(shots)}`, '', true);
     pvInit(v, shots);
   }
 
