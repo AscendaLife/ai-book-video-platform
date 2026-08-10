@@ -2937,9 +2937,7 @@ window.VIEWS = window.VIEWS || {};
       <div class="card-h"><div><div class="card-t">数字人开口说话</div>
           <div class="card-s">选一个数字人形象、选一个声音，就能真的生成一支会说话的影片</div></div>
         <div class="right"><span class="tag a">连的是真实外部服务，会花钱</span></div></div>
-      <div class="field"><div class="label">发布服务网址</div><input class="input" id="hg-server" value="http://localhost:8787" placeholder="http://localhost:8787"></div>
-      <div id="hg-status" style="margin-top:10px"></div>
-      <button class="btn btn-sm" style="margin-top:10px" data-act="hg-check">检测</button>
+      <div id="hg-status"><div class="hint">连线中…</div></div>
     </div>
 
     <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
@@ -4499,7 +4497,6 @@ window.TOUR = (function () {
 
       /* ---- 数字人开口说话（外部真实数字人生成服务）---- */
       case 'hg-check': return hgCheck();
-      case 'hg-save-app': return hgSaveApp();
       case 'hg-pick-avatar': {
         HG.mode = 'avatar'; HG.avatarId = el.dataset.id; HG.assetId = null;
         hgRenderAvatars(); hgRenderGenerate(); return;
@@ -4807,9 +4804,12 @@ window.TOUR = (function () {
     voiceId: null, text: '',
     avatars: [], voices: []
   };
-  const hgBase = () => (($('#hg-server') && $('#hg-server').value) || STORE.s.settings.pubServer || 'http://localhost:8787').replace(/\/+$/, '');
+  /* 部署在 Vercel、一直开着的数字人生成服务，金钥存在 Vercel 项目的
+   * 环境变量里——网页上不再需要「服务网址」「API Key」这些欄位，
+   * 用户完全看不到、也不用管本机有没有开着什么服务。 */
+  const HG_BASE = 'http://localhost:8787'; // 公开展示版故意指向本机，陌生访客连不到
   async function hgFetch(p, opt) {
-    const r = await fetch(hgBase() + p, opt);
+    const r = await fetch(HG_BASE + p, opt);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     return j;
@@ -4818,7 +4818,7 @@ window.TOUR = (function () {
   let hgTried = false;
   /* 只有第一次进这个页面才真的去连线；之后这页因为其他操作（比如加一句
    * 口头禅）整页重画时，直接从快取重画形象/声音，不用每次都重打网络请求，
-   * 也不会打断正在进行中的生成/克隆轮询。要强制重新连线，按「检测」即可。 */
+   * 也不会打断正在进行中的生成/克隆轮询。 */
   function hgAutoCheck() {
     if (HG.avatars.length || HG.voices.length) {
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRepaintStatus();
@@ -4831,43 +4831,30 @@ window.TOUR = (function () {
 
   function hgRepaintStatus() {
     const status = $('#hg-status');
-    if (status && HG.keyMasked) status.innerHTML = `<div class="hint" style="color:var(--green)">已连接（Key ${esc(HG.keyMasked)}）</div>`;
+    if (status) status.innerHTML = '<div class="hint" style="color:var(--green)">已连接</div>';
   }
 
   async function hgCheck() {
     const status = $('#hg-status');
     if (!status) return;
-    STORE.s.settings.pubServer = hgBase(); STORE.update();
     status.innerHTML = '<div class="hint">连线中…</div>';
     try {
       const cfg = await hgFetch('/api/heygen/config');
       if (!cfg.configured) {
-        status.innerHTML = `
-          <div class="field"><div class="label">数字人生成服务 API Key</div>
-            <input class="input" id="hg-key" type="password" placeholder="到该服务的开发者后台复制"></div>
-          <button class="btn btn-primary btn-sm" data-act="hg-save-app">保存设定</button>`;
+        status.innerHTML = '<div class="hint" style="color:var(--amber)">服务还没设定好（管理员需要在 Vercel 项目设置 HEYGEN_API_KEY），请联系管理员。</div>';
         return;
       }
-      HG.keyMasked = cfg.apiKeyMasked;
-      status.innerHTML = `<div class="hint" style="color:var(--green)">已连接（Key ${esc(cfg.apiKeyMasked)}）</div>`;
+      status.innerHTML = '<div class="hint" style="color:var(--green)">已连接</div>';
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
       HG.avatars = av.avatars || []; HG.voices = vo.voices || [];
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate();
     } catch (e) {
-      status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上发布服务或数字人生成服务（${esc(e.message)}）</div>`;
+      hgTried = false; // 失败了，下次进这一页还可以再自动试一次
+      status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上数字人生成服务（${esc(e.message)}）</div>
+        <button class="btn btn-sm" style="margin-top:8px" data-act="hg-check">重试</button>`;
     }
-  }
-
-  async function hgSaveApp() {
-    try {
-      await hgFetch('/api/heygen/config', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: $('#hg-key').value })
-      });
-      toast('已保存', 'ok'); hgCheck();
-    } catch (e) { toast('保存失败：' + e.message, 'err'); }
   }
 
   /* ---- 形象：挑现成的，或上传照片 ---- */
@@ -4897,7 +4884,7 @@ window.TOUR = (function () {
     HG.assetPreview = localPreview; HG.mode = 'image'; hgRenderAvatars();
     try {
       const buf = await file.arrayBuffer();
-      const r = await fetch(hgBase() + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
+      const r = await fetch(HG_BASE + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
         { method: 'POST', body: buf });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
@@ -4933,7 +4920,7 @@ window.TOUR = (function () {
     let assetId;
     try {
       const buf = await file.arrayBuffer();
-      const r = await fetch(hgBase() + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
+      const r = await fetch(HG_BASE + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
         { method: 'POST', body: buf });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
