@@ -4940,10 +4940,11 @@ window.TOUR = (function () {
     HG.assetPreview = localPreview; HG.mode = 'image'; hgRenderAvatars();
     try {
       const buf = await file.arrayBuffer();
-      const r = await fetch(HG_BASE + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
+      // 走 hgFetch 而不是原生 fetch——它会自动带上写入凭证，
+      // 少了这个标头服务端一律回「凭证不正确」。
+      const j = await hgFetch(
+        `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
         { method: 'POST', body: buf });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
       HG.assetId = j.assetId; HG.avatarId = null;
       toast('照片已上传', 'ok'); hgRenderGenerate();
     } catch (e) {
@@ -4976,10 +4977,10 @@ window.TOUR = (function () {
     let assetId;
     try {
       const buf = await file.arrayBuffer();
-      const r = await fetch(HG_BASE + `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
+      // 同上：一定要走 hgFetch，原生 fetch 不会带凭证
+      const j = await hgFetch(
+        `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
         { method: 'POST', body: buf });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
       assetId = j.assetId;
     } catch (e) { return toast('上传失败：' + e.message, 'err'); }
 
