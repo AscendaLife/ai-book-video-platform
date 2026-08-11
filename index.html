@@ -1249,8 +1249,12 @@ window.DATA = (function () {
     const pain = (b.pains && b.pains[i % b.pains.length]) || '很努力却看不到结果';
     const theme = (b.themes && b.themes[i % b.themes.length]) || '先判断任务的回报结构';
     const pool = sceneTemplateLibrary();
+    /* 优先用使用者在「创意分镜」选好的场景。以前这里一律用
+     * (i*3+n) 自动分配，使用者选了也没用——这是「选了没反应」的根因。
+     * 没选才退回自动分配，行为跟以前一样。 */
+    const picked = (b.sceneIds || []).map(id => pool.find(x => x.id === id)).filter(Boolean);
     const scenes = [0, 1, 2].map(n => {
-      const t = pool[(i * 3 + n) % pool.length];
+      const t = picked.length ? picked[n % picked.length] : pool[(i * 3 + n) % pool.length];
       return { name: t.name, visual: t.setting, role: t.fit };
     });
     const style = {
@@ -1508,6 +1512,15 @@ window.DATA = (function () {
     speed: 62, warmth: 55, formal: 48, pause: 58, emphasis: 66,
     voiceMode: 'clone',        // clone 本人克隆声 / library 配音员声库 / system 系统合成
     voiceActor: 'v02',         // 选用的配音员
+    /* 下面这组是「真的会拿去生成影片」的选择，跟上面那些示范参数不同。
+     * 存在这里而不是只放记忆体，页面重整才不会掉，流水线也才读得到。 */
+    realAvatarMode: 'avatar',  // avatar 用现成形象 / image 用上传的照片
+    realAvatarId: null,        // 现成形象的 id
+    realAvatarName: '',        // 存名字纯粹是为了介面显示，不用每次再去查
+    realPhotoAssetId: null,    // 上传照片后拿到的素材 id
+    realPhotoPreview: null,    // 照片预览图网址
+    realVoiceId: null,
+    realVoiceName: '',
     cloneSamples: [{ name: '录音样本_01.wav', min: 42 }, { name: '录音样本_02.wav', min: 86 }],
     habits: ['我讲得直白一点', '你听我说完', '说句实在话', '这里我要停一下', '我自己的体会是'],
     values: ['尊重常识', '不夸大结论', '先讲代价再讲收益', '给具体做法而不是口号'],
@@ -1970,8 +1983,14 @@ window.CHART = (function () {
 window.ENGINE = (function () {
 
   let running = null;   // { projectId, stageIndex, taskIndex, timer }
+  let paused = false;   // 停在某个阶段之前，等使用者确认
   const listeners = [];
   const logs = [];
+
+  /* 在「数字人开口说话」之前停下来。理由：这一步之后产出的就是成片，
+   * 用什么形象、什么声音、什么场景都定死了，改就得整批重跑。
+   * 停在这里成本最低，也是使用者真正想介入的点。 */
+  const PAUSE_BEFORE = 'avatar';
 
   function on(f) { listeners.push(f); }
   function emit(evt) { listeners.forEach(f => f(evt, snapshot())); }
@@ -2006,7 +2025,16 @@ window.ENGINE = (function () {
       if (p) { p.stages.forEach(s => { if (s.state === 'run') s.state = 'todo'; }); p.status = 'ready'; }
       addLog('l-warn', '任务已被用户中止');
     }
-    running = null; STORE.update(); emit('stop');
+    running = null; paused = false; STORE.update(); emit('stop');
+  }
+
+  /* 确认之后继续跑完剩下的阶段 */
+  function resume() {
+    if (!running || !paused) return;
+    paused = false; running.confirmed = true;
+    addLog('l-ok', '▶ 已确认设定，继续生成影片');
+    STORE.update(); emit('resume');
+    step();
   }
 
   function step() {
@@ -2015,6 +2043,14 @@ window.ENGINE = (function () {
     if (!p) { running = null; return; }
     const stage = DATA.STAGES[running.stageIndex];
     if (!stage) return finish(p);
+
+    // 进入「生成影片」这一步之前先停下来，让使用者确认形象/声音/场景
+    if (stage.key === PAUSE_BEFORE && running.taskIndex === -1 && !paused && !running.confirmed) {
+      paused = true;
+      addLog('l-warn', '⏸ 已暂停：请确认要用的数字人形象、声音与场景，确认后再继续生成影片');
+      STORE.update(); emit('pause');
+      return;
+    }
 
     running.taskIndex++;
     p.stages[running.stageIndex].state = 'run';
@@ -2103,7 +2139,8 @@ window.ENGINE = (function () {
     UI.toast(`《${p.title}》生产完成，共 ${p.videos.length} 支视频`, 'ok');
   }
 
-  return { start, stop, on, snapshot, get logs() { return logs; }, get isRunning() { return !!running; } };
+  return { start, stop, resume, on, snapshot, get logs() { return logs; },
+    get isRunning() { return !!running; }, get isPaused() { return paused; } };
 })();
 
 
@@ -2578,6 +2615,34 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
+    ${ENGINE.isPaused ? (() => {
+      const pa = STORE.s.persona;
+      const pool = DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : [];
+      const sceneNames = (p.sceneIds || []).map(id => (pool.find(x => x.id === id) || {}).name).filter(Boolean);
+      const avatarLabel = pa.realAvatarMode === 'image'
+        ? '你上传的照片' : (pa.realAvatarName || '（尚未选择）');
+      return `
+      <div class="card" style="margin-bottom:16px;border-color:var(--violet-2)">
+        <div class="card-h"><div><div class="card-t">⏸ 已暂停 —— 请确认这批影片要怎么生成</div>
+            <div class="card-s">下一步就会产出成片，形象、声音、场景到时候改就得整批重跑，先在这里确认</div></div></div>
+        <div class="grid g3" style="margin-bottom:14px">
+          ${[['数字人形象', avatarLabel, 'persona'],
+             ['声音', pa.realVoiceName || '（尚未选择）', 'persona'],
+             ['拍摄场景', sceneNames.length ? sceneNames.join('、') : '（未选，系统自动配）', 'creative']]
+            .map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px">
+              <div style="font-size:11.5px;color:var(--txt-3)">${x[0]}</div>
+              <div style="font-size:14px;font-weight:700;margin:4px 0 8px">${esc(x[1])}</div>
+              <button class="btn btn-sm" data-act="goto" data-route="${x[2]}">去修改</button>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:9px">
+          <button class="btn btn-primary" data-act="resume-run">✓ 确认，继续生成</button>
+          <button class="btn" data-act="stop-run">■ 中止</button>
+        </div>
+        <div class="hint" style="margin-top:10px">去修改设定后回到这一页，这里会一直等你，不会自己跑掉。</div>
+      </div>`;
+    })() : ''}
+
     <div class="pipe">${DATA.STAGES.map((st, i) => {
       const s = stages[i] || { state: 'todo' };
       const ico = s.state === 'done' ? '<i class="dot g"></i>已完成' : s.state === 'run' ? '<i class="dot v"></i>执行中' : '<i class="dot"></i>待执行';
@@ -2770,9 +2835,22 @@ window.VIEWS = window.VIEWS || {};
       avatar: () => `<div class="row2">
         <div>
           <div class="label">双数字人与声音</div>
+          ${(() => {
+            const pa = STORE.s.persona;
+            const label = pa.realAvatarMode === 'image' ? '你上传的照片' : (pa.realAvatarName || '');
+            return (label || pa.realVoiceName)
+              ? `<div class="explain" style="margin:0 0 12px;border-left-color:var(--green)">
+                   <div class="ex-r"><span class="ex-k">目前设定</span><span>形象 <b>${esc(label || '未选')}</b>　声音 <b>${esc(pa.realVoiceName || '未选')}</b>　—— 下面「真实试跑一支」会用这组设定</span></div>
+                 </div>`
+              : `<div class="explain" style="margin:0 0 12px;border-left-color:var(--amber)">
+                   <div class="ex-r"><span class="ex-k">还没设定</span><span>去「数字人 / 声音 / 克隆」选好形象与声音，这里才知道要用谁来生成。</span></div>
+                 </div>`;
+          })()}
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center">
             <div style="display:flex;gap:8px;flex:0 0 auto">
-              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px">主</div>
+              ${STORE.s.persona.realPhotoPreview && STORE.s.persona.realAvatarMode === 'image'
+                ? `<img src="${esc(STORE.s.persona.realPhotoPreview)}" style="width:66px;height:66px;object-fit:cover;border-radius:18px">`
+                : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px">主</div>`}
               <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px;background:linear-gradient(150deg,#ff8a5b,#ffb020)">作</div>
             </div>
             <div style="flex:1">
@@ -3550,8 +3628,17 @@ window.VIEWS = window.VIEWS || {};
 
     <div class="card" style="margin-bottom:18px">
       <div class="card-h"><div><div class="card-t">30 种数字人场景模板库</div>
-        <div class="card-s">可以直接选模板，也可以输入自己的场景；敏感场景会用合规叙事方式呈现</div></div>
+        <div class="card-s">选 1-3 个场景，跑流程时的对谈脚本就会用这几个场地；不选就由系统自动配</div></div>
         <div class="right"><button class="btn btn-sm" data-act="copy" data-t="${esc(sceneLibraryPrompt(p, templates.slice(0, 30)))}">复制 30 种模板提示词</button></div></div>
+      ${(p.sceneIds || []).length
+        ? `<div class="explain" style="margin:0 0 14px;border-left-color:var(--green)">
+             <div class="ex-r"><span class="ex-k">已选场景</span><span><b>${(p.sceneIds || []).map(id => {
+               const t = templates.find(x => x.id === id); return esc(t ? t.name : id);
+             }).join('、')}</b>（${(p.sceneIds || []).length}/3）——跑「一键生成短视频」时会用这几个场地写对谈稿</span></div>
+           </div>`
+        : `<div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+             <div class="ex-r"><span class="ex-k">还没选场景</span><span>现在跑流程会由系统自动配场地。想自己决定影片长什么样，先在下面选 1-3 个。</span></div>
+           </div>`}
       <div class="template-toolbar">
         <span class="tag v">真实</span><span class="tag c">奇观</span><span class="tag g">Q 版 / 动物</span><span class="tag a">敏感场景需合规</span>
         <input class="input" id="custom-scene-name" placeholder="自定义场景：例如雨夜便利店、海底列车、古代皇宫">
@@ -3559,13 +3646,15 @@ window.VIEWS = window.VIEWS || {};
         <button class="btn btn-primary" data-act="custom-scene-prompt">生成自定义提示词</button>
       </div>
       <div class="template-grid">
-        ${templates.map(t => `
-          <div class="template-card">
+        ${templates.map(t => {
+          const picked = (p.sceneIds || []).indexOf(t.id) >= 0;
+          return `
+          <div class="template-card" style="${picked ? 'border-color:var(--violet-2);box-shadow:0 0 0 1px var(--violet-2) inset' : ''}">
             <div class="template-top">
               <div style="display:flex;gap:10px;min-width:0">
                 <div class="template-ico">${esc(t.ico)}</div>
                 <div style="min-width:0">
-                  <div class="template-name">${esc(t.name)}</div>
+                  <div class="template-name">${esc(t.name)}${picked ? ' <span class="tag v">已选用</span>' : ''}</div>
                   <div class="template-meta" style="margin-top:6px">
                     <span class="tag">${esc(t.cat)}</span><span class="tag c">${esc(t.risk)}风险</span>
                   </div>
@@ -3575,14 +3664,15 @@ window.VIEWS = window.VIEWS || {};
             <div class="template-desc">${esc(t.setting)}</div>
             <div class="template-roles"><b>角色</b>：${esc(t.roles)}<br><b>适合</b>：${esc(t.fit)}<br><b>语气</b>：${esc(t.tone)}</div>
             <div class="template-actions">
-              <button class="btn btn-sm btn-primary" data-act="apply-scene-template" data-id="${esc(t.id)}">套用</button>
+              <button class="btn btn-sm ${picked ? '' : 'btn-primary'}" data-act="apply-scene-template" data-id="${esc(t.id)}">${picked ? '取消选用' : '选用'}</button>
               <button class="btn btn-sm" data-act="copy-scene-template" data-id="${esc(t.id)}">复制提示词</button>
               <button class="btn btn-sm" data-act="ai-scene-image" data-id="${esc(t.id)}">✨ 生成示意图</button>
               <button class="btn btn-sm" data-act="ai-scene-video" data-id="${esc(t.id)}">✨ 生成场景短片</button>
             </div>
             <div class="ai-scene-img" data-for="${esc(t.id)}"></div>
             <div class="ai-scene-video" data-for="${esc(t.id)}"></div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>
 
@@ -4417,16 +4507,30 @@ window.TOUR = (function () {
         return;
       }
       case 'stop-run': return ENGINE.stop();
+      case 'resume-run': return ENGINE.resume();
 
       case 'view-script': return scriptModal(el.dataset.id);
       case 'play': return playerModal(el.dataset.id);
       case 'play-creative': return creativePlayerModal(el.dataset.mode);
+      /* 「套用」以前只是把提示词复制到剪贴簿，选择根本没被记住，
+       * 所以跑流程时轮不到你选的场景。现在真的存进专案，写稿阶段会用。
+       * 最多 3 个：一支 60 秒短片就是三段场景切换，选再多也用不到。 */
       case 'apply-scene-template': {
         const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
         if (!t) return toast('找不到这个场景模板', 'warn');
-        copy(CREATIVE.sceneTemplatePrompt(STORE.current, t));
-        toast(`已套用「${t.name}」并复制提示词`, 'ok');
-        return go('creative', { m: 'scene' });
+        const p = STORE.current;
+        if (!p) return toast('请先建立或选择一本书', 'warn');
+        p.sceneIds = Array.isArray(p.sceneIds) ? p.sceneIds : [];
+        const i = p.sceneIds.indexOf(t.id);
+        if (i >= 0) {
+          p.sceneIds.splice(i, 1);
+          STORE.update(); render();
+          return toast(`已取消「${t.name}」`, 'ok');
+        }
+        if (p.sceneIds.length >= 3) return toast('最多选 3 个场景，请先取消一个', 'warn');
+        p.sceneIds.push(t.id);
+        STORE.update(); render();
+        return toast(`已选用「${t.name}」（${p.sceneIds.length}/3），跑流程时会用这些场景`, 'ok');
       }
       case 'copy-scene-template': {
         const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === el.dataset.id);
@@ -4525,11 +4629,11 @@ window.TOUR = (function () {
       case 'hg-check': return hgCheck();
       case 'hg-pick-avatar': {
         HG.mode = 'avatar'; HG.avatarId = el.dataset.id; HG.assetId = null;
-        hgRenderAvatars(); hgRenderGenerate(); return;
+        hgSaveChoice(); hgRenderAvatars(); hgRenderGenerate(); return;
       }
       case 'hg-pick-voice': {
         HG.voiceId = el.dataset.id;
-        hgRenderVoices(); hgRenderGenerate(); return;
+        hgSaveChoice(); hgRenderVoices(); hgRenderGenerate(); return;
       }
       case 'ai-scene-image': return aiSceneImage(el.dataset.id);
       case 'ai-scene-video': return aiSceneVideo(el.dataset.id);
@@ -4859,6 +4963,32 @@ window.TOUR = (function () {
     return j;
   }
 
+  /* 把「选了哪个形象、哪个声音」写进 STORE。
+   * 这一步是三个问题的共同解法：选择存下来之后，页面重整不会掉，
+   * 生产流水线也才读得到——在这之前这些选择只活在记忆体里，
+   * 除了手动「试跑一支」以外没有任何地方会用到。 */
+  function hgSaveChoice() {
+    const p = STORE.s.persona;
+    p.realAvatarMode = HG.mode;
+    p.realAvatarId = HG.avatarId;
+    p.realAvatarName = (HG.avatars.find(a => a.id === HG.avatarId) || {}).name || '';
+    p.realPhotoAssetId = HG.assetId;
+    p.realPhotoPreview = HG.assetPreview;
+    p.realVoiceId = HG.voiceId;
+    p.realVoiceName = (HG.voices.find(v => v.id === HG.voiceId) || {}).name || '';
+    STORE.update();
+  }
+
+  /* 反向：进页面时把存过的选择放回记忆体，让介面显示上次选的 */
+  function hgRestoreChoice() {
+    const p = STORE.s.persona;
+    if (p.realAvatarMode) HG.mode = p.realAvatarMode;
+    if (p.realAvatarId) HG.avatarId = p.realAvatarId;
+    if (p.realPhotoAssetId) HG.assetId = p.realPhotoAssetId;
+    if (p.realPhotoPreview) HG.assetPreview = p.realPhotoPreview;
+    if (p.realVoiceId) HG.voiceId = p.realVoiceId;
+  }
+
   /* 公开展示版按下会花钱的动作时，与其送出去被挡、跳一个看起来像坏掉的
    * 错误，不如直接讲清楚这是展示版。 */
   function hgDemoNotice() {
@@ -4903,8 +5033,10 @@ window.TOUR = (function () {
       status.innerHTML = '<div class="hint" style="color:var(--green)">已连接</div>';
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
       HG.avatars = av.avatars || []; HG.voices = vo.voices || [];
+      hgRestoreChoice();   // 先放回上次存的选择，再决定要不要给预设值
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
+      hgSaveChoice();      // 把（可能刚补上的）预设值也存起来，流水线才读得到
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate();
     } catch (e) {
       hgTried = false; // 失败了，下次进这一页还可以再自动试一次
@@ -4946,7 +5078,11 @@ window.TOUR = (function () {
         `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
         { method: 'POST', body: buf });
       HG.assetId = j.assetId; HG.avatarId = null;
-      toast('照片已上传', 'ok'); hgRenderGenerate();
+      // 上传成功才存——服务端回传的网址才是长期有效的，本机预览网址
+      // （blob:）一关页面就失效，存了下次读回来是破图
+      HG.assetPreview = j.url || HG.assetPreview;
+      hgSaveChoice();
+      toast('照片已上传，之后生成影片会用这张', 'ok'); hgRenderGenerate();
     } catch (e) {
       toast('上传失败：' + e.message, 'err'); HG.mode = 'avatar'; hgRenderAvatars();
     }
@@ -6216,14 +6352,16 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
   /* ---------------- 引擎事件 ---------------- */
   let logTimer = null;
   ENGINE.on((evt) => {
-    if (route !== 'pipeline') { if (evt === 'finish' || evt === 'stage') render(); return; }
+    // 暂停时就算人在别页也要提示一声，否则会以为流程自己停住了
+    if (evt === 'pause') toast('流程已暂停，请回「一键生成短视频」确认设定', 'warn');
+    if (route !== 'pipeline') { if (evt === 'finish' || evt === 'stage' || evt === 'pause') render(); return; }
     // 只刷新日志与步骤条，避免整页重绘打断滚动
     const logEl = $('#run-log');
     if (logEl) {
       logEl.innerHTML = ENGINE.logs.map(l => `<div class="${l.cls}">[${l.ts}] ${esc(l.text)}</div>`).join('');
       if (window.I18N) I18N.apply(logEl);
     }
-    if (evt === 'stage' || evt === 'finish' || evt === 'stop') {
+    if (evt === 'stage' || evt === 'finish' || evt === 'stop' || evt === 'pause' || evt === 'resume') {
       clearTimeout(logTimer);
       logTimer = setTimeout(render, 60);
     }
