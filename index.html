@@ -3558,7 +3558,9 @@ window.VIEWS = window.VIEWS || {};
             <div class="template-actions">
               <button class="btn btn-sm btn-primary" data-act="apply-scene-template" data-id="${esc(t.id)}">套用</button>
               <button class="btn btn-sm" data-act="copy-scene-template" data-id="${esc(t.id)}">复制提示词</button>
+              <button class="btn btn-sm" data-act="ai-scene-image" data-id="${esc(t.id)}">✨ 生成示意图</button>
             </div>
+            <div class="ai-scene-img" data-for="${esc(t.id)}"></div>
           </div>`).join('')}
       </div>
     </div>
@@ -4508,6 +4510,7 @@ window.TOUR = (function () {
         HG.voiceId = el.dataset.id;
         hgRenderVoices(); hgRenderGenerate(); return;
       }
+      case 'ai-scene-image': return aiSceneImage(el.dataset.id);
       case 'hg-upload-photo-btn':
         if (!hgCanWrite()) return hgDemoNotice();
         return $('#hg-photo-input').click();
@@ -4641,6 +4644,7 @@ window.TOUR = (function () {
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
+    if (a === 'ai-rewrite') return aiRewriteScript(el.dataset.id);
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
     if (a === 'ig-open') return igPublishModal(el.dataset.id);
@@ -5401,7 +5405,109 @@ window.TOUR = (function () {
           <div class="shot-d"><span>🎥 ${sh.cam}</span><span>🖼 ${sh.vis}</span><span>⏱ ${sh.dur}</span></div></div>
       </div>`).join('')}`,
       `<button class="btn" data-act="copy" data-t="${esc(full)}" onclick="UI.copy(this.dataset.t)">复制全文</button>
+       <button class="btn" data-modal-act="ai-rewrite" data-id="${s.id}">✨ 用真实 AI 重写</button>
        <button class="btn btn-primary" onclick="UI.closeModal()">关闭</button>`, true);
+  }
+
+  /* ============================================================
+   * 真实 AI 写稿（接 AI Platform 的 chat）
+   *
+   * 现况：STEP 4 产出的对谈稿是模板拼出来的，句型固定、换本书也
+   * 只有书名变。这里让它真的送进大模型重写一遍，成本约 US$0.01-0.05
+   * 一篇，所以做成「单篇触发」而不是整批自动跑。
+   * 接不上或没设定金钥时，维持原本的模板稿，不会把页面弄坏。
+   * ========================================================== */
+  async function aiRewriteScript(id) {
+    let p = null, s = null;
+    STORE.s.projects.forEach(x => (x.scripts || []).forEach(y => { if (y.id === id) { s = y; p = x; } }));
+    if (!s) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+
+    const pa = STORE.s.persona;
+    const scenes = (s.scenePlan || []).map(x => `${x.name}（${x.visual}）`).join('、') || '棚内访谈';
+    const system = '你是短视频编剧，专写中文双人对谈短片脚本。只输出 JSON，不要任何解释文字。';
+    const prompt = `帮我写一支 60 秒的双人对谈短视频脚本，用来推荐这本书。
+
+【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【全书摘要】${p.summary || '（未提供）'}
+【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
+【书中金句】${(p.quotes || []).slice(0, 6).join('；') || '（未提供）'}
+【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
+
+【拍摄场地】依序是：${scenes}
+【角色】主持人（年轻女声、语速快、爱追问、会插嘴）＋ 作者（成熟男声、语速稳、先给结论再解释）
+【口吻要求】语速 ${pa.speed}/100、亲和 ${pa.warmth}/100、正式度 ${pa.formal}/100（数字越高越正式）
+${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要每句都用：' + pa.habits.join('、') : ''}
+
+要求：
+- 真的像两个人在聊天：有打断、有接话、有反问，不要一人一段轮流演讲
+- 讲书里真正的观点，不要空泛的「这本书很好看」
+- 10 句左右，每句给时间区间，总长不超过 60 秒
+- 最后一句是引导留言或试读的 CTA
+
+只输出这个 JSON 结构：
+{"title":"一句吸引人的标题","hook":"前3秒开场白","dialogue":[{"t":"0.0-3.8s","speaker":"主持人","cue":"语气提示","text":"台词"}],"cta":"结尾引导语"}`;
+
+    const body = $('#modal-body');
+    if (body) body.insertAdjacentHTML('afterbegin',
+      '<div id="ai-rw" class="hint" style="margin-bottom:12px;color:var(--violet-2)">✨ 真实 AI 重写中，约 10-30 秒…</div>');
+    const setMsg = (t, color) => { const el = $('#ai-rw'); if (el) { el.textContent = t; el.style.color = color || 'var(--violet-2)'; } };
+
+    try {
+      const r = await hgFetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, system, quality: 'auto', maxTokens: 2000, wantJson: true })
+      });
+      let out;
+      try { out = JSON.parse(r.content); }
+      catch (e) {
+        // 模型偶尔会在 JSON 外面包一层 ```json，取出中间那段再试一次
+        const m = (r.content || '').match(/\{[\s\S]*\}/);
+        if (!m) throw new Error('模型没有回传可解析的 JSON');
+        out = JSON.parse(m[0]);
+      }
+      if (!out.dialogue || !out.dialogue.length) throw new Error('模型回传的内容里没有对谈台词');
+
+      s.title = out.title || s.title;
+      s.hook = out.hook || s.hook;
+      s.dialogue = out.dialogue;
+      s.cta = out.cta || s.cta;
+      s.aiWritten = true;
+      s.aiModel = r.model || null;
+      STORE.update();
+      toast('已用真实 AI 重写（模型：' + (r.model || '未知') + '）', 'ok');
+      render(); scriptModal(id);
+    } catch (e) {
+      setMsg('AI 重写失败：' + e.message + '（原本的稿子没有被改动）', 'var(--red)');
+    }
+  }
+
+  /* ---- 真实场景示意图（AI Platform 的 image 任务）----
+   * $0.03-0.07 一张，所以一次只生一张、按一次生一次，不做批次。 */
+  async function aiSceneImage(templateId) {
+    const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === templateId);
+    const slot = $(`.ai-scene-img[data-for="${templateId}"]`);
+    if (!t || !slot) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+
+    const p = STORE.current;
+    slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">✨ 生成中，约 10-20 秒…</div>';
+    const prompt = `短视频场景示意图，直式 9:16 构图。场景：${t.name}——${t.setting}。`
+      + `画面里有 ${t.roles}，气氛${t.tone}。`
+      + (p ? `内容主题与《${p.title}》这本书有关。` : '')
+      + '电影感打光、真实摄影风格、不要出现文字或字幕。';
+
+    try {
+      const r = await hgFetch('/api/ai/image', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, quality: 'fast' })
+      });
+      if (!r.url) throw new Error('平台没有回传图片网址');
+      slot.innerHTML = `<img src="${esc(r.url)}" style="width:100%;border-radius:10px;margin-top:10px">
+        <div class="hint" style="margin-top:6px">AI 生成的场景示意图，仅供沟通画面用</div>`;
+    } catch (e) {
+      slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--amber)">生成失败：${esc(e.message)}</div>`;
+    }
   }
 
   /* ============================================================
