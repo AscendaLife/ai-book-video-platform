@@ -2965,9 +2965,15 @@ window.VIEWS = window.VIEWS || {};
     <div class="hint" style="margin-bottom:16px">上面选好形象和声音后，去「一键生成短视频」的 STEP 6 就能真的试跑一支。</div>
 
 
+    <div class="explain" style="margin-bottom:16px">
+      <div class="ex-r"><span class="ex-k">滑杆和口头禅</span><span><b>是真的会用到</b>——脚本详情弹窗里「✨ 用真实 AI 重写」会把这几个数字和口头禅一起送进大模型的提示词。但只有你手动点了那个按钮的稿子才会套用，批量自动产出的稿子目前还是模板拼接，不会读这里的设定。</span></div>
+      <div class="ex-r"><span class="ex-k">价值观准则 / 禁语清单</span><span>目前<b>只是显示</b>，没有真的拦截任何生成内容。要做成硬约束，得在写稿或 AI 重写那一步加检查逻辑，现在还没做。</span></div>
+      <div class="ex-r"><span class="ex-k">模型版本 / 一致性表现</span><span>这两张卡是<b>示范数据</b>——时间轴是编的，「回滚到此版本」点了只会跳提示，不会真的改变任何设定；一致性分数也不是算出来的。</span></div>
+    </div>
+
     <div class="grid g-2-1">
       <div class="card">
-        <div class="card-h"><div><div class="card-t">表达风格参数</div><div class="card-s">调整后立即影响后续所有脚本改写与语音合成</div></div></div>
+        <div class="card-h"><div><div class="card-t">表达风格参数</div><div class="card-s">喂进「用真实 AI 重写」的提示词——但要手动点那个按钮才会用到</div></div></div>
         ${sliders.map(s => `
           <div class="field">
             <div class="label">${s[1]}<span style="margin-left:auto;color:var(--violet-2);font-weight:700" id="pv-${s[0]}">${p[s[0]]}</span></div>
