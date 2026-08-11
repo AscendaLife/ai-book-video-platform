@@ -3578,8 +3578,10 @@ window.VIEWS = window.VIEWS || {};
               <button class="btn btn-sm btn-primary" data-act="apply-scene-template" data-id="${esc(t.id)}">套用</button>
               <button class="btn btn-sm" data-act="copy-scene-template" data-id="${esc(t.id)}">复制提示词</button>
               <button class="btn btn-sm" data-act="ai-scene-image" data-id="${esc(t.id)}">✨ 生成示意图</button>
+              <button class="btn btn-sm" data-act="ai-scene-video" data-id="${esc(t.id)}">✨ 生成场景短片</button>
             </div>
             <div class="ai-scene-img" data-for="${esc(t.id)}"></div>
+            <div class="ai-scene-video" data-for="${esc(t.id)}"></div>
           </div>`).join('')}
       </div>
     </div>
@@ -4530,6 +4532,7 @@ window.TOUR = (function () {
         hgRenderVoices(); hgRenderGenerate(); return;
       }
       case 'ai-scene-image': return aiSceneImage(el.dataset.id);
+      case 'ai-scene-video': return aiSceneVideo(el.dataset.id);
       case 'hg-upload-photo-btn':
         if (!hgCanWrite()) return hgDemoNotice();
         return $('#hg-photo-input').click();
@@ -4663,6 +4666,7 @@ window.TOUR = (function () {
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
+    if (a === 'confirm-scene-video') { const id = el.dataset.id; closeModal(); return aiDoSceneVideo(id); }
     if (a === 'ai-rewrite') return aiRewriteScript(el.dataset.id);
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
@@ -4891,7 +4895,7 @@ window.TOUR = (function () {
     if (!status) return;
     status.innerHTML = '<div class="hint">连线中…</div>';
     try {
-      const cfg = await hgFetch('/api/heygen/config');
+      const cfg = (await hgFetch('/api/config')).heygen;
       if (!cfg.configured) {
         status.innerHTML = '<div class="hint" style="color:var(--amber)">服务还没设定好（管理员需要在 Vercel 项目设置 HEYGEN_API_KEY），请联系管理员。</div>';
         return;
@@ -4997,7 +5001,7 @@ window.TOUR = (function () {
       setStatus('克隆中，通常 1-2 分钟…');
       const tick = async () => {
         try {
-          const s = await hgFetch('/api/heygen/voice-status/' + encodeURIComponent(r.voiceCloneId));
+          const s = await hgFetch('/api/status?service=heygen-voice&id=' + encodeURIComponent(r.voiceCloneId));
           if (s.status === 'complete') {
             HG.voices.unshift({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview });
             HG.voiceId = s.voiceId;
@@ -5046,7 +5050,7 @@ window.TOUR = (function () {
     const tick = async () => {
       if (!document.body.contains(result)) return; // 使用者已离开这一页，停止轮询
       try {
-        const s = await hgFetch('/api/heygen/status/' + encodeURIComponent(videoId));
+        const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(videoId));
         if (s.status === 'completed' && s.videoUrl) {
           result.innerHTML = `<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
             <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`;
@@ -5527,6 +5531,66 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     } catch (e) {
       slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--amber)">生成失败：${esc(e.message)}</div>`;
     }
+  }
+
+  /* ---- 场景真实短片（外部文字转短片服务，会花额度）----
+   * 比生成示意图贵，所以送出前先跳窗确认。 */
+  function aiSceneVideo(templateId) {
+    const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === templateId);
+    if (!t) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+
+    modal('确定要生成场景短片吗？',
+      `<div style="font-size:13.5px">这会真的呼叫外部服务生成一支约 5 秒的场景短片（场景：${esc(t.name)}），从额度扣钱，比生成示意图贵，送出后无法撤销。</div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="confirm-scene-video" data-id="${esc(templateId)}">确认生成（会扣额度）</button>`);
+  }
+
+  async function aiDoSceneVideo(templateId) {
+    const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === templateId);
+    const slot = $(`.ai-scene-video[data-for="${templateId}"]`);
+    if (!t || !slot) return;
+
+    const p = STORE.current;
+    slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">✨ 送出中…</div>';
+    const prompt = `${t.name}，${t.setting}。${t.roles}，气氛${t.tone}。`
+      + (p ? `内容主题与《${p.title}》这本书有关。` : '')
+      + '电影感镜头运动，真实摄影风格，直式构图，不要出现文字或字幕。';
+
+    try {
+      const r = await hgFetch('/api/deevid/video', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      if (!r.taskId) throw new Error('服务没有回传任务 ID');
+      slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">生成中，通常 1-2 分钟…</div>';
+      aiPollSceneVideo(r.taskId, slot);
+    } catch (e) {
+      slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--amber)">生成失败：${esc(e.message)}</div>`;
+    }
+  }
+
+  function aiPollSceneVideo(taskId, slot) {
+    const tick = async () => {
+      if (!document.body.contains(slot)) return; // 使用者已离开这一页，停止轮询
+      try {
+        const s = await hgFetch('/api/status?service=deevid-video&id=' + encodeURIComponent(taskId));
+        if (s.status === 'SUCCESS' && s.videoUrl) {
+          slot.innerHTML = `<video src="${esc(s.videoUrl)}" controls style="width:100%;border-radius:10px;margin-top:10px"></video>
+            <div class="hint" style="margin-top:6px">外部服务生成的场景短片，网址可能有时效，要保留请自行下载</div>`;
+          return;
+        }
+        if (s.status === 'FAILED') {
+          slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--red)">生成失败（外部服务回报失败）</div>';
+          return;
+        }
+        slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--violet-2)">生成中…（${esc(s.status || 'processing')}）</div>`;
+        setTimeout(tick, 6000);
+      } catch (e) {
+        slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--amber)">查询失败：${esc(e.message)}</div>`;
+      }
+    };
+    tick();
   }
 
   /* ============================================================
