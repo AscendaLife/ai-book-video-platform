@@ -4508,9 +4508,14 @@ window.TOUR = (function () {
         HG.voiceId = el.dataset.id;
         hgRenderVoices(); hgRenderGenerate(); return;
       }
-      case 'hg-upload-photo-btn': return $('#hg-photo-input').click();
-      case 'hg-upload-audio-btn': return $('#hg-audio-input').click();
+      case 'hg-upload-photo-btn':
+        if (!hgCanWrite()) return hgDemoNotice();
+        return $('#hg-photo-input').click();
+      case 'hg-upload-audio-btn':
+        if (!hgCanWrite()) return hgDemoNotice();
+        return $('#hg-audio-input').click();
       case 'hg-generate': {
+        if (!hgCanWrite()) return hgDemoNotice();
         const textEl = $('#hg-text');
         const hasSubject = HG.mode === 'image' ? HG.assetId : HG.avatarId;
         if (!hasSubject || !HG.voiceId || !textEl || !textEl.value.trim()) return toast('请先选好形象、声音，并填台词', 'warn');
@@ -4809,13 +4814,34 @@ window.TOUR = (function () {
   };
   /* 部署在 Vercel、一直开着的数字人生成服务，金钥存在 Vercel 项目的
    * 环境变量里——网页上不再需要「服务网址」「API Key」这些欄位，
-   * 用户完全看不到、也不用管本机有没有开着什么服务。 */
-  const HG_BASE = 'http://localhost:8787'; // 公开展示版故意指向本机，陌生访客连不到
+   * 用户完全看不到、也不用管本机有没有开着什么服务。
+   *
+   * 「看」（形象、声音列表）对所有人开放，所以公开展示版一进页面就
+   * 直接显示得出来；「做」（上传 / 克隆 / 生成，会写入帐号或真的花钱）
+   * 需要下面这把凭证，只有内部版建置时才会被 build.js 填进来。 */
+  const HG_BASE = 'https://heygen-api-self.vercel.app';
+  const HG_WRITE_TOKEN = ''; /* build-token */
+  const hgCanWrite = () => !!HG_WRITE_TOKEN;
+
   async function hgFetch(p, opt) {
-    const r = await fetch(HG_BASE + p, opt);
+    const o = Object.assign({}, opt);
+    if (HG_WRITE_TOKEN) o.headers = Object.assign({}, o.headers, { 'x-bookreel-token': HG_WRITE_TOKEN });
+    const r = await fetch(HG_BASE + p, o);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     return j;
+  }
+
+  /* 公开展示版按下会花钱的动作时，与其送出去被挡、跳一个看起来像坏掉的
+   * 错误，不如直接讲清楚这是展示版。 */
+  function hgDemoNotice() {
+    modal('这是公开展示版', `
+      <div style="font-size:13.5px;line-height:1.9">
+        这一页的<b>形象与声音是真的</b>，可以随便浏览、试听。<br><br>
+        但「上传照片 / 上传录音克隆 / 生成影片」会<b>真的产生费用</b>（约 US$1-3 一支），
+        所以只开放在内部版操作，公开网址上不开放。
+      </div>`,
+      `<button class="btn btn-primary" onclick="UI.closeModal()">知道了</button>`);
   }
 
   let hgTried = false;
