@@ -1638,6 +1638,7 @@ window.DATA = (function () {
     guestAvatarId: '',
     guestVoiceId: '',
     conversationScene: 'professional_interview_room',
+    conversationTemplateId: 'bookreel_fixed_interview_v1',
     cloneSamples: [{ name: '录音样本_01.wav', min: 42 }, { name: '录音样本_02.wav', min: 86 }],
     habits: ['我讲得直白一点', '你听我说完', '说句实在话', '这里我要停一下', '我自己的体会是'],
     values: ['尊重常识', '不夸大结论', '先讲代价再讲收益', '给具体做法而不是口号'],
@@ -3441,6 +3442,10 @@ window.VIEWS = window.VIEWS || {};
                 ['podcast_studio', '播客录音室']
               ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
             </select></div>
+          <div class="field"><div class="label">HeyGen 双人模板 ID</div>
+            <input class="input" value="${esc(p.conversationTemplateId || 'bookreel_fixed_interview_v1')}" data-act="persona-set" data-k="conversationTemplateId">
+            <div class="hint" style="margin-top:6px">第一版使用固定 5 段结构：主持人开场 → 来宾回答 → 主持人追问 → 来宾补充 → 主持人 CTA。</div>
+          </div>
         </div>
         <div>
           <div class="field"><div class="label">来宾名称</div>
@@ -5381,40 +5386,40 @@ window.TOUR = (function () {
     const host = STORE.s.account.name || '主持人';
     const guest = pa.guestName || '来宾';
     const lines = (s && Array.isArray(s.dialogue) ? s.dialogue : []).filter(x => x && x.text);
-    const speakers = Array.from(new Set(lines.map(x => x.speaker).filter(Boolean)));
-    if (speakers.length > 1) {
-      return lines.map((l, i) => ({
-        t: l.t || '',
-        speaker: i % 2 ? 'guest' : 'host',
-        speakerName: l.speaker,
-        cue: l.cue || '',
-        text: l.text
-      }));
-    }
     const seed = lines.length ? lines : [{ text: v.title || p.title || '这本书值得聊一聊', cue: '开场' }];
-    const out = [];
-    seed.slice(0, 8).forEach((l, i) => {
-      if (i === 0) {
-        out.push({ speaker: 'host', speakerName: host, cue: '开场提问，语气自然', text: `我们今天聊《${p.title}》。你觉得这本书最值得先讲的是什么？` });
-      }
-      out.push({
+    const take = i => (seed[i] || seed[seed.length - 1] || {}).text || '';
+    const out = [
+      {
+        speaker: 'host',
+        speakerName: host,
+        cue: '主持人开场，5-8 秒，直接抛出主题',
+        text: `我们今天聊《${p.title}》。这本书最值得先讲的，是它怎么回应「${(p.pains || [])[0] || '很多人很努力却没有结果'}」这个问题。`
+      },
+      {
         speaker: 'guest',
         speakerName: guest,
-        cue: l.cue || '回答，不要像念稿',
-        text: l.text
-      });
-      if (i < seed.length - 1) {
-        out.push({
-          speaker: 'host',
-          speakerName: host,
-          cue: i % 2 ? '追问，稍微插话' : '接话，提出观众疑问',
-          text: i % 2
-            ? '等一下，这里我想插一句。普通读者听到这里，最容易误会的点是什么？'
-            : '所以这不是一句漂亮话，它具体会怎么影响一个人的选择？'
-        });
+        cue: '来宾回答，10-15 秒，讲核心观点',
+        text: take(0)
+      },
+      {
+        speaker: 'host',
+        speakerName: host,
+        cue: '主持人追问或插嘴，5-8 秒，像真人交流',
+        text: '等一下，这里我想插一句。这个观点听起来很对，但普通人最容易误会的地方是什么？'
+      },
+      {
+        speaker: 'guest',
+        speakerName: guest,
+        cue: '来宾补充，10-15 秒，给一个具体动作或书中金句',
+        text: take(1) || take(0)
+      },
+      {
+        speaker: 'host',
+        speakerName: host,
+        cue: '主持人总结 CTA，5-8 秒，自然收尾',
+        text: `所以这本书不是叫你更忙，而是让你做对更少的事。想看《${p.title}》更完整的拆解，留言「书摘」。`
       }
-    });
-    out.push({ speaker: 'host', speakerName: host, cue: '收束 CTA', text: `如果大家想看《${p.title}》更完整的拆解，留言「书摘」，我们下一支继续聊。` });
+    ];
     return scaleConversation(out, Number(v.duration) || defaultVideoDuration());
   }
 
@@ -5439,6 +5444,36 @@ window.TOUR = (function () {
       const raw = m[1].toLowerCase();
       return { speaker: /host|主持|主理/.test(raw) ? 'host' : 'guest', text: m[2].trim() };
     }).filter(x => x.text);
+  }
+
+  function fixedConversation(lines, p) {
+    const hostFallback = STORE.s.account.name || '主持人';
+    const guestFallback = STORE.s.persona.guestName || '来宾';
+    const list = (Array.isArray(lines) ? lines : []).filter(x => x && x.text);
+    const byRole = role => list.filter(x => x.speaker === role);
+    const hosts = byRole('host');
+    const guests = byRole('guest');
+    const pick = (arr, i, fallback) => (arr[i] && arr[i].text) || fallback;
+    return [
+      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 0, `我们今天聊《${p.title}》，先讲它最值得注意的一点。`) },
+      { speaker: 'guest', speakerName: guestFallback, text: pick(guests, 0, `这本书真正有价值的地方，是它把一个复杂问题讲得很具体。`) },
+      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 1, '我插一句，普通读者听到这里，最容易误会的地方是什么？') },
+      { speaker: 'guest', speakerName: guestFallback, text: pick(guests, 1, `不要只把它当成道理，要回到自己今天能改变的一个动作。`) },
+      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 2, `想看《${p.title}》更完整的拆解，留言「书摘」。`) }
+    ];
+  }
+
+  function conversationVariables(lines, p) {
+    const fixed = fixedConversation(lines, p);
+    return {
+      book_title: p.title || '',
+      book_author: p.author || '',
+      host_line_1: fixed[0].text,
+      guest_line_1: fixed[1].text,
+      host_line_2: fixed[2].text,
+      guest_line_2: fixed[3].text,
+      host_line_3: fixed[4].text
+    };
   }
 
   function genVideoModal(id) {
@@ -5487,9 +5522,9 @@ window.TOUR = (function () {
           <div class="field"><div class="label">片长</div>
             <input class="input" id="gv-duration" type="number" min="15" max="180" step="5" value="${Number(v.duration) || defaultVideoDuration()}"></div>
         </div>
-        <div class="field"><div class="label">双人对谈台词（可以改）</div>
+        <div class="field"><div class="label">固定 5 段双人对谈台词（可以改）</div>
           <textarea class="input" id="gv-dialogue" style="min-height:190px;line-height:1.75">${esc(conversationToText(lines))}</textarea></div>
-        <div class="hint">格式用「主持人：」和「来宾：」。送出后会保留 speaker，不会合成成单一旁白。</div>`,
+        <div class="hint">第一版固定结构：主持人开场 → 来宾回答 → 主持人追问 → 来宾补充 → 主持人 CTA。送出时会转成 host_line_1 / guest_line_1 / host_line_2 / guest_line_2 / host_line_3。</div>`,
         `<button class="btn" onclick="UI.closeModal()">取消</button>
          <button class="btn btn-primary" data-modal-act="confirm-conversation-video" data-id="${esc(id)}">确认生成双人访谈（会扣钱）</button>`, true);
     }
@@ -5601,11 +5636,12 @@ window.TOUR = (function () {
     const { v, p } = hit;
     if (videoJobs[id]) return toast('这一支已经在生成中了', 'warn');
 
-    const dialogue = parseConversationText(($('#gv-dialogue') || {}).value || '');
+    const dialogue = fixedConversation(parseConversationText(($('#gv-dialogue') || {}).value || ''), p);
+    const variables = conversationVariables(dialogue, p);
     const scene = (($('#gv-scene') || {}).value || STORE.s.persona.conversationScene || 'professional_interview_room');
     const duration = clampDuration((($('#gv-duration') || {}).value) || v.duration || defaultVideoDuration());
     closeModal();
-    if (dialogue.length < 2) return toast('双人访谈至少要两句对谈', 'warn');
+    if (!variables.host_line_1 || !variables.guest_line_1) return toast('双人访谈模板至少要有主持人与来宾台词', 'warn');
 
     const pa = STORE.s.persona;
     const hostAvatar = pa.realAvatarMode === 'image'
@@ -5613,6 +5649,7 @@ window.TOUR = (function () {
       : { mode: 'avatar', avatar_id: pa.realAvatarId, name: pa.realAvatarName || STORE.s.account.name };
     const payload = {
       task: 'conversation_video',
+      template_id: pa.conversationTemplateId || 'bookreel_fixed_interview_v1',
       quality: 'balanced',
       ratio: v.ratio || '9:16',
       duration_seconds: duration,
@@ -5625,6 +5662,7 @@ window.TOUR = (function () {
         script_id: v.scriptId,
         book: { title: p.title, author: p.author, publisher: p.publisher }
       },
+      variables,
       speakers: [
         { id: 'host', role: 'host', name: STORE.s.account.name || '主持人', avatar: hostAvatar, voice_id: pa.realVoiceId, voice_name: pa.realVoiceName },
         { id: 'guest', role: 'guest', name: pa.guestName || '来宾', avatar_id: pa.guestAvatarId || 'auto', voice_id: pa.guestVoiceId || 'auto' }

@@ -61,12 +61,22 @@ function statusUrl(id) {
 async function main() {
   const payload = {
     task: 'conversation_video',
+    template_id: process.env.AI_PLATFORM_CONVERSATION_TEMPLATE_ID || 'bookreel_fixed_interview_v1',
     quality: 'fast',
     ratio: '9:16',
     duration_seconds: 30,
     callback_id: `bookreel_conversation_test_${Date.now()}`,
     scene: 'professional_interview_room',
     title: 'BookReel 双人访谈测试',
+    variables: {
+      book_title: '认知杠杆',
+      book_author: '测试作者',
+      host_line_1: '今天我们用一分钟聊一本新书。你觉得它最值得先讲的是什么？',
+      guest_line_1: '它不是叫你更忙，而是提醒你把力气放在真正有杠杆的地方。',
+      host_line_2: '等一下，这句话听起来很漂亮。普通人要怎么判断什么叫杠杆？',
+      guest_line_2: '看这件事做完之后，是只消耗你，还是会持续带来结果。',
+      host_line_3: '所以这本书不是叫你更忙，而是让你做对更少的事。想看完整拆解，留言书摘。'
+    },
     speakers: [
       {
         id: 'host',
@@ -87,7 +97,8 @@ async function main() {
       { speaker: 'host', text: '今天我们用一分钟聊一本新书。你觉得它最值得先讲的是什么？' },
       { speaker: 'guest', text: '它不是叫你更忙，而是提醒你把力气放在真正有杠杆的地方。' },
       { speaker: 'host', text: '等一下，这句话听起来很漂亮。普通人要怎么判断什么叫杠杆？' },
-      { speaker: 'guest', text: '看这件事做完之后，是只消耗你，还是会持续带来结果。' }
+      { speaker: 'guest', text: '看这件事做完之后，是只消耗你，还是会持续带来结果。' },
+      { speaker: 'host', text: '所以这本书不是叫你更忙，而是让你做对更少的事。想看完整拆解，留言书摘。' }
     ],
     output: {
       format: 'mp4',
