@@ -132,6 +132,15 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .btn-primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 22px rgba(124,108,255,.35)}
 .btn-primary:hover{box-shadow:0 12px 28px rgba(124,108,255,.5)}
 .btn-ghost{background:transparent}
+/* 折叠区：把次要 / 尚未实作的设定收起来，别把真正要做的事淹没掉 */
+.adv{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.adv>summary{padding:15px 20px;cursor:pointer;font-weight:650;font-size:15px;color:var(--txt-2);
+  list-style:none;display:flex;align-items:center;gap:9px;user-select:none}
+.adv>summary::-webkit-details-marker{display:none}
+.adv>summary::before{content:"▸";color:var(--txt-3);transition:.16s;display:inline-block}
+.adv[open]>summary::before{transform:rotate(90deg)}
+.adv>summary:hover{background:var(--panel-2);color:var(--txt)}
+.adv-b{padding:0 20px 20px}
 /* 不可逆动作用红底，跟旁边的「取消」在视觉上分清楚 */
 .btn-danger{background:var(--red);border:0;color:#fff}
 .btn-danger:hover{filter:brightness(1.1);box-shadow:0 8px 20px rgba(239,68,68,.4)}
@@ -3270,107 +3279,91 @@ window.VIEWS = window.VIEWS || {};
 
     return `
     <div class="page-h">
-      <div><div class="page-t">数字人 · 声音 · 人格</div>
-        <div class="page-d">这里定义「像不像${esc(ac.name)}」——所有脚本与视频都会经过这一层</div></div>
-      <div class="right">
-        <button class="btn" data-act="persona-test">▶ 试听风格样例</button>
-        <button class="btn btn-primary" data-act="persona-save">保存人格参数</button>
-      </div>
+      <div><div class="page-t">数字人 · 声音</div>
+        <div class="page-d">选一张脸、选一个声音——之后生成的影片都用这一组</div></div>
     </div>
 
     <div class="explain" style="margin-bottom:16px">
-      <div class="ex-r"><span class="ex-k">这一页在做什么</span><span>决定<b>影片里说话的是谁、怎么说</b>。没有这一层，AI 写出来的稿子谁用都一样，念出来一股机器味。</span></div>
-      <div class="ex-r"><span class="ex-k">「${esc(ac.name)}」是谁</span><span>${ac.name === '主理人'
-        ? '<b>目前是空的占位名称</b>，不对应任何真人。点左下角可以改成本人的名字，改完全站都会跟着变。'
-        : `就是目前登录的帐户。所有生成的内容都会以${esc(ac.name)}的口吻产出。`}</span></div>
-      <div class="ex-r"><span class="ex-k">你要做的</span><span>先选一种声音来源，再调下面五个参数与口头禅。<b>这一步要在生成影片之前做</b>，否则整批跑完才发现口吻不对，得重来。</span></div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">数字人开口说话</div>
-          <div class="card-s">选一个数字人形象、选一个声音，就能真的生成一支会说话的影片</div></div>
-        <div class="right"><span class="tag a">连的是真实外部服务，会花钱</span></div></div>
-      <div id="hg-status"><div class="hint">连线中…</div></div>
+      <div class="ex-r"><span class="ex-k">这一页只要做两件事</span><span>
+        <b>① 选一个数字人形象</b>（或上传自己的照片）　<b>② 选一个声音</b>。两个都选好就可以去生成影片了。</span></div>
+      <div class="ex-r"><span class="ex-k">设定一次就好</span><span>这是<b>帐号级</b>设定，每本书都会沿用，不用每本重设。</span></div>
     </div>
 
     <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
     <input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">数字人形象</div>
-          <div class="card-s">选一个现成的，或上传自己的照片</div></div></div>
-      <div id="hg-avatar-panel"><div class="hint">点上面「检测」连线后读取。</div></div>
+      <div class="card-h"><div><div class="card-t">① 数字人形象</div>
+          <div class="card-s">影片里出现的那张脸</div></div>
+        <div class="right"><span id="hg-status-chip"></span></div></div>
+      <div id="hg-status"><div class="hint">连线中…</div></div>
+      <div id="hg-avatar-panel" style="margin-top:12px"><div class="hint">读取中…</div></div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">声音</div>
-          <div class="card-s">选一个现成的，或上传一段录音克隆你自己的声音</div></div></div>
-      <div id="hg-voice-panel"><div class="hint">点上面「检测」连线后读取。</div></div>
+      <div class="card-h"><div><div class="card-t">② 声音</div>
+          <div class="card-s">影片里说话的那个声音</div></div></div>
+      <div id="hg-voice-panel"><div class="hint">读取中…</div></div>
     </div>
 
-    <div id="hg-choice-summary" style="margin-bottom:16px"></div>
+    <div id="hg-choice-summary" style="margin-bottom:20px"></div>
 
-
-    <div class="explain" style="margin-bottom:16px">
-      <div class="ex-r"><span class="ex-k">滑杆和口头禅</span><span><b>是真的会用到</b>——脚本详情弹窗里「✨ 用真实 AI 重写」会把这几个数字和口头禅一起送进大模型的提示词。但只有你手动点了那个按钮的稿子才会套用，批量自动产出的稿子目前还是模板拼接，不会读这里的设定。</span></div>
-      <div class="ex-r"><span class="ex-k">价值观准则 / 禁语清单</span><span>目前<b>只是显示</b>，没有真的拦截任何生成内容。要做成硬约束，得在写稿或 AI 重写那一步加检查逻辑，现在还没做。</span></div>
-      <div class="ex-r"><span class="ex-k">模型版本 / 一致性表现</span><span>这两张卡是<b>示范数据</b>——时间轴是编的，「回滚到此版本」点了只会跳提示，不会真的改变任何设定；一致性分数也不是算出来的。</span></div>
-    </div>
-
-    <div class="grid g-2-1">
-      <div class="card">
-        <div class="card-h"><div><div class="card-t">表达风格参数</div><div class="card-s">喂进「用真实 AI 重写」的提示词——但要手动点那个按钮才会用到</div></div></div>
-        ${sliders.map(s => `
-          <div class="field">
-            <div class="label">${s[1]}<span style="margin-left:auto;color:var(--violet-2);font-weight:700" id="pv-${s[0]}">${p[s[0]]}</span></div>
-            <input type="range" min="0" max="100" value="${p[s[0]]}" data-act="persona-slider" data-k="${s[0]}">
-            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--txt-3);margin-top:2px">
-              <span>${s[2]}</span><span>${s[3]}</span></div>
-          </div>`).join('')}
-
-        <div class="label" style="margin-top:18px">口头禅词库<span class="hint" style="margin-left:8px;font-weight:400">单支视频最多植入 2 处，避免滥用</span></div>
-        <div class="chip-list" style="margin-bottom:10px">
-          ${p.habits.map((h, i) => `<span class="tag v">${esc(h)} <b data-act="del-habit" data-i="${i}" style="cursor:pointer;opacity:.6;margin-left:3px">✕</b></span>`).join('')}
+    ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
+         默认收起来，免得把真正要做的两件事淹没掉。 */''}
+    <details class="adv" style="margin-bottom:12px">
+      <summary>说话风格微调（选用）</summary>
+      <div class="adv-b">
+        <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+          <div class="ex-r"><span class="ex-k">什么时候才生效</span><span>
+            下面这些<b>只有你手动点脚本的「✨ 用真实 AI 重写」时才会用到</b>。
+            批量自动产出的稿子目前是模板拼的，不会读这里的设定。不调也完全能用。</span></div>
         </div>
-        <div style="display:flex;gap:9px"><input class="input" id="new-habit" placeholder="新增一句${esc(ac.name)}常说的话…" style="flex:1">
-          <button class="btn" data-act="add-habit">添加</button></div>
+        <div class="grid g-2-1">
+          <div>
+            ${sliders.map(s => `
+              <div class="field">
+                <div class="label">${s[1]}<span style="margin-left:auto;color:var(--violet-2);font-weight:700" id="pv-${s[0]}">${p[s[0]]}</span></div>
+                <input type="range" min="0" max="100" value="${p[s[0]]}" data-act="persona-slider" data-k="${s[0]}">
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--txt-3);margin-top:2px">
+                  <span>${s[2]}</span><span>${s[3]}</span></div>
+              </div>`).join('')}
 
-        <div class="row2" style="margin-top:20px">
-          <div><div class="label">价值观准则（生成时的硬约束）</div>
+            <div class="label" style="margin-top:18px">口头禅词库<span class="hint" style="margin-left:8px;font-weight:400">单支影片最多植入 2 处</span></div>
+            <div class="chip-list" style="margin-bottom:10px">
+              ${p.habits.map((h, i) => `<span class="tag v">${esc(h)} <b data-act="del-habit" data-i="${i}" style="cursor:pointer;opacity:.6;margin-left:3px">✕</b></span>`).join('')}
+            </div>
+            <div style="display:flex;gap:9px"><input class="input" id="new-habit" placeholder="新增一句${esc(ac.name)}常说的话…" style="flex:1">
+              <button class="btn" data-act="add-habit">添加</button></div>
+            <div style="margin-top:14px">
+              <button class="btn" data-act="persona-test">▶ 试听风格样例</button>
+              <button class="btn btn-primary" data-act="persona-save">保存这些参数</button>
+            </div>
+          </div>
+          <div class="card" style="align-self:start">
+            <div class="card-h"><div class="card-t">风格雷达</div></div>
+            <div style="display:grid;place-items:center">
+              ${CHART.radar([{ k: '语速', v: p.speed }, { k: '亲和', v: p.warmth }, { k: '正式', v: p.formal }, { k: '停顿', v: p.pause }, { k: '强调', v: p.emphasis }])}
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="adv">
+      <summary>价值观准则与禁语清单（目前只是列出来，还没有真的拦截）</summary>
+      <div class="adv-b">
+        <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+          <div class="ex-r"><span class="ex-k">先讲清楚</span><span>下面两份清单<b>目前只是显示</b>，系统<b>不会</b>真的挡掉命中的内容。
+            要做成硬约束，得在写稿那一步加检查逻辑，还没做。</span></div>
+        </div>
+        <div class="row2">
+          <div><div class="label">价值观准则</div>
             ${p.values.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--green)">✓</span>${esc(v)}</div>`).join('')}</div>
-          <div><div class="label">禁语清单（命中即拦截）</div>
+          <div><div class="label">禁语清单</div>
             ${p.forbid.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--red)">✕</span>${esc(v)}</div>`).join('')}</div>
         </div>
       </div>
-
-      <div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-h"><div class="card-t">风格雷达</div></div>
-          <div style="display:grid;place-items:center">
-            ${CHART.radar([{ k: '语速', v: p.speed }, { k: '亲和', v: p.warmth }, { k: '正式', v: p.formal }, { k: '停顿', v: p.pause }, { k: '强调', v: p.emphasis }])}
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-h"><div class="card-t">模型版本</div></div>
-          <div class="tl">
-            ${[['v3.2', '当前版本 · 加入 5 句新口头禅', '3 天前'], ['v3.1', '提高停顿密度，完播率 +4%', '2 周前'],
-               ['v3.0', '接入 342 段真实发言语料', '1 个月前'], ['v2.0', '首个可用风格卡版本', '3 个月前']]
-              .map((x, i) => `<div class="tl-i"><div class="tl-t">${x[0]} ${i === 0 ? '<span class="tag g" style="margin-left:6px">使用中</span>' : ''}</div>
-                <div class="tl-s">${x[1]} · ${x[2]}</div>
-                ${i ? `<button class="btn btn-sm" style="margin-top:6px" data-act="rollback" data-v="${x[0]}">回滚到此版本</button>` : ''}</div>`).join('')}
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-h"><div class="card-t">一致性表现</div></div>
-          <div style="display:flex;gap:16px;align-items:center">
-            ${CHART.ring(p.similarity, p.similarity + '%')}
-            <div style="font-size:14.5px;line-height:2;color:var(--txt-2)">
-              近 30 支视频<br>平均一致性 <b style="color:var(--txt)">${p.similarity}%</b><br>
-              低分退回 <b style="color:var(--txt)">2</b> 篇<br>禁语拦截 <b style="color:var(--txt)">0</b> 次</div>
-          </div>
-        </div>
-      </div>
-    </div>`;
+    </details>`;
   };
 
   /* =======================================================
@@ -4830,10 +4823,25 @@ window.TOUR = (function () {
   const HG_WRITE_TOKEN = "wSZNS0NgUyQGOSGmPC7xaJlCQe7ZaI_d"; /* build-token */
   const hgCanWrite = () => !!HG_WRITE_TOKEN;
 
-  async function hgFetch(p, opt) {
+  /* 一定要有逾时：fetch 预设永远不会自己放弃，网路卡住时那个 Promise
+   * 既不成功也不失败，介面就永远停在「连线中…」——使用者只看到一个
+   * 转不完的圈，也没有任何出路。逾时后当成失败处理，才有机会显示重试。 */
+  async function hgFetch(p, opt, timeoutMs) {
     const o = Object.assign({}, opt);
     if (HG_WRITE_TOKEN) o.headers = Object.assign({}, o.headers, { 'x-bookreel-token': HG_WRITE_TOKEN });
-    const r = await fetch(HG_BASE + p, o);
+    const ac = new AbortController();
+    o.signal = ac.signal;
+    const ms = timeoutMs || 15000;
+    const timer = setTimeout(() => ac.abort(), ms);
+    let r;
+    try {
+      r = await fetch(HG_BASE + p, o);
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error(`连线逾时（超过 ${Math.round(ms / 1000)} 秒没有回应）`);
+      throw new Error('连不上服务器：' + e.message);
+    } finally {
+      clearTimeout(timer);
+    }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     return j;
@@ -4920,47 +4928,92 @@ window.TOUR = (function () {
   async function hgCheck() {
     const status = $('#hg-status');
     if (!status) return;
-    status.innerHTML = '<div class="hint">连线中…</div>';
+    status.innerHTML = '<div class="hint">连线中…（最多等 15 秒）</div>';
+    // 就算连不上，也要先让「上传自己的照片」这条路可以走——那条路不依赖形象清单
+    hgRenderAvatars(); hgRenderVoices();
     try {
       const cfg = (await hgFetch('/api/config')).heygen;
       if (!cfg.configured) {
-        status.innerHTML = '<div class="hint" style="color:var(--amber)">服务还没设定好（管理员需要在 Vercel 项目设置 HEYGEN_API_KEY），请联系管理员。</div>';
+        hgTried = false;
+        status.innerHTML = `<div class="hint" style="color:var(--amber)">服务还没设定好（管理员需要在 Vercel 项目设置 HEYGEN_API_KEY）。
+          你仍然可以<b>上传自己的照片</b>当数字人。</div>`;
         return;
       }
-      status.innerHTML = '<div class="hint" style="color:var(--green)">已连接</div>';
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
-      HG.avatars = av.avatars || []; HG.voices = vo.voices || [];
+      HG.avatars = (av.avatars || []).map(a => Object.assign({ own: true }, a));
+      HG.voices = vo.voices || [];
       hgRestoreChoice();   // 先放回上次存的选择，再决定要不要给预设值
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
-      hgSaveChoice();      // 把（可能刚补上的）预设值也存起来，流水线才读得到
+      hgSaveChoice();
+      // 先把自己建的画出来，不要被下面拉公版的请求拖慢
+      status.innerHTML = `<div class="hint" style="color:var(--green)">已连接</div>`;
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
+
+      /* 再补上官方公版里的亚洲脸。这是额外的，拿不到也不影响上面已经能用的东西，
+       * 所以独立 try 住、失败静默。 */
+      try {
+        const pub = await hgFetch('/api/heygen/avatars?scope=public', null, 20000);
+        const have = new Set(HG.avatars.map(a => a.id));
+        const extra = pickAsian(pub.avatars || []).filter(a => !have.has(a.id));
+        if (extra.length) {
+          HG.avatars = HG.avatars.concat(extra);
+          hgRenderAvatars();
+        }
+      } catch (e) { /* 公版是加分项，没有就算了 */ }
+      const st = $('#hg-status');
+      if (st) st.innerHTML = `<div class="hint" style="color:var(--green)">已连接 · ${HG.avatars.length} 个形象 / ${HG.voices.length} 个声音可选</div>`;
     } catch (e) {
       hgTried = false; // 失败了，下次进这一页还可以再自动试一次
-      status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上数字人生成服务（${esc(e.message)}）</div>
-        <button class="btn btn-sm" style="margin-top:8px" data-act="hg-check">重试</button>`;
+      status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上数字人服务：${esc(e.message)}
+          <br>现成的形象与声音清单读不到，但<b>上传自己的照片</b>这条路不受影响，还是可以用。</div>
+        <button class="btn btn-sm" style="margin-top:8px" data-act="hg-check">重新连线</button>`;
+      hgRenderAvatars(); hgRenderVoices();
     }
+  }
+
+  /* 从官方公版清单里挑亚洲脸。
+   * 供应商各版本的字段名不一致（ethnicity / race / tags / description…），
+   * 与其猜字段名，不如把整笔资料转成字串比对关键字，来得可靠。
+   * 一个都没命中时退回前 8 个——有得选总比空的好，但不假装它们是亚洲脸。 */
+  function pickAsian(list) {
+    const RE = /asian|chinese|japanese|korean|taiwan|东亚|亞洲|亚洲|中文|华|華/i;
+    const hit = list.filter(a => RE.test(JSON.stringify(a)));
+    return (hit.length ? hit : list).slice(0, 8).map(a => Object.assign({}, a, { own: false, asian: !!hit.length }));
   }
 
   /* ---- 形象：挑现成的，或上传照片 ---- */
   function hgRenderAvatars() {
     const panel = $('#hg-avatar-panel');
     if (!panel) return;
+    const mine = HG.mode === 'image' && HG.assetPreview;
+    /* 「上传自己的照片」放第一格而且做大：这是唯一不依赖外部清单、永远能用的路，
+     * 也是多数人真正想要的东西（专属自己的数字人）。清单读不到时它照样能点。 */
     panel.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:12px">
-        ${HG.avatars.slice(0, 6).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
-            style="border:1px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center">
-          ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px">` : ''}
-          <div style="font-size:13.5px;font-weight:600">${esc(a.name || a.id)}</div>
-        </div>`).join('')}
-        <div class="hg-avatar ${HG.mode === 'image' ? 'on' : ''}" data-act="hg-upload-photo-btn"
-            style="border:1px dashed ${HG.mode === 'image' ? 'var(--violet-2)' : 'var(--line-2)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:96px">
-          ${HG.mode === 'image' && HG.assetPreview
-            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px"><div style="font-size:13.5px;font-weight:600">你上传的照片</div>`
-            : `<div style="font-size:21.5px;color:var(--txt-3)">＋</div><div style="font-size:13.5px;color:var(--txt-2);margin-top:3px">上传照片</div>`}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:11px;margin-bottom:12px">
+        <div class="hg-avatar ${mine ? 'on' : ''}" data-act="hg-upload-photo-btn"
+            style="border:2px dashed ${mine ? 'var(--violet-2)' : 'var(--violet)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center;
+                   display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;
+                   background:${mine ? 'transparent' : 'rgba(124,108,255,.07)'}">
+          ${mine
+            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">
+               <div style="font-size:14px;font-weight:700;color:var(--violet-2)">✓ 你的专属数字人</div>
+               <div style="font-size:12.5px;color:var(--txt-3);margin-top:2px">点这里可换一张</div>`
+            : `<div style="font-size:26px;color:var(--violet-2)">＋</div>
+               <div style="font-size:14.5px;font-weight:700;margin-top:6px">上传我的照片</div>
+               <div style="font-size:12.5px;color:var(--txt-3);margin-top:3px;line-height:1.5">做一个<br>专属自己的数字人</div>`}
         </div>
+        ${HG.avatars.slice(0, 11).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
+            style="border:2px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center">
+          ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">` : ''}
+          <div style="font-size:14px;font-weight:600">${esc(a.name || a.id)}</div>
+          <div style="font-size:12.5px;color:var(--txt-3)">${a.own ? '你帐号里的' : '官方形象'}${a.gender ? ' · ' + esc(a.gender) : ''}</div>
+        </div>`).join('')}
       </div>
-      <div class="hint">上传照片建议<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」，无法生成。上传本身免费，真正花钱的是下面的「生成」那一步。</div>`;
+      ${!HG.avatars.length
+        ? `<div class="hint" style="color:var(--amber);margin-bottom:8px">现成形象清单目前是空的（服务连不上，或帐号里没有建好的形象）。
+             <b>上传自己的照片</b>不受影响，直接点上面那一格就行。</div>` : ''}
+      <div class="hint">照片要<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」。上传免费，花钱的是之后「生成影片」那一步。</div>`;
   }
 
   async function hgUploadPhoto(file) {
