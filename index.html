@@ -1148,7 +1148,7 @@ window.DATA = (function () {
     b => `${b.author}用一本书，讲透了这件事`,
     b => `这本书我读了三遍，第三遍才看懂`,
     b => `《${b.title}》：普通人最该补的一课`,
-    b => `我把《${b.title}》浓缩成了 60 秒`,
+    b => `我把《${b.title}》浓缩成了 ${defaultVideoDuration()} 秒`,
     b => `别再瞎努力了，先看看《${b.title}》怎么说`,
     b => `${b.publisher}这本新书，值得放进你的书架`,
     b => `看完这本书，我重新想了想我的工作`,
@@ -1354,6 +1354,7 @@ window.DATA = (function () {
     for (let i = 0; i < (count || 10); i++) {
       const a = ANGLES[i % ANGLES.length];
       const p = PLATFORMS[i % PLATFORMS.length];
+      const duration = defaultVideoDuration();
       const sceneDialogue = genSceneDialogue(b, a.key, i);
       out.push({
         id: uid('s'), n: i + 1, angle: a.key, angleName: a.name, platform: p.key, platformName: p.name,
@@ -1365,12 +1366,23 @@ window.DATA = (function () {
         rhythm: sceneDialogue.rhythm,
         scenePlan: sceneDialogue.scenePlan,
         voicePlan: sceneDialogue.voicePlan,
-        dialogue: sceneDialogue.dialogue,
-        cta: p.cta, duration: 60, words: 260 + Math.floor(Math.random() * 90),
+        dialogue: scaleDialogue(sceneDialogue.dialogue, duration),
+        cta: p.cta, duration, words: Math.round(duration * 4.7),
         score: 66 + Math.floor(Math.random() * 32), persona: false
       });
     }
     return out;
+  }
+
+  function scaleDialogue(dialogue, duration) {
+    const lines = Array.isArray(dialogue) ? dialogue : [];
+    if (!lines.length) return lines;
+    const D = clampDuration(duration);
+    return lines.map((line, i) => {
+      const t0 = +(i * D / lines.length).toFixed(1);
+      const t1 = +((i + 1) * D / lines.length).toFixed(1);
+      return Object.assign({}, line, { t: `${t0.toFixed(1)}-${t1.toFixed(1)}s` });
+    });
   }
 
   /* 人格改写（Step 5） */
@@ -1392,7 +1404,7 @@ window.DATA = (function () {
 
   /* 生成分镜（时间轴按实际片长等比分配，不写死秒数） */
   function genShots(s, b) {
-    const D = s.duration || 45;
+    const D = clampDuration(s.duration || defaultVideoDuration());
     if (s.scenePlan && s.dialogue) {
       const scenes = s.scenePlan;
       const lines = s.dialogue;
@@ -1403,17 +1415,24 @@ window.DATA = (function () {
        * 不再有「双人交叉剪」「插嘴重叠」这种数字人做不出来的东西。
        * txt 直接取台词本文，不加「谁说的」前缀——反正全篇只有一个人在讲。 */
       const say = (...idx) => idx.map(n => lines[n]).filter(Boolean).map(x => x.text).join('\n');
-      return [
-        { t: first.name + '开场', txt: say(0) || s.hook, cam: '中景，背后看得见场地，人物占画面 45%', vis: '前 3 秒字幕大字 + 环境声', t0: 0, t1: 4, dur: '0–4s' },
-        { t: '给结论', txt: say(1), cam: '正面中近景，轻微推镜', vis: '结论关键词大字', t0: 4, t1: 10, dur: '4–10s' },
-        { t: '讲核心观点', txt: say(2), cam: '近景，语速稳', vis: '书封插入 + 核心句字幕', t0: 10, t1: 17, dur: '10–17s' },
-        { t: '金句停顿', txt: say(3), cam: '人物让位，切书页划线与金句卡', vis: '全屏金句卡 + 停顿留白', t0: 17, t1: 24, dur: '17–24s' },
-        { t: second.name + '换场解释', txt: say(4), cam: `换到${second.visual}，中景`, vis: second.role, t0: 24, t1: 31, dur: '24–31s' },
-        { t: '自问自答', txt: say(5), cam: '正面近景，直视镜头', vis: '反问字幕卡', t0: 31, t1: 38, dur: '31–38s' },
-        { t: '给具体做法', txt: say(6), cam: '中景，语速回快', vis: '三栏清单动画（消耗/维持/放大）', t0: 38, t1: 46, dur: '38–46s' },
-        { t: third.name + '收束', txt: say(7), cam: `${third.visual}，中景`, vis: third.role, t0: 46, t1: 52, dur: '46–52s' },
-        { t: 'CTA 与 AI 标识', txt: say(8) || s.cta, cam: '书封 + 人物小窗 + 留言提示', vis: '留言书摘 / 试读 / AI 生成声明', t0: 52, t1: D, dur: `52–${D}s` }
+      const parts = [
+        { t: first.name + '开场', txt: say(0) || s.hook, cam: '中景，背后看得见场地，人物占画面 45%', vis: '前 3 秒字幕大字 + 环境声', w: 0.07 },
+        { t: '给结论', txt: say(1), cam: '正面中近景，轻微推镜', vis: '结论关键词大字', w: 0.10 },
+        { t: '讲核心观点', txt: say(2), cam: '近景，语速稳', vis: '书封插入 + 核心句字幕', w: 0.12 },
+        { t: '金句停顿', txt: say(3), cam: '人物让位，切书页划线与金句卡', vis: '全屏金句卡 + 停顿留白', w: 0.12 },
+        { t: second.name + '换场解释', txt: say(4), cam: `换到${second.visual}，中景`, vis: second.role, w: 0.12 },
+        { t: '自问自答', txt: say(5), cam: '正面近景，直视镜头', vis: '反问字幕卡', w: 0.12 },
+        { t: '给具体做法', txt: say(6), cam: '中景，语速回快', vis: '三栏清单动画（消耗/维持/放大）', w: 0.13 },
+        { t: third.name + '收束', txt: say(7), cam: `${third.visual}，中景`, vis: third.role, w: 0.10 },
+        { t: 'CTA 与 AI 标识', txt: say(8) || s.cta, cam: '书封 + 人物小窗 + 留言提示', vis: '留言书摘 / 试读 / AI 生成声明', w: 0.12 }
       ];
+      let acc = 0;
+      return parts.map((p, i) => {
+        const t0 = +(acc * D).toFixed(1);
+        acc += p.w;
+        const t1 = i === parts.length - 1 ? D : +(acc * D).toFixed(1);
+        return { t: p.t, txt: p.txt, cam: p.cam, vis: p.vis, t0, t1, dur: `${t0}–${t1}s` };
+      });
     }
     const parts = [
       { t: '开场特写', txt: s.hook, cam: '数字人正面近景', vis: '书封悬浮入场', w: 0.13 },
@@ -1753,6 +1772,7 @@ window.STORE = (function () {
       tts: 'zhao-voice-v3',
       avatarEngine: 'ZD-Avatar 2.0 (口型+表情+手势)',
       autoPersona: true, autoSubtitle: true, autoBroll: true, autoBgm: true,
+      videoDuration: 60,
       realAI: true,   // STEP 2/4 用真实模型（约 US$0.6/本）；关掉就走模板
       compliance: true, watermark: true, autoPublish: false,
       quotaUsed: 186, quotaTotal: 500
@@ -1813,7 +1833,7 @@ window.STORE = (function () {
       if (p.scripts.length && p.scripts.some(s => !s.scenePlan || !s.dialogue || !s.voicePlan)) {
         const fresh = DATA.genScripts(p, p.scripts.length);
         p.scripts = p.scripts.map((s, i) => Object.assign({}, s, {
-          duration: 60,
+          duration: defaultVideoDuration(),
           sceneMode: fresh[i].sceneMode,
           sceneStyle: fresh[i].sceneStyle,
           rhythm: fresh[i].rhythm,
@@ -2301,6 +2321,7 @@ window.ENGINE = (function () {
               hook: rs.hook || p.scripts[i].hook,
               dialogue: rs.dialogue,
               cta: rs.cta || p.scripts[i].cta,
+              duration: defaultVideoDuration(),
               aiWritten: true, aiModel: r.model || null
             });
           });
@@ -3259,6 +3280,12 @@ window.VIEWS = window.VIEWS || {};
       <div class="vid-b">
         <div class="vid-tt">${esc(v.title)}</div>
         <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span></div>
+        <div class="vid-m" style="align-items:center;gap:8px">
+          <span>片长</span>
+          <input class="input" type="number" min="15" max="180" step="5" value="${Number(v.duration) || defaultVideoDuration()}"
+            data-act="video-duration" data-id="${v.id}" style="width:82px;padding:6px 8px;border-radius:9px">
+          <span>秒</span>
+        </div>
         <div class="vid-m">${live && v.demo
           ? `<span style="color:var(--amber)">▶ ${nf(v.views)}（假）</span><span style="color:var(--amber)">完播 ${v.watch}%（假）</span>`
           : done ? '<span style="color:var(--green)">影片已做好，可播放</span>'
@@ -3660,6 +3687,10 @@ window.VIEWS = window.VIEWS || {};
             </select></div>
           <div class="field"><div class="label">数字人引擎</div>
             <input class="input" value="${esc(st.avatarEngine)}" data-act="set" data-k="avatarEngine"></div>
+          <div class="field"><div class="label">默认短影音长度（秒）</div>
+            <input class="input" type="number" min="15" max="180" step="5" value="${defaultVideoDuration()}" data-act="set-number" data-k="videoDuration">
+            <div class="hint" style="margin-top:6px">新生成的脚本和待生成影片会使用这个长度。已经在资产库里的影片，也可以在卡片上逐支修改。</div>
+          </div>
         </div>
 
         <div class="card">
@@ -4308,6 +4339,7 @@ window.TOUR = (function () {
     if (route === 'persona' || route === 'pipeline') hgAutoCheck();
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
   }
+  window.render = render;
 
   function go(r, q) { route = r; query = q || {}; $('#sidebar').classList.remove('open'); render(); }
   window.go = go;
@@ -4669,6 +4701,10 @@ window.TOUR = (function () {
     if (el.dataset.act === 'switch-proj') { STORE.setCurrent(el.value); render(); }
     if (el.dataset.act === 'plat-filter') go('publish', { p: el.value });
     if (el.dataset.act === 'set') { STORE.s.settings[el.dataset.k] = el.value; STORE.update(); toast('已保存', 'ok'); }
+    if (el.dataset.act === 'set-number') {
+      STORE.s.settings[el.dataset.k] = clampDuration(el.value);
+      STORE.update(); render(); toast('已保存', 'ok');
+    }
   });
   $('#view').addEventListener('input', e => {
     // 提示词是使用者随时会改的，边打边存，不用另外按储存
@@ -4681,11 +4717,21 @@ window.TOUR = (function () {
       }
       return;
     }
+    const dur = e.target.closest('[data-act="video-duration"]');
+    if (dur) {
+      setVideoDuration(dur.dataset.id, dur.value, false);
+      return;
+    }
     const el = e.target.closest('[data-act="persona-slider"]');
     if (!el) return;
     const k = el.dataset.k;
     STORE.s.persona[k] = +el.value;
     const lab = $('#pv-' + k); if (lab) lab.textContent = el.value;
+  });
+
+  $('#view').addEventListener('change', e => {
+    const dur = e.target.closest('[data-act="video-duration"]');
+    if (dur) setVideoDuration(dur.dataset.id, dur.value, true);
   });
 
   /* 弹窗内按钮 */
@@ -5813,7 +5859,10 @@ window.TOUR = (function () {
      * 写成双人对谈的话，生成时只能由同一个人念完两边台词，稿子会对不上成品。 */
     const speaker = STORE.s.account.name || '主讲人';
     const system = '你是短视频编剧，专写中文单人口播短片脚本。只输出 JSON，不要任何解释文字。';
-    const prompt = `帮我写一支 60 秒的单人口播短视频脚本，用来推荐这本书。
+    const duration = clampDuration(s.duration || defaultVideoDuration());
+    const minWords = Math.max(80, Math.round(duration * 4.1));
+    const maxWords = Math.max(minWords + 30, Math.round(duration * 5.3));
+    const prompt = `帮我写一支 ${duration} 秒的单人口播短视频脚本，用来推荐这本书。
 
 【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
 【全书摘要】${p.summary || '（未提供）'}
@@ -5833,7 +5882,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
 - 中间要有一次自问自答（先讲出观众可能的反驳，再回应）
 - 引用书里的一句原话，前后留停顿
 - 讲书里真正的观点，不要空泛的「这本书很好看」
-- 8-10 句，每句给时间区间，总长不超过 60 秒，全篇 260-320 字
+- 8-10 句，每句给时间区间，总长不超过 ${duration} 秒，全篇 ${minWords}-${maxWords} 字
 - 最后给一个今天就能做的具体动作，再带出引导留言或试读的 CTA
 
 只输出这个 JSON 结构：
@@ -5863,6 +5912,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
       s.hook = out.hook || s.hook;
       s.dialogue = out.dialogue;
       s.cta = out.cta || s.cta;
+      s.duration = duration;
       s.aiWritten = true;
       s.aiModel = r.model || null;
       STORE.update();
@@ -5996,9 +6046,12 @@ ${ctx}
        * 一个声音念一段话。写成对谈的话，生成时只能由同一个人把两边台词都念完，
        * 稿子和做得出来的影片对不上。 */
       const speaker = (window.STORE && STORE.s.account && STORE.s.account.name) || '主讲人';
+      const duration = defaultVideoDuration();
+      const minWords = Math.max(80, Math.round(duration * 4.1));
+      const maxWords = Math.max(minWords + 30, Math.round(duration * 5.3));
       let scripts = [];
       try {
-        const r2 = await call(`帮这本书写 3 篇 60 秒短视频口播稿。
+        const r2 = await call(`帮这本书写 3 篇 ${duration} 秒短视频口播稿。
 
 ${ctx}
 
@@ -6011,7 +6064,7 @@ ${ctx}
 - 中间要有一次自问自答（预设观众的反驳，然后回应）
 - 要引用书里的一句原话，并留一个停顿
 - 结尾给一个今天就能做的具体动作，再自然带出引导语
-- 每篇 8-10 句，全篇加起来 260-320 字（60 秒念得完）
+- 每篇 8-10 句，全篇加起来 ${minWords}-${maxWords} 字（${duration} 秒念得完）
 
 只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3500);
         scripts = (aiJson(r2.content).scripts || []);
@@ -6737,6 +6790,33 @@ ${ctx}
   if (!STORE.s.settings.tourDone) setTimeout(() => TOUR.start(0), 500);
   else setTimeout(() => toast('欢迎回来 · 需要重看用法请点顶栏「导览」', 'ok'), 700);
 })();
+
+function defaultVideoDuration() {
+  const raw = window.STORE && STORE.s && STORE.s.settings ? STORE.s.settings.videoDuration : 60;
+  return clampDuration(raw);
+}
+
+function clampDuration(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(180, Math.max(15, Math.round(n))) : 60;
+}
+
+function setVideoDuration(videoId, value, notify) {
+  const duration = clampDuration(value);
+  let hit = null;
+  (STORE.s.projects || []).forEach(p => (p.videos || []).forEach(v => {
+    if (v.id === videoId) hit = { p, v };
+  }));
+  if (!hit) return;
+  hit.v.duration = duration;
+  const script = (hit.p.scripts || []).find(s => s.id === hit.v.scriptId);
+  if (script) script.duration = duration;
+  STORE.update();
+  if (notify) {
+    render();
+    UI.toast(`片长已设为 ${duration} 秒`, 'ok');
+  }
+}
 
 </script>
 </body>
