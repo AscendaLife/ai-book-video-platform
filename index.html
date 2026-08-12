@@ -50,7 +50,7 @@
 html,body{height:100%}
 body{
   font-family:var(--font); background:var(--bg); color:var(--txt);
-  font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
   overflow:hidden;
 }
 a{color:inherit;text-decoration:none;cursor:pointer}
@@ -69,38 +69,38 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .brand{display:flex;align-items:center;gap:11px;padding:19px 18px 16px}
 .brand-logo{
   width:38px;height:38px;border-radius:11px;background:var(--grad);display:grid;place-items:center;
-  font-weight:800;font-size:18px;color:#fff;box-shadow:0 8px 22px rgba(124,108,255,.45)
+  font-weight:800;font-size:19.5px;color:#fff;box-shadow:0 8px 22px rgba(124,108,255,.45)
 }
-.brand-title{font-weight:700;font-size:14.5px;letter-spacing:.2px}
-.brand-sub{font-size:10.5px;color:var(--txt-3);letter-spacing:1.1px;text-transform:uppercase}
+.brand-title{font-weight:700;font-size:16.5px;letter-spacing:.2px}
+.brand-sub{font-size:12.5px;color:var(--txt-3);letter-spacing:1.1px;text-transform:uppercase}
 
 .nav{flex:1;overflow-y:auto;padding:6px 12px 12px}
-.nav-group{font-size:10.5px;color:var(--txt-3);letter-spacing:1.4px;padding:16px 10px 7px;font-weight:600}
+.nav-group{font-size:12.5px;color:var(--txt-3);letter-spacing:1.4px;padding:16px 10px 7px;font-weight:600}
 .nav-item{
   display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;
-  color:var(--txt-2);font-size:13.5px;margin-bottom:2px;position:relative;transition:.16s
+  color:var(--txt-2);font-size:15.5px;margin-bottom:2px;position:relative;transition:.16s
 }
-.nav-item .ni{width:18px;text-align:center;opacity:.8;font-size:13px}
+.nav-item .ni{width:18px;text-align:center;opacity:.8;font-size:15px}
 .nav-item:hover{background:var(--panel);color:var(--txt)}
 .nav-item.active{background:var(--panel-2);color:var(--txt);font-weight:600}
 .nav-item.active::before{
   content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--grad)
 }
-.ni-badge{margin-left:auto;background:var(--violet);color:#fff;font-size:10px;padding:1px 6px;border-radius:20px;font-weight:700}
+.ni-badge{margin-left:auto;background:var(--violet);color:#fff;font-size:12px;padding:1px 6px;border-radius:20px;font-weight:700}
 .ni-badge:empty{display:none}
 
 .sidebar-foot{padding:14px;border-top:1px solid var(--line)}
-.quota-head{display:flex;justify-content:space-between;font-size:11px;color:var(--txt-3);margin-bottom:6px}
+.quota-head{display:flex;justify-content:space-between;font-size:13px;color:var(--txt-3);margin-bottom:6px}
 .bar{height:5px;background:var(--panel-2);border-radius:5px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--grad);border-radius:5px;transition:width .6s}
 .user{display:flex;align-items:center;gap:10px;margin-top:14px;padding:6px;margin-left:-6px;margin-right:-6px;
   border-radius:10px;cursor:pointer;transition:.15s;position:relative}
 .user:hover{background:var(--panel)}
-.user::after{content:"⚙";position:absolute;right:8px;opacity:0;transition:.15s;color:var(--txt-3);font-size:12px}
+.user::after{content:"⚙";position:absolute;right:8px;opacity:0;transition:.15s;color:var(--txt-3);font-size:14px}
 .user:hover::after{opacity:1}
-.avatar{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff8a5b,#ff5d8f);display:grid;place-items:center;font-weight:700;color:#fff;font-size:14px}
-.user-name{font-size:13px;font-weight:600}
-.user-role{font-size:11px;color:var(--txt-3)}
+.avatar{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff8a5b,#ff5d8f);display:grid;place-items:center;font-weight:700;color:#fff;font-size:16px}
+.user-name{font-size:15px;font-weight:600}
+.user-role{font-size:13px;color:var(--txt-3)}
 
 /* ---------------- 顶栏 ---------------- */
 .main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg);background-image:var(--glow)}
@@ -108,11 +108,11 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
   height:62px;flex:0 0 62px;display:flex;align-items:center;gap:14px;padding:0 24px;
   border-bottom:1px solid var(--line);backdrop-filter:blur(8px);
 }
-.crumb{font-size:15px;font-weight:650}
+.crumb{font-size:17px;font-weight:650}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
   border-radius:10px;padding:7px 12px;width:260px;color:var(--txt-3)}
-.search input{background:none;border:0;outline:0;width:100%;font-size:13px}
+.search input{background:none;border:0;outline:0;width:100%;font-size:15px}
 .icon-btn{
   width:36px;height:36px;border-radius:10px;background:var(--panel);border:1px solid var(--line);
   cursor:pointer;display:grid;place-items:center;color:var(--txt-2);transition:.16s
@@ -125,20 +125,20 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 /* ---------------- 通用组件 ---------------- */
 .btn{
   border:1px solid var(--line-2);background:var(--panel);border-radius:10px;padding:8px 15px;
-  cursor:pointer;font-size:13px;font-weight:600;transition:.16s;white-space:nowrap;display:inline-flex;
+  cursor:pointer;font-size:15px;font-weight:600;transition:.16s;white-space:nowrap;display:inline-flex;
   align-items:center;gap:7px
 }
 .btn:hover{background:var(--panel-2);transform:translateY(-1px)}
 .btn-primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 22px rgba(124,108,255,.35)}
 .btn-primary:hover{box-shadow:0 12px 28px rgba(124,108,255,.5)}
 .btn-ghost{background:transparent}
-.btn-sm{padding:5px 11px;font-size:12px;border-radius:8px}
+.btn-sm{padding:5px 11px;font-size:14px;border-radius:8px}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;position:relative}
 .card-h{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.card-t{font-size:14.5px;font-weight:680}
-.card-s{font-size:12px;color:var(--txt-3)}
+.card-t{font-size:16.5px;font-weight:680}
+.card-s{font-size:14px;color:var(--txt-3)}
 .card-h .right{margin-left:auto;display:flex;gap:8px;align-items:center}
 
 .grid{display:grid;gap:16px}
@@ -152,7 +152,7 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 @media(max-width:1280px){.g4{grid-template-columns:repeat(2,1fr)}.g-2-1,.g-1-2{grid-template-columns:1fr}}
 @media(max-width:900px){.g3,.g2{grid-template-columns:1fr}}
 
-.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3px 9px;border-radius:20px;
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:13.5px;padding:3px 9px;border-radius:20px;
   background:var(--panel-2);border:1px solid var(--line);color:var(--txt-2);white-space:nowrap}
 .tag.v{color:var(--violet-2);border-color:rgba(124,108,255,.35);background:rgba(124,108,255,.12)}
 .tag.c{color:var(--cyan);border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.1)}
@@ -167,39 +167,39 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .dot.v{background:var(--violet);box-shadow:0 0 0 3px rgba(124,108,255,.2)}
 
 .page-h{display:flex;align-items:flex-end;gap:14px;margin-bottom:20px;flex-wrap:wrap}
-.page-t{font-size:22px;font-weight:750;letter-spacing:-.2px}
-.page-d{font-size:13px;color:var(--txt-3);margin-top:3px}
+.page-t{font-size:24px;font-weight:750;letter-spacing:-.2px}
+.page-d{font-size:15px;color:var(--txt-3);margin-top:3px}
 .page-h .right{margin-left:auto;display:flex;gap:9px}
 
-.hint{font-size:12px;color:var(--txt-3)}
+.hint{font-size:14px;color:var(--txt-3)}
 .muted{color:var(--txt-2)}
 .empty{text-align:center;padding:56px 20px;color:var(--txt-3)}
-.empty .big{font-size:40px;opacity:.35;margin-bottom:10px}
-.mono{font-family:"JetBrains Mono","Cascadia Code",Consolas,monospace;font-size:12px}
+.empty .big{font-size:42px;opacity:.35;margin-bottom:10px}
+.mono{font-family:"JetBrains Mono","Cascadia Code",Consolas,monospace;font-size:14px}
 
 /* KPI 卡 */
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:17px 19px;overflow:hidden;position:relative}
 .kpi::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;
   background:var(--grad);opacity:.10;filter:blur(6px)}
-.kpi-l{font-size:12px;color:var(--txt-3);display:flex;align-items:center;gap:6px}
-.kpi-v{font-size:27px;font-weight:760;margin:7px 0 4px;letter-spacing:-.6px}
-.kpi-v small{font-size:13px;font-weight:600;color:var(--txt-3);margin-left:3px}
-.kpi-d{font-size:11.5px;color:var(--green);font-weight:600}
+.kpi-l{font-size:14px;color:var(--txt-3);display:flex;align-items:center;gap:6px}
+.kpi-v{font-size:29px;font-weight:760;margin:7px 0 4px;letter-spacing:-.6px}
+.kpi-v small{font-size:15px;font-weight:600;color:var(--txt-3);margin-left:3px}
+.kpi-d{font-size:13.5px;color:var(--green);font-weight:600}
 .kpi-d.down{color:var(--red)}
 
 /* 表格 */
 table{width:100%;border-collapse:collapse}
-th{font-size:11.5px;color:var(--txt-3);text-align:left;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
-td{padding:11px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+th{font-size:13.5px;color:var(--txt-3);text-align:left;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
+td{padding:11px 12px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:middle}
 tr:last-child td{border-bottom:0}
 tbody tr{transition:.14s}
 tbody tr:hover{background:var(--panel-2)}
 
 /* 表单 */
 .field{margin-bottom:14px}
-.label{font-size:12px;color:var(--txt-2);margin-bottom:6px;display:flex;align-items:center;gap:6px;font-weight:600}
+.label{font-size:14px;color:var(--txt-2);margin-bottom:6px;display:flex;align-items:center;gap:6px;font-weight:600}
 .input,select.input,textarea.input{
-  width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:0;transition:.16s;font-size:13px
+  width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:0;transition:.16s;font-size:15px
 }
 .input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,108,255,.16)}
 textarea.input{resize:vertical;min-height:88px;line-height:1.7}
@@ -216,7 +216,7 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 
 /* 分段控件 */
 .seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
-.seg button{background:none;border:0;padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--txt-2);transition:.15s}
+.seg button{background:none;border:0;padding:6px 13px;border-radius:8px;cursor:pointer;font-size:14.5px;color:var(--txt-2);transition:.15s}
 .seg button.on{background:var(--panel);color:var(--txt);font-weight:650;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 
 /* ---------------- 项目卡 ---------------- */
@@ -225,13 +225,13 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .book-card:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow)}
 .book-cover{height:132px;position:relative;display:flex;align-items:flex-end;padding:14px}
 .book-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.55))}
-.book-cover .bt{position:relative;z-index:2;color:#fff;font-weight:750;font-size:16px;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.book-cover .bt{position:relative;z-index:2;color:#fff;font-weight:750;font-size:17.5px;text-shadow:0 2px 12px rgba(0,0,0,.5)}
 .book-cover .st{position:absolute;top:12px;right:12px;z-index:2}
 .book-b{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:9px}
-.book-meta{font-size:12px;color:var(--txt-3)}
+.book-meta{font-size:14px;color:var(--txt-3)}
 .book-stats{display:flex;gap:14px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
-.bs{font-size:11px;color:var(--txt-3)}
-.bs b{display:block;font-size:15px;color:var(--txt);font-weight:700}
+.bs{font-size:13px;color:var(--txt-3)}
+.bs b{display:block;font-size:17px;color:var(--txt);font-weight:700}
 
 /* ---------------- 流水线 ---------------- */
 .pipe{display:flex;gap:0;overflow-x:auto;padding:4px 0 14px}
@@ -245,38 +245,38 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .pstep:hover{background:var(--panel-2)}
 .pstep.on{background:var(--panel-2)}
 .pstep.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--grad)}
-.pstep .pn{font-size:10.5px;color:var(--txt-3);letter-spacing:1px}
-.pstep .pt{font-size:12.5px;font-weight:650;margin-top:4px}
-.pstep .ps{font-size:10.5px;margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--txt-3)}
+.pstep .pn{font-size:12.5px;color:var(--txt-3);letter-spacing:1px}
+.pstep .pt{font-size:14.5px;font-weight:650;margin-top:4px}
+.pstep .ps{font-size:12.5px;margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--txt-3)}
 .pstep.done .pt{color:var(--green)}
 .pstep.run .pt{color:var(--violet-2)}
 
 .stage{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;margin-top:16px}
 .log{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:14px;max-height:230px;
-  overflow-y:auto;font-family:"JetBrains Mono",Consolas,monospace;font-size:11.5px;line-height:1.9}
+  overflow-y:auto;font-family:"JetBrains Mono",Consolas,monospace;font-size:13.5px;line-height:1.9}
 .log .l-ok{color:var(--green)}.log .l-run{color:var(--cyan)}.log .l-info{color:var(--txt-3)}.log .l-warn{color:var(--amber)}
 
 .ring{position:relative;width:132px;height:132px;flex:0 0 132px}
 .ring svg{transform:rotate(-90deg)}
-.ring .rv{position:absolute;inset:0;display:grid;place-items:center;font-size:24px;font-weight:750}
+.ring .rv{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:750}
 
 .drop{
   border:1.5px dashed var(--line-2);border-radius:var(--r-lg);padding:34px;text-align:center;transition:.18s;cursor:pointer;background:var(--panel-2)
 }
 .drop:hover,.drop.over{border-color:var(--violet);background:rgba(124,108,255,.07)}
-.drop .di{font-size:34px;opacity:.5}
+.drop .di{font-size:36px;opacity:.5}
 .file-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);margin-top:8px}
-.file-ico{width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:13px;color:#fff;flex:0 0 32px}
+.file-ico{width:32px;height:32px;border-radius:9px;background:var(--grad);display:grid;place-items:center;font-size:15px;color:#fff;flex:0 0 32px}
 
 /* 内容资产 */
 .chip-list{display:flex;flex-wrap:wrap;gap:8px}
 .copy-item{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;transition:.16s;position:relative}
 .copy-item:hover{border-color:var(--line-2)}
 .copy-item .ci-h{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.copy-item .ci-n{font-size:11px;color:var(--txt-3);font-family:monospace}
+.copy-item .ci-n{font-size:13px;color:var(--txt-3);font-family:monospace}
 .copy-item .ci-a{margin-left:auto;opacity:0;transition:.16s;display:flex;gap:6px}
 .copy-item:hover .ci-a{opacity:1}
-.copy-txt{font-size:13.5px;line-height:1.75}
+.copy-txt{font-size:15.5px;line-height:1.75}
 
 /* 视频卡 */
 .vid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:16px}
@@ -285,32 +285,32 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .vid-th{aspect-ratio:9/16;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:11px}
 .vid-th::after{content:"";position:absolute;inset:0;background:linear-gradient(190deg,rgba(0,0,0,.28),transparent 42%,rgba(0,0,0,.68))}
 .vid-th>*{position:relative;z-index:2}
-.vid-cap{color:#fff;font-weight:700;font-size:13px;line-height:1.45;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.vid-cap{color:#fff;font-weight:700;font-size:15px;line-height:1.45;text-shadow:0 2px 10px rgba(0,0,0,.6)}
 .vid-play{position:absolute;inset:0;display:grid;place-items:center;z-index:3;opacity:0;transition:.2s;background:rgba(0,0,0,.3)}
 .vid:hover .vid-play{opacity:1}
-.vid-play span{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.94);color:#111;display:grid;place-items:center;font-size:16px;padding-left:3px}
+.vid-play span{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.94);color:#111;display:grid;place-items:center;font-size:17.5px;padding-left:3px}
 .vid-b{padding:10px 12px;display:flex;flex-direction:column;gap:7px}
-.vid-tt{font-size:12.5px;font-weight:600;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.vid-m{display:flex;justify-content:space-between;font-size:11px;color:var(--txt-3)}
-.plat{position:absolute;top:10px;left:10px;z-index:3;font-size:10.5px;padding:3px 8px;border-radius:6px;
+.vid-tt{font-size:14.5px;font-weight:600;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vid-m{display:flex;justify-content:space-between;font-size:13px;color:var(--txt-3)}
+.plat{position:absolute;top:10px;left:10px;z-index:3;font-size:12.5px;padding:3px 8px;border-radius:6px;
   background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(4px);font-weight:600}
-.dur{position:absolute;bottom:10px;right:10px;z-index:3;font-size:10.5px;padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:#fff}
+.dur{position:absolute;bottom:10px;right:10px;z-index:3;font-size:12.5px;padding:2px 6px;border-radius:5px;background:rgba(0,0,0,.6);color:#fff}
 
 /* 日历 */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.cal-h{font-size:11px;color:var(--txt-3);text-align:center;padding:4px 0;font-weight:600}
-.cal-d{min-height:92px;min-width:0;border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--panel-2);font-size:11px;transition:.15s}
+.cal-h{font-size:13px;color:var(--txt-3);text-align:center;padding:4px 0;font-weight:600}
+.cal-d{min-height:92px;min-width:0;border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--panel-2);font-size:13px;transition:.15s}
 .cal-d:hover{border-color:var(--line-2)}
 .cal-d.out{opacity:.35}
 .cal-d.today{border-color:var(--violet);box-shadow:0 0 0 2px rgba(124,108,255,.18)}
 .cal-n{color:var(--txt-3);margin-bottom:5px;font-weight:600}
-.cal-e{font-size:10px;padding:2px 5px;border-radius:5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;
+.cal-e{font-size:12px;padding:2px 5px;border-radius:5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;color:#fff;background:var(--ec);cursor:pointer;transition:.14s;border:1px solid transparent}
 .cal-e:hover{filter:brightness(1.12);transform:translateX(1px)}
 .cal-e.done{background:transparent;border:1px dashed var(--line-2);color:var(--txt-3)}
 .cal-e.done::before{content:"✓ ";font-weight:700;color:var(--green)}
 .cal-e.done:hover{filter:none;background:var(--panel)}
-.cal-legend{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--txt-3)}
+.cal-legend{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--txt-3)}
 .cal-legend i{display:inline-block;width:14px;height:10px;border-radius:4px;vertical-align:-1px;margin-right:5px}
 .cal-legend .lg-p{background:var(--violet)}
 .cal-legend .lg-d{background:transparent;border:1px dashed var(--line-2)}
@@ -320,8 +320,8 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:1.5px;background:var(--line)}
 .tl-i{position:relative;padding-bottom:18px}
 .tl-i::before{content:"";position:absolute;left:-22px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--violet);box-shadow:0 0 0 3px rgba(124,108,255,.2)}
-.tl-t{font-size:13px;font-weight:640}
-.tl-s{font-size:11.5px;color:var(--txt-3)}
+.tl-t{font-size:15px;font-weight:640}
+.tl-s{font-size:13.5px;color:var(--txt-3)}
 
 /* 弹窗 */
 .modal-mask{position:fixed;inset:0;background:rgba(4,7,15,.66);backdrop-filter:blur(5px);z-index:100;
@@ -332,7 +332,7 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .modal.wide{max-width:940px}
 @keyframes pop{from{transform:translateY(14px) scale(.985);opacity:0}}
 .modal-head{display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}
-.modal-title{font-size:16px;font-weight:700;flex:1}
+.modal-title{font-size:17.5px;font-weight:700;flex:1}
 .modal-body{padding:22px;overflow-y:auto;flex:1}
 .modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
 .modal-foot:empty{display:none}
@@ -340,19 +340,19 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 /* Toast */
 .toasts{position:fixed;right:22px;bottom:22px;z-index:200;display:flex;flex-direction:column;gap:10px}
 .toast{background:var(--panel);border:1px solid var(--line-2);border-left:3px solid var(--violet);border-radius:12px;
-  padding:12px 16px;box-shadow:var(--shadow);min-width:250px;animation:slide .25s ease;font-size:13px}
+  padding:12px 16px;box-shadow:var(--shadow);min-width:250px;animation:slide .25s ease;font-size:15px}
 .toast.ok{border-left-color:var(--green)}.toast.warn{border-left-color:var(--amber)}.toast.err{border-left-color:var(--red)}
 @keyframes slide{from{transform:translateX(24px);opacity:0}}
 
 /* 文档 */
-.doc{max-width:900px;line-height:1.85;font-size:14px}
-.doc h1{font-size:24px;margin:6px 0 16px;font-weight:750}
-.doc h2{font-size:18px;margin:26px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-weight:700}
-.doc h3{font-size:15px;margin:20px 0 9px;font-weight:680;color:var(--violet-2)}
+.doc{max-width:900px;line-height:1.85;font-size:16px}
+.doc h1{font-size:26px;margin:6px 0 16px;font-weight:750}
+.doc h2{font-size:19.5px;margin:26px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-weight:700}
+.doc h3{font-size:17px;margin:20px 0 9px;font-weight:680;color:var(--violet-2)}
 .doc p{margin:9px 0;color:var(--txt-2)}
 .doc ul,.doc ol{margin:9px 0 9px 22px;color:var(--txt-2)}
 .doc li{margin:5px 0}
-.doc code{background:var(--panel-2);padding:2px 6px;border-radius:5px;font-family:monospace;font-size:12.5px;color:var(--cyan)}
+.doc code{background:var(--panel-2);padding:2px 6px;border-radius:5px;font-family:monospace;font-size:14.5px;color:var(--cyan)}
 .doc table{margin:12px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .doc blockquote{border-left:3px solid var(--violet);padding:8px 14px;margin:12px 0;background:var(--panel-2);border-radius:0 10px 10px 0;color:var(--txt-2)}
 .doc hr{border:0;border-top:1px solid var(--line);margin:22px 0}
@@ -362,9 +362,9 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .shot{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
 .shot:last-child{border-bottom:0}
 .shot-n{width:56px;height:56px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);
-  display:grid;place-items:center;font-weight:700;color:var(--txt-3);font-size:12px}
-.shot-t{font-size:13.5px;line-height:1.7}
-.shot-d{font-size:11.5px;color:var(--txt-3);margin-top:5px;display:flex;gap:12px;flex-wrap:wrap}
+  display:grid;place-items:center;font-weight:700;color:var(--txt-3);font-size:14px}
+.shot-t{font-size:15.5px;line-height:1.7}
+.shot-d{font-size:13.5px;color:var(--txt-3);margin-top:5px;display:flex;gap:12px;flex-wrap:wrap}
 .shot.on{background:rgba(124,108,255,.09);border-radius:10px}
 .shot.on .shot-n{border-color:var(--violet);color:var(--violet-2);background:rgba(124,108,255,.14)}
 #pv-play:hover{background:#fff;transform:translate(-50%,-50%) scale(1.06)}
@@ -376,21 +376,21 @@ input[type=range]{width:100%;accent-color:var(--violet)}
   background:linear-gradient(135deg,rgba(124,108,255,.18),rgba(34,211,238,.10) 48%,rgba(255,176,32,.10));
   display:grid;grid-template-columns:1.15fr .85fr;gap:20px;align-items:center;margin-bottom:18px
 }
-.creative-hero h2{font-size:24px;line-height:1.25;margin-bottom:9px;letter-spacing:0;font-weight:780}
-.creative-hero p{font-size:13.5px;color:var(--txt-2);line-height:1.9;max-width:760px}
+.creative-hero h2{font-size:26px;line-height:1.25;margin-bottom:9px;letter-spacing:0;font-weight:780}
+.creative-hero p{font-size:15.5px;color:var(--txt-2);line-height:1.9;max-width:760px}
 .creative-board{min-height:210px;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:16px;position:relative;overflow:hidden}
 .creative-board::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(124,108,255,.16),transparent 45%),radial-gradient(circle at 82% 20%,rgba(34,211,238,.18),transparent 34%);pointer-events:none}
 .creative-frame{position:relative;z-index:1;border:1px solid var(--line-2);border-radius:14px;min-height:178px;background:var(--bg-2);padding:14px;display:flex;flex-direction:column;justify-content:space-between}
 .frame-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.frame-avatar{width:62px;height:62px;border-radius:18px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:24px;box-shadow:0 12px 30px rgba(124,108,255,.35)}
+.frame-avatar{width:62px;height:62px;border-radius:18px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:26px;box-shadow:0 12px 30px rgba(124,108,255,.35)}
 .frame-book{width:48px;height:68px;border-radius:6px;background:linear-gradient(150deg,#ff8a5b,#7c6cff);box-shadow:0 12px 24px rgba(0,0,0,.25)}
-.frame-caption{font-size:13px;font-weight:760;line-height:1.55;max-width:260px}
+.frame-caption{font-size:15px;font-weight:760;line-height:1.55;max-width:260px}
 .creative-mode{border:1px solid var(--line);border-radius:16px;padding:15px;background:var(--panel);cursor:pointer;transition:.16s;min-height:150px}
 .creative-mode:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
 .creative-mode.on{border-color:rgba(124,108,255,.55);background:linear-gradient(135deg,rgba(124,108,255,.14),rgba(34,211,238,.06))}
 .creative-mode .ico{width:34px;height:34px;border-radius:11px;background:var(--panel-2);display:grid;place-items:center;margin-bottom:10px;font-weight:800;color:var(--violet-2)}
-.creative-mode .name{font-size:14px;font-weight:730;margin-bottom:5px}
-.creative-mode .desc{font-size:12.2px;color:var(--txt-2);line-height:1.65}
+.creative-mode .name{font-size:16px;font-weight:730;margin-bottom:5px}
+.creative-mode .desc{font-size:14px;color:var(--txt-2);line-height:1.65}
 .creative-preview{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;transition:.16s}
 .creative-preview:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
 .creative-thumb{aspect-ratio:16/9;background:linear-gradient(135deg,#1d2540,#7c6cff 58%,#22d3ee);position:relative;padding:12px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
@@ -399,27 +399,27 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .creative-thumb .mini-book{width:34px;height:48px;border-radius:5px;background:rgba(255,255,255,.88);box-shadow:0 10px 24px rgba(0,0,0,.25)}
 .creative-thumb .mini-line{height:7px;border-radius:9px;background:rgba(255,255,255,.72);margin-top:6px}
 .creative-preview-b{padding:13px 14px}
-.creative-preview-b .title{font-size:13.5px;font-weight:730;margin-bottom:4px}
-.creative-preview-b .desc{font-size:12px;color:var(--txt-2);line-height:1.6;min-height:38px}
+.creative-preview-b .title{font-size:15.5px;font-weight:730;margin-bottom:4px}
+.creative-preview-b .desc{font-size:14px;color:var(--txt-2);line-height:1.6;min-height:38px}
 .creative-shot{display:grid;grid-template-columns:70px 1fr 156px;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start}
 .creative-shot:last-child{border-bottom:0}
-.creative-shot .time{font-family:"JetBrains Mono",Consolas,monospace;font-size:12px;color:var(--violet-2);font-weight:700}
-.creative-shot .main{font-size:13.5px;font-weight:680;line-height:1.55}
-.creative-shot .sub{font-size:12px;color:var(--txt-3);line-height:1.65;margin-top:4px}
-.creative-shot .asset{font-size:11.5px;color:var(--txt-2);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px;line-height:1.55}
+.creative-shot .time{font-family:"JetBrains Mono",Consolas,monospace;font-size:14px;color:var(--violet-2);font-weight:700}
+.creative-shot .main{font-size:15.5px;font-weight:680;line-height:1.55}
+.creative-shot .sub{font-size:14px;color:var(--txt-3);line-height:1.65;margin-top:4px}
+.creative-shot .asset{font-size:13.5px;color:var(--txt-2);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px;line-height:1.55}
 .visual-card{border:1px solid var(--line);border-radius:14px;background:var(--panel-2);padding:14px;min-height:128px}
-.visual-card b{display:block;font-size:13.5px;margin-bottom:6px}
-.visual-card span{font-size:12px;color:var(--txt-2);line-height:1.65}
+.visual-card b{display:block;font-size:15.5px;margin-bottom:6px}
+.visual-card span{font-size:14px;color:var(--txt-2);line-height:1.65}
 .sample-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .sample-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:12px;overflow:hidden}
 .sample-video{width:100%;aspect-ratio:9/16;border-radius:12px;background:#060912;display:block;object-fit:cover;border:1px solid var(--line)}
 .sample-meta{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 8px}
-.sample-title{font-size:13.5px;font-weight:730;line-height:1.45}
-.sample-desc{font-size:12px;color:var(--txt-2);line-height:1.65;margin-top:4px}
+.sample-title{font-size:15.5px;font-weight:730;line-height:1.45}
+.sample-desc{font-size:14px;color:var(--txt-2);line-height:1.65;margin-top:4px}
 .scene-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .scene-pill{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px}
-.scene-pill b{display:block;font-size:12.5px;margin-bottom:4px}
-.scene-pill span{font-size:11.5px;color:var(--txt-2);line-height:1.5}
+.scene-pill b{display:block;font-size:14.5px;margin-bottom:4px}
+.scene-pill span{font-size:13.5px;color:var(--txt-2);line-height:1.5}
 .template-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .template-toolbar .input{max-width:280px}
 .template-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -427,10 +427,10 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .template-card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
 .template-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .template-ico{width:38px;height:38px;border-radius:12px;background:var(--panel-2);display:grid;place-items:center;font-weight:800;color:var(--cyan);flex:0 0 38px}
-.template-name{font-size:14px;font-weight:760;line-height:1.35}
+.template-name{font-size:16px;font-weight:760;line-height:1.35}
 .template-meta{display:flex;gap:6px;flex-wrap:wrap}
-.template-desc{font-size:12px;color:var(--txt-2);line-height:1.65}
-.template-roles{font-size:11.5px;color:var(--txt-3);line-height:1.6;margin-top:auto}
+.template-desc{font-size:14px;color:var(--txt-2);line-height:1.65}
+.template-roles{font-size:13.5px;color:var(--txt-3);line-height:1.6;margin-top:auto}
 .template-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
 .custom-scene{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
 @media(max-width:1080px){.creative-hero{grid-template-columns:1fr}.creative-shot{grid-template-columns:58px 1fr}}
@@ -444,7 +444,7 @@ input[type=range]{width:100%;accent-color:var(--violet)}
   border:1px solid var(--line-2);display:flex;gap:24px;align-items:center;flex-wrap:wrap
 }
 .pv{width:112px;height:112px;border-radius:26px;background:linear-gradient(150deg,#5b4bff,#22d3ee);display:grid;place-items:center;
-  font-size:40px;font-weight:800;color:#fff;flex:0 0 112px;box-shadow:0 16px 40px rgba(91,75,255,.4)}
+  font-size:42px;font-weight:800;color:#fff;flex:0 0 112px;box-shadow:0 16px 40px rgba(91,75,255,.4)}
 .wave{display:flex;align-items:center;gap:3px;height:34px}
 .wave i{width:3px;background:var(--cyan);border-radius:3px;animation:w 1.1s ease-in-out infinite}
 @keyframes w{0%,100%{height:20%}50%{height:100%}}
@@ -453,14 +453,14 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .doc-card{cursor:pointer;padding:15px 16px;transition:.18s}
 .doc-card:hover{border-color:var(--line-2);transform:translateY(-2px)}
 .doc-card.on{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,108,255,.14)}
-.doc-card .dc-i{font-size:19px;color:var(--violet-2);line-height:1}
-.doc-card .dc-n{font-weight:680;font-size:13.5px;margin-top:8px}
+.doc-card .dc-i{font-size:20.5px;color:var(--violet-2);line-height:1}
+.doc-card .dc-n{font-weight:680;font-size:15.5px;margin-top:8px}
 
 /* ---------------- 阶段说明条 ---------------- */
 .explain{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--violet);
   border-radius:0 12px 12px 0;padding:13px 16px;margin:-4px 0 18px;display:flex;flex-direction:column;gap:7px}
-.ex-r{display:flex;gap:12px;font-size:13px;line-height:1.75}
-.ex-k{flex:0 0 84px;color:var(--txt-3);font-size:12px;font-weight:650;padding-top:1px}
+.ex-r{display:flex;gap:12px;font-size:15px;line-height:1.75}
+.ex-k{flex:0 0 84px;color:var(--txt-3);font-size:14px;font-weight:650;padding-top:1px}
 .ex-r>span:last-child{color:var(--txt-2);flex:1}
 mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padding:1px 4px;font-weight:600}
 @media(max-width:700px){.ex-r{flex-direction:column;gap:2px}.ex-k{flex:none}}
@@ -494,32 +494,32 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
 .mv-book.show{opacity:1;transform:translate(-50%,0)}
 .mv-book-c{width:86px;height:120px;border-radius:6px;box-shadow:0 14px 34px rgba(0,0,0,.5);
   display:grid;place-items:center;padding:8px;margin:0 auto;border:1px solid rgba(255,255,255,.25)}
-.mv-book-c span{color:#fff;font-weight:800;font-size:13px;line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.mv-book-t{color:#fff;font-size:10.5px;opacity:.85;margin-top:7px}
+.mv-book-c span{color:#fff;font-weight:800;font-size:15px;line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.mv-book-t{color:#fff;font-size:12.5px;opacity:.85;margin-top:7px}
 
-.mv-kw{position:absolute;inset:12% 10% auto 10%;z-index:3;color:#fff;font-weight:850;font-size:19px;line-height:1.45;
+.mv-kw{position:absolute;inset:12% 10% auto 10%;z-index:3;color:#fff;font-weight:850;font-size:20.5px;line-height:1.45;
   text-align:center;text-shadow:0 4px 18px rgba(0,0,0,.65);opacity:0;transform:scale(.94);transition:.4s;
   display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .mv-kw.show{opacity:1;transform:scale(1)}
 
 .mv-top{position:absolute;top:12px;left:12px;right:12px;z-index:4;display:flex;justify-content:space-between;align-items:flex-start}
-.mv-btn{background:rgba(0,0,0,.5);border:0;color:#fff;border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;line-height:1.5}
+.mv-btn{background:rgba(0,0,0,.5);border:0;color:#fff;border-radius:6px;padding:2px 6px;font-size:13px;cursor:pointer;line-height:1.5}
 .mv-btn:hover{background:rgba(0,0,0,.72)}
 
 .mv-bottom{position:absolute;left:14px;right:14px;bottom:14px;z-index:4}
-.mv-meta{color:#fff;opacity:.75;font-size:10.5px;letter-spacing:.4px}
-.mv-sub{color:#fff;font-weight:750;font-size:14.5px;line-height:1.55;margin-top:5px;
+.mv-meta{color:#fff;opacity:.75;font-size:12.5px;letter-spacing:.4px}
+.mv-sub{color:#fff;font-weight:750;font-size:16.5px;line-height:1.55;margin-top:5px;
   text-shadow:0 2px 12px rgba(0,0,0,.8);min-height:88px;
   display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .mv-cta{margin-top:8px;display:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);
-  border-radius:8px;padding:6px 9px;color:#fff;font-size:11px;backdrop-filter:blur(3px)}
+  border-radius:8px;padding:6px 9px;color:#fff;font-size:13px;backdrop-filter:blur(3px)}
 .mv-cta.show{display:block}
-.mv-sign{display:flex;align-items:center;gap:7px;margin-top:9px;color:#fff;font-size:11px;opacity:.9}
+.mv-sign{display:flex;align-items:center;gap:7px;margin-top:9px;color:#fff;font-size:13px;opacity:.9}
 .mv-track{height:3px;background:rgba(255,255,255,.3);border-radius:3px;margin-top:10px;overflow:hidden}
 .mv-track>div{width:0%;height:100%;background:#fff;border-radius:3px}
 
 .mv-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;width:54px;height:54px;border-radius:50%;
-  background:rgba(255,255,255,.93);border:0;cursor:pointer;font-size:17px;color:#111;display:grid;place-items:center;transition:.2s}
+  background:rgba(255,255,255,.93);border:0;cursor:pointer;font-size:18.5px;color:#111;display:grid;place-items:center;transition:.2s}
 .mv-play:hover{background:#fff;transform:translate(-50%,-50%) scale(1.06)}
 .mv-play.hide{opacity:0;pointer-events:none}
 .mv:hover .mv-play.hide{opacity:.75;pointer-events:auto}
@@ -535,12 +535,12 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
   border-radius:18px;padding:18px 20px 16px;box-shadow:var(--shadow);display:none;animation:pop .22s ease}
 .tour-pop.center{left:50%!important;top:50%!important;transform:translate(-50%,-50%);width:min(460px,calc(100vw - 32px))}
 .tour-h{display:flex;align-items:center;margin-bottom:9px}
-.tour-n{font-size:11px;color:var(--txt-3);letter-spacing:1px;font-weight:700}
-.tour-x{width:26px;height:26px;margin-left:auto;border-radius:8px;font-size:12px}
-.tour-t{font-size:16.5px;font-weight:730;margin-bottom:9px;letter-spacing:-.2px;text-wrap:balance}
-.tour-b{font-size:13.5px;line-height:1.85;color:var(--txt-2)}
+.tour-n{font-size:13px;color:var(--txt-3);letter-spacing:1px;font-weight:700}
+.tour-x{width:26px;height:26px;margin-left:auto;border-radius:8px;font-size:14px}
+.tour-t{font-size:18px;font-weight:730;margin-bottom:9px;letter-spacing:-.2px;text-wrap:balance}
+.tour-b{font-size:15.5px;line-height:1.85;color:var(--txt-2)}
 .tour-b b{color:var(--txt)}
-.tour-note{margin-top:12px;font-size:11.5px;color:var(--amber);background:rgba(255,176,32,.1);
+.tour-note{margin-top:12px;font-size:13.5px;color:var(--amber);background:rgba(255,176,32,.1);
   border:1px solid rgba(255,176,32,.28);border-radius:9px;padding:7px 10px;line-height:1.6}
 .tour-dots{display:flex;gap:5px;margin:15px 0 13px}
 .tour-dots i{width:16px;height:3px;border-radius:3px;background:var(--line-2);transition:.2s}
@@ -550,10 +550,10 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
 
 /* ---------------- 以下来自同事版本合并：人物引擎 ---------------- */
 .nav-group.admin{margin-top:12px;border-top:1px solid var(--line);padding-top:18px}
-.nav-item.admin{font-size:12.5px;opacity:.72}
+.nav-item.admin{font-size:14.5px;opacity:.72}
 .nav-item.admin:hover,.nav-item.admin.active{opacity:1}
 .nav-more{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
-.nav-more summary{list-style:none;cursor:pointer;font-size:10.5px;color:var(--txt-3);letter-spacing:1.4px;padding:8px 10px 7px;font-weight:600}
+.nav-more summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--txt-3);letter-spacing:1.4px;padding:8px 10px 7px;font-weight:600}
 .nav-more summary::-webkit-details-marker{display:none}
 .nav-more summary::after{content:"▾";float:right;opacity:.65}
 .nav-more:not([open]) summary::after{content:"▸"}
@@ -562,30 +562,30 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
 .daily-action{border:1px solid var(--line);background:var(--panel-2);border-radius:14px;padding:15px;cursor:pointer;transition:.16s;min-height:116px}
 .daily-action.primary{background:linear-gradient(135deg,rgba(124,108,255,.18),rgba(255,176,32,.12));border-color:rgba(124,108,255,.38)}
 .daily-action:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
-.daily-action .num{width:28px;height:28px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;margin-bottom:10px}
-.daily-action .title{font-size:15px;font-weight:730;margin-bottom:5px}
-.daily-action .desc{font-size:12.5px;color:var(--txt-2);line-height:1.65}
+.daily-action .num{width:28px;height:28px;border-radius:9px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;margin-bottom:10px}
+.daily-action .title{font-size:17px;font-weight:730;margin-bottom:5px}
+.daily-action .desc{font-size:14.5px;color:var(--txt-2);line-height:1.65}
 .task-list{display:grid;gap:10px}
 .task-row{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);cursor:pointer;transition:.16s}
 .task-row:hover{border-color:var(--line-2);transform:translateY(-1px)}
 .task-icon{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;flex:0 0 34px}
-.task-title{font-weight:700;font-size:13.5px}
-.task-desc{font-size:12px;color:var(--txt-3);margin-top:2px}
+.task-title{font-weight:700;font-size:15.5px}
+.task-desc{font-size:14px;color:var(--txt-3);margin-top:2px}
 .task-panel{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px}
 .quiet-stat{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
 .quiet-stat:last-child{border-bottom:0}
-.quiet-stat b{font-size:18px}
+.quiet-stat b{font-size:19.5px}
 .voice-preview{display:grid;gap:10px}
-.voice-box{border:1px solid var(--line);background:var(--panel-2);border-radius:12px;padding:13px;line-height:1.75;font-size:13px}
-.voice-box b{display:block;font-size:12px;color:var(--txt-3);margin-bottom:4px}
+.voice-box{border:1px solid var(--line);background:var(--panel-2);border-radius:12px;padding:13px;line-height:1.75;font-size:15px}
+.voice-box b{display:block;font-size:14px;color:var(--txt-3);margin-bottom:4px}
 .engine-card{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:16px;cursor:pointer;transition:.16s}
 .engine-card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
 .engine-card.on{border-color:rgba(124,108,255,.45);background:linear-gradient(135deg,rgba(124,108,255,.14),rgba(255,176,32,.08))}
-.engine-score{font-size:27px;font-weight:780;letter-spacing:-.4px}
+.engine-score{font-size:29px;font-weight:780;letter-spacing:-.4px}
 .engine-flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .engine-step{border:1px solid var(--line);background:var(--panel-2);border-radius:14px;padding:14px;min-height:120px}
-.engine-step .n{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;margin-bottom:10px}
-.schema-table td:first-child{font-family:"JetBrains Mono",Consolas,monospace;color:var(--violet-2);font-size:12px}
+.engine-step .n{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;margin-bottom:10px}
+.schema-table td:first-child{font-family:"JetBrains Mono",Consolas,monospace;color:var(--violet-2);font-size:14px}
 @media(max-width:900px){.zhao-hero-grid{grid-template-columns:1fr}}
 @media(max-width:900px){.daily-actions{grid-template-columns:1fr}}
 @media(max-width:900px){.engine-flow{grid-template-columns:1fr}}
@@ -1023,21 +1023,24 @@ window.DATA = (function () {
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
       out: '全部脚本被重写一遍，自然植入口头禅（每支最多 2 处），并打一个「像不像本人」的分数，低于 90 分退回重写。',
       tasks: ['载入人格模型 v3.2', '语气与节奏改写', '口头禅自然植入', '价值观一致性校验'] },
-    { key: 'avatar', n: 'STEP 6', t: '双数字人开口对谈', d: '两种声音 / 插嘴 / 口型 / 表情 / 场景站位',
-      why: '用两套声音把主持人与作者分别合成，再让两个数字人对上口型、表情和插嘴节奏。重点不是一张嘴在动，而是两个人真的像在同一个场地里聊天。',
-      you: '不用做什么，等着就行。',
-      out: '一段段双人对谈素材，包含主持人声线、作者声线、插嘴重叠、口型同步和场景站位。',
-      tasks: ['主持人声音 TTS 合成', '作者声音 TTS 合成', '插嘴重叠时间线', '双人口型对齐（Lip-sync）', '表情与微动作驱动', '场景站位渲染'] },
-    { key: 'package', n: 'STEP 7', t: '自动剪辑包装', d: '场地大景 / 书封 / B-roll / 字幕 / BGM / CTA',
-      why: '相当于一个剪辑师：先给场地大景，再剪双人中景、书封、金句、图卡和 B-roll。观众要看得出是在马路、访谈室、车里，而不是只有棚内人头。',
-      you: '想换风格就在下面挑模板，或在系统设置里关掉不想要的元素。',
-      out: '可以直接发布的成片，不需要再进剪辑软件。',
-      tasks: ['场地大景与转场', '自动字幕与断句', '书封与作者照插入', '关键词动态大字', 'B-roll 素材匹配', 'BGM 与音量平衡', '品牌片头片尾'] },
+    { key: 'avatar', n: 'STEP 6', t: '建立影片待办清单', d: '一篇稿子 = 一支待生成的影片',
+      why: '把上一步写好的每一篇稿子，对应成一支「还没做出来」的影片。这一步<b>不会真的生成影片</b>——真的生成要送去外部数字人服务，一支要花约 US$1-3、等几分钟，所以做哪几支由你自己决定。',
+      you: '等清单出来后，到「内容资产库」挑你想做的那几支，逐支点「生成这一支」。',
+      out: '一份影片待办清单，每支都对应一篇稿子，状态是「待生成」。',
+      real: true,
+      tasks: ['读取已写好的稿子', '对应平台与尺寸', '建立影片待办清单'] },
+    { key: 'package', n: 'STEP 7', t: '自动剪辑包装', d: '字幕 / 书封 / BGM / 片头片尾',
+      why: '规划中的功能：自动加字幕、插书封、配 BGM、套片头片尾，让影片不用再进剪辑软件。',
+      you: '目前不用做什么——<b>这一步还没有实作</b>，点了只会走个过场，不会真的剪辑任何东西。',
+      out: '（尚未实作）未来会产出可直接发布的成片。',
+      todo: true,
+      tasks: ['（示意）自动字幕与断句', '（示意）书封插入', '（示意）BGM 与音量平衡', '（示意）品牌片头片尾'] },
     { key: 'export', n: 'STEP 8', t: '导出各平台版本', d: '多尺寸 / 多版本 / 一键分发',
-      why: '同一支视频，抖音要竖屏、小红书要 3:4、Facebook 要方的，标题和话题标签也各写一套。这一步一次做完。',
-      you: '导出文案包，或直接送进发布排程排时间。',
-      out: '30 支成片 + 各平台对应尺寸、封面、标题与话题标签。',
-      tasks: ['多分辨率转码', '平台字幕样式适配', '封面图自动生成', '标题与话题标签写入', '推送至发布排程'] }
+      why: '规划中的功能：同一支影片自动转成抖音竖屏、小红书 3:4、Facebook 方形等各平台尺寸，标题与标签各写一套。',
+      you: '目前不用做什么——<b>这一步还没有实作</b>。影片要先真的生成出来，才谈得上转档与分发。',
+      out: '（尚未实作）未来会产出各平台对应尺寸、封面与标签。',
+      todo: true,
+      tasks: ['（示意）多分辨率转码', '（示意）平台字幕样式适配', '（示意）封面图自动生成'] }
   ];
 
   /* ---------- 演示书籍 ---------- */
@@ -1370,6 +1373,27 @@ window.DATA = (function () {
   }
 
   /* 生成视频。只有「已发布」的才有数据——没发布过的影片不可能有观看数 */
+  /* 真实流程用：一篇稿子 = 一支待生成的影片。
+   * 这里刻意不产生任何播放量、按赞、完播率——那些数字只有影片真的做出来、
+   * 真的发布到平台、平台真的回传之后才会有。凭空生成会让人以为影片已经存在。 */
+  function genPendingVideos(b, scripts) {
+    return scripts.map((s, i) => {
+      const p = PLATFORMS.find(x => x.key === s.platform);
+      return {
+        id: uid('v'), scriptId: s.id, title: s.title, caption: s.hook.slice(0, 26) + '…',
+        platform: s.platform, platformName: p.name, color: p.color, ratio: p.ratio,
+        angle: s.angleName, duration: s.duration, cover: COVERS[i % COVERS.length],
+        status: '待生成',
+        videoUrl: null,      // 真的生成出来才有，有了才播得了、下载得了
+        heygenId: null,      // 送去生成后的任务编号，用来查进度
+        avatarName: '', voiceName: '',   // 这支实际用了哪个形象与声音
+        views: 0, watch: 0, like: 0, share: 0, click: 0, day: 0
+      };
+    });
+  }
+
+  /* 仅供内建示范专案使用：连播放数据一起造，好让工作台/数据分析页有东西可看。
+   * 每一支都带 demo:true，介面必须据此标示「演示数据」，不可与真实产出混为一谈。 */
   function genVideos(b, scripts) {
     // 状态用加权随机，不能跟平台一样按序号循环——否则周期互相整除，
     // 会变成永远只有固定那几个平台有已发布的影片
@@ -1387,6 +1411,7 @@ window.DATA = (function () {
         platform: s.platform, platformName: p.name, color: p.color, ratio: p.ratio,
         angle: s.angleName, duration: s.duration, cover: COVERS[i % COVERS.length],
         status,
+        demo: true,          // 这是演示数据，介面必须标示出来
         views,
         watch: live ? 28 + Math.floor(Math.random() * 55) : 0,
         like: live ? Math.floor(views * (0.02 + Math.random() * 0.06)) : 0,
@@ -1635,7 +1660,7 @@ window.DATA = (function () {
     PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
-    applyPersona, genShots, genVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
+    applyPersona, genShots, genVideos, genPendingVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
   };
 })();
 
@@ -1693,6 +1718,14 @@ window.STORE = (function () {
     state.projects.forEach(p => {
       if (!Array.isArray(p.materials)) p.materials = [];
       ['titles', 'hooks', 'opens', 'scripts', 'videos'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
+      /* 旧版影片全是凭空造的假数据（随机播放量、随机「已发布」状态），
+       * 但没有 demo 标记，介面会把它们当成真影片显示。
+       * 凡是带旧状态值又没有真影片档的，一律补上 demo 标记，
+       * 介面才能明确标示「这是演示假数据」，不再让人误会。 */
+      p.videos.forEach(v => {
+        if (v.demo === undefined && !v.videoUrl &&
+            ['已发布', '待审核', '排程中', '草稿'].indexOf(v.status) >= 0) v.demo = true;
+      });
       if (!Array.isArray(p.stages)) p.stages = DATA.STAGES.map(s => ({ key: s.key, state: 'todo' }));
       // 旧版脚本没有场景对谈栏位（scenePlan / dialogue / voicePlan），补生成一份，
       // 否则「创意分镜」与脚本详情弹窗读到 undefined 会直接崩掉
@@ -1819,14 +1852,16 @@ window.UI = (function () {
 
   const statusTag = s => {
     const m = { 'done': ['g', '已完成'], 'ready': ['c', '待生产'], 'producing': ['a', '生产中'], 'draft': ['', '草稿'],
-      '已发布': ['g', '已发布'], '待审核': ['a', '待审核'], '排程中': ['c', '排程中'], '草稿': ['', '草稿'], '待发布': ['v', '待发布'] };
+      '已发布': ['g', '已发布'], '待审核': ['a', '待审核'], '排程中': ['c', '排程中'], '草稿': ['', '草稿'], '待发布': ['v', '待发布'],
+      // 影片按需生成的四个状态：稿子写好了但还没做成影片 → 正在做 → 做好了 → 做失败
+      '待生成': ['', '待生成'], '生成中': ['a', '生成中'], '已生成': ['g', '已生成'], '生成失败': ['r', '生成失败'] };
     const x = m[s] || ['', s];
     return `<span class="tag ${x[0]}"><i class="dot ${x[0]}"></i>${x[1]}</span>`;
   };
 
   const scoreBar = v => `<div style="display:flex;align-items:center;gap:8px">
       <div class="bar" style="width:56px"><i style="width:${v}%"></i></div>
-      <span style="font-size:11px;color:var(--txt-3);font-weight:600">${v}</span></div>`;
+      <span style="font-size:13px;color:var(--txt-3);font-weight:600">${v}</span></div>`;
 
   return { $, $$, esc, nf, toast, modal, closeModal, onClose, copy, download, statusTag, scoreBar };
 })();
@@ -1878,9 +1913,9 @@ window.CHART = (function () {
     const max = Math.max.apply(null, items.map(i => i.value)) || 1;
     return `<div style="display:flex;flex-direction:column;gap:13px">` + items.map(i => `
       <div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px">
           <span style="display:flex;align-items:center;gap:7px"><i style="width:8px;height:8px;border-radius:2px;background:${i.color};display:inline-block"></i>${UI.esc(i.name)}
-            <span style="color:var(--txt-3);font-size:11px">${i.count ? i.count + ' 支' : ''}</span></span>
+            <span style="color:var(--txt-3);font-size:13px">${i.count ? i.count + ' 支' : ''}</span></span>
           <b style="font-weight:650">${nf(i.value)}</b>
         </div>
         <div class="bar" style="height:7px"><i style="width:${(i.value / max * 100).toFixed(1)}%;background:${i.color}"></i></div>
@@ -1904,11 +1939,11 @@ window.CHART = (function () {
         <svg viewBox="0 0 160 160" style="width:160px;height:160px">
           <circle cx="80" cy="80" r="${R}" fill="none" stroke="var(--panel-2)" stroke-width="17"/>${segs}</svg>
         <div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">
-          <div><div style="font-size:20px;font-weight:750">${center || nf(total)}</div>
-          <div style="font-size:10.5px;color:var(--txt-3)">总播放</div></div></div>
+          <div><div style="font-size:21.5px;font-weight:750">${center || nf(total)}</div>
+          <div style="font-size:12.5px;color:var(--txt-3)">总播放</div></div></div>
       </div>
       <div style="flex:1;min-width:170px;display:flex;flex-direction:column;gap:9px">
-        ${items.map(i => `<div style="display:flex;align-items:center;gap:9px;font-size:12.5px">
+        ${items.map(i => `<div style="display:flex;align-items:center;gap:9px;font-size:14.5px">
           <i style="width:9px;height:9px;border-radius:3px;background:${i.color}"></i>
           <span style="flex:1">${UI.esc(i.name)}</span>
           <b>${((i.value / total) * 100).toFixed(1)}%</b></div>`).join('')}
@@ -1923,12 +1958,12 @@ window.CHART = (function () {
       const w = Math.max(12, (it.v / max) * 100);
       const rate = i ? ((it.v / items[i - 1].v) * 100).toFixed(1) + '%' : '—';
       return `<div style="display:flex;align-items:center;gap:12px">
-        <div style="width:66px;font-size:12px;color:var(--txt-2)">${it.k}</div>
+        <div style="width:66px;font-size:14px;color:var(--txt-2)">${it.k}</div>
         <div style="flex:1;background:var(--panel-2);border-radius:8px;overflow:hidden;height:32px;position:relative">
           <div style="width:${w}%;height:100%;background:linear-gradient(90deg,${cols[i]},${cols[i]}aa);border-radius:8px;
-            display:flex;align-items:center;padding-left:11px;font-size:12px;font-weight:650;color:#fff">${nf(it.v)}</div>
+            display:flex;align-items:center;padding-left:11px;font-size:14px;font-weight:650;color:#fff">${nf(it.v)}</div>
         </div>
-        <div style="width:52px;text-align:right;font-size:11.5px;color:var(--txt-3)">${rate}</div>
+        <div style="width:52px;text-align:right;font-size:13.5px;color:var(--txt-3)">${rate}</div>
       </div>`;
     }).join('') + `</div>`;
   }
@@ -2090,14 +2125,19 @@ window.ENGINE = (function () {
 
   function extra(key, i) {
     const m = {
-      upload: ['4 个文件校验通过', '抽取 86,420 字', '识别图内文字 312 处', '切分 12 章 / 148 段', '向量索引 1,486 条'],
-      read: ['摘要 1,200 字', '核心论点 7 条', '金句 32 条', '受众画像 4 类', '匹配热点话题 5 个', '可传播单元 46 个'],
-      strategy: ['8 个平台评分完成', '内容矩阵 32 支', '排期跨度 21 天', 'CTA 方案 6 套'],
-      script: ['开场 20 条', 'Hook 20 条', '标题 20 条', '场景对谈脚本 14 篇', '插嘴/停顿时间线 14 条', '镜头表与声音配置已生成', '合规风险 0 项'],
-      persona: ['人格模型载入成功', '改写 14 篇双人台词', '主持/作者语气区分完成', '口头禅植入 26 处', '一致性 96.4%'],
-      avatar: ['主持人音频 14 段', '作者音频 14 段', '插嘴重叠点 42 个', '双人口型对齐误差 <40ms', '表情关键帧 1,240', '场景站位渲染 30 支 · 1080P'],
-      package: ['场地大景 90 段', '字幕 1,860 行', '书封插入 30 处', '大字动效 240 处', 'B-roll 匹配 96 段', 'BGM 已平衡 -14 LUFS', '片头片尾已套用'],
-      export: ['转码 3 种分辨率', '字幕样式 7 套', '封面 30 张', '话题标签已写入', '已推送至排程']
+      /* 这些是每个小任务跑完后附带的一句话。以前写死了「抽取 86,420 字」
+       * 「一致性 96.4%」这类数字，不管实际情况如何都照报，等于骗人。
+       * 改成不带数字的中性描述——真正的数字由各阶段自己的真实日志输出。 */
+      upload: ['文件已校验', '文本已抽取', '图片文字识别（未实作，略过）', '章节已切分', '索引已建立'],
+      read: ['', '', '', '', '', ''],
+      strategy: ['平台评分完成', '内容矩阵已规划', '发布节奏已排布', 'CTA 方案已生成'],
+      script: ['', '', '', '', '', '', ''],
+      persona: ['人格参数已载入', '台词已改写', '主持/作者语气已区分', '口头禅已植入', ''],
+      // avatar 这一步是真的在做事（建清单），但绝不能写得像已经渲染出影片了
+      avatar: ['读到已写好的稿子', '平台与尺寸已对应', '清单已建立，全部标为「待生成」'],
+      // package / export 目前没有实作，日志必须说实话，不能再报「字幕 1,860 行」这种假数字
+      package: ['尚未实作，本步未做任何事', '尚未实作，本步未做任何事', '尚未实作，本步未做任何事', '尚未实作，本步未做任何事'],
+      export: ['尚未实作，本步未做任何事', '尚未实作，本步未做任何事', '尚未实作，本步未做任何事']
     };
     return (m[key] && m[key][i]) ? '（' + m[key][i] + '）' : '';
   }
@@ -2169,14 +2209,18 @@ window.ENGINE = (function () {
       applyScriptFallback(p);
     }
     if (key === 'persona' && STORE.s.settings.autoPersona) p.scripts = p.scripts.map(DATA.applyPersona);
-    if (key === 'avatar') p.videos = DATA.genVideos(p, p.scripts);
-    if (key === 'export') {
-      p.videos = p.videos.concat(DATA.genVideos(p, DATA.genScripts(p, 16)));
-      (p.videos || []).slice(0, 12).forEach(v => STORE.s.schedule.push({
-        id: DATA.uid('sc'), projectId: p.id, bookTitle: p.title, videoId: v.id, title: v.title,
-        platform: v.platformName, color: v.color, day: v.day, hour: [8, 12, 18, 20, 21][Math.floor(Math.random() * 5)], status: '待发布'
-      }));
+    /* 一篇稿子对应一支影片，状态一律是「待生成」。
+     * 这里绝对不能凭空造影片：影片要真的送去数字人服务、真的花钱、真的等几分钟
+     * 才会有，一支约 US$1-3。所以流水线只负责把稿子准备好，做不做成影片、做哪几支，
+     * 由使用者在资产库里逐支决定。 */
+    if (key === 'avatar') {
+      p.videos = DATA.genPendingVideos(p, p.scripts);
+      addLog('l-info', `  └ 已按稿子建立 ${p.videos.length} 支影片待办，尚未真的生成`);
+      addLog('l-info', '  └ 影片要逐支送去数字人服务才会产生（会花钱），到「内容资产库」点想做的那一支');
     }
+    /* export 阶段以前会再凭空造 16 支影片、还顺手塞进发布排程——那 16 支的稿子
+     * 是当场临时编的，跟前面 AI 写的 14 篇毫无关系。整段移除。
+     * 排程也不该自动排：影片都还没做出来，没有东西可发。 */
   }
 
   function applyScriptFallback(p) {
@@ -2210,11 +2254,13 @@ window.ENGINE = (function () {
 
   function finish(p) {
     p.status = 'done'; p.progress = 100;
-    addLog('l-ok', `🎉 全流程完成：共产出 ${p.videos.length} 支视频 / ${p.titles.length} 个标题 / ${p.hooks.length} 个 Hook`);
-    STORE.s.settings.quotaUsed = Math.min(STORE.s.settings.quotaTotal, STORE.s.settings.quotaUsed + p.videos.length);
-    STORE.log('ok', `《${p.title}》全流程生产完成，产出 ${p.videos.length} 支视频`);
+    const n = (p.videos || []).length;
+    addLog('l-ok', `🎉 全流程完成：${p.titles.length} 个标题 / ${p.hooks.length} 个 Hook / ${(p.scripts || []).length} 篇稿子`);
+    addLog('l-info', `📹 ${n} 支影片已列为「待生成」——到「内容资产库」逐支点「生成这一支」才会真的做出影片`);
+    // 额度只在影片真的送去生成时才扣，这里不能预扣：现在一支影片都还没做。
+    STORE.log('ok', `《${p.title}》稿子已全部产出（${(p.scripts || []).length} 篇），影片待逐支生成`);
     running = null; STORE.update(); emit('finish');
-    UI.toast(`《${p.title}》生产完成，共 ${p.videos.length} 支视频`, 'ok');
+    UI.toast(`《${p.title}》稿子已写完，${n} 支影片待生成`, 'ok');
   }
 
   return { start, stop, resume, on, snapshot, get logs() { return logs; },
@@ -2479,7 +2525,7 @@ Hook 之后的第一句自我介绍或场景引入，比如「我是⋯⋯，今
     for (let i = 0; i < lines.length; i++) {
       const L = lines[i];
       if (/^```/.test(L)) {
-        if (!inCode) { closeList(); closeTable(); out += '<pre style="background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:12px 0"><code style="background:none;color:var(--txt-2);font-size:12px;line-height:1.7;white-space:pre">'; inCode = true; }
+        if (!inCode) { closeList(); closeTable(); out += '<pre style="background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:12px 0"><code style="background:none;color:var(--txt-2);font-size:14px;line-height:1.7;white-space:pre">'; inCode = true; }
         else { out += '</code></pre>'; inCode = false; }
         continue;
       }
@@ -2563,11 +2609,18 @@ window.VIEWS = window.VIEWS || {};
       —— 数字人/声音是帐号级设定，做一次之后每本书都会沿用，不用重设。
     </div>
 
+    ${live.length && live.every(v => v.demo)
+      ? `<div class="hint" style="margin-bottom:14px;padding:11px 14px;background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:10px;color:var(--txt-2)">
+           ⚠ <b>下面的播放数据是假的</b>——目前「已发布」的影片全部来自内建示范书，播放量、完播率、图表都是随机造出来给你看介面长相的，不是真实表现。自己建一本书跑完流程、生成并发布影片后，这里才会显示真数据。</div>`
+      : ''}
+
     <div class="grid g4" style="margin-bottom:16px">
       ${kpi('在库书籍项目', ps.length, '本', `+${ps.filter(p => Date.now() - p.createdAt < 30 * 864e5).length} 本 本月新增`)}
-      ${kpi('已生成短视频', allVideos.length, '支', `已发布 ${published} 支`)}
+      ${/* 「已生成」以前把待生成的也算进去，等于虚报。这里只算真的做出影片档的那些。 */''}
+      ${kpi('真的生成的影片', allVideos.filter(v => v.videoUrl).length, '支',
+        `待生成 ${allVideos.filter(v => v.status === '待生成').length} 支 · 示范假数据 ${allVideos.filter(v => v.demo).length} 支`)}
       ${kpi('内容资产条目', totalScripts + ps.reduce((a, p) => a + (p.titles || []).length + (p.hooks || []).length, 0), '条', '标题 / Hook / 脚本')}
-      ${kpi('平均完播率', avgWatch, '%', published ? `统计自已发布的 ${published} 支` : '尚无已发布影片', avgWatch < 30)}
+      ${kpi('平均完播率', avgWatch, '%', published ? (live.every(v => v.demo) ? '⚠ 来自示范书的假数据' : `统计自已发布的 ${published} 支`) : '尚无已发布影片', avgWatch < 30)}
     </div>
 
     <div class="grid g-2-1" style="margin-bottom:16px">
@@ -2607,11 +2660,11 @@ window.VIEWS = window.VIEWS || {};
     return `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer" data-act="open-proj" data-id="${p.id}">
       <div style="width:42px;height:56px;border-radius:8px;background:${p.cover};flex:0 0 42px"></div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:650;font-size:13.5px">《${esc(p.title)}》</div>
-        <div style="font-size:11.5px;color:var(--txt-3)">${esc(p.author)} · ${esc(p.publisher)} · ${(p.videos || []).length} 支视频</div>
+        <div style="font-weight:650;font-size:15.5px">《${esc(p.title)}》</div>
+        <div style="font-size:13.5px;color:var(--txt-3)">${esc(p.author)} · ${esc(p.publisher)} · ${(p.videos || []).length} 支视频</div>
         <div class="bar" style="margin-top:7px"><i style="width:${p.progress}%"></i></div>
       </div>
-      <div style="text-align:right">${statusTag(p.status)}<div style="font-size:11px;color:var(--txt-3);margin-top:5px">${p.progress}%</div></div>
+      <div style="text-align:right">${statusTag(p.status)}<div style="font-size:13px;color:var(--txt-3);margin-top:5px">${p.progress}%</div></div>
     </div>`;
   }
 
@@ -2653,7 +2706,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="book-b">
           <div class="book-meta">${esc(p.author)} 著 · ${esc(p.publisher)}</div>
           <div class="chip-list">${(p.tags || []).slice(0, 3).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-          <div style="font-size:12px;color:var(--txt-3);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.summary || '尚未进行 AI 阅读，上传资料后即可自动生成解读。')}</div>
+          <div style="font-size:14px;color:var(--txt-3);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.summary || '尚未进行 AI 阅读，上传资料后即可自动生成解读。')}</div>
           <div class="book-stats">
             <div class="bs"><b>${(p.videos || []).length}</b>视频</div>
             <div class="bs"><b>${(p.scripts || []).length}</b>脚本</div>
@@ -2665,6 +2718,60 @@ window.VIEWS = window.VIEWS || {};
       : `<div class="card empty"><div class="big">▤</div><div>暂无符合条件的项目</div>
          <div style="margin-top:14px"><button class="btn btn-primary" data-act="new-proj">＋ 新建书籍项目</button></div></div>`}`;
   };
+
+  /* 「接下来该做什么」。
+   * 使用者最常卡住的地方是：八个步骤平铺在上面，跑完了也不知道该看哪、该去哪。
+   * 这里按专案的实际状态，只给一个明确的下一步和一颗按钮，不给选择题。 */
+  function nextStepCard(p) {
+    const vs = p.videos || [];
+    const pa = STORE.s.persona;
+    const hasMaterial = (p.materials || []).length > 0;
+    const hasScript = (p.scripts || []).length > 0;
+    const pending = vs.filter(v => !v.demo && v.status === '待生成').length;
+    const making = vs.filter(v => v.status === '生成中').length;
+    const made = vs.filter(v => v.videoUrl).length;
+    const avatarOk = pa.realAvatarMode === 'image' ? !!pa.realPhotoAssetId : !!pa.realAvatarId;
+    const voiceOk = !!pa.realVoiceId;
+
+    let s;
+    if (ENGINE.isRunning) return '';                    // 正在跑，日志区已经在讲话了
+    if (!hasMaterial) {
+      s = { t: '先把书的资料传进来', d: '在下面 STEP 1 把书籍档案、内文档拖进上传区。不传也能跑，但产出的会是内建演示内容，不是你这本书的。',
+        b: '去 STEP 1 上传', act: 'sel-stage', k: 'upload' };
+    } else if (!hasScript) {
+      s = { t: '可以开始跑了', d: '资料已经在了。点「一键跑完整流程」，AI 会真的读这本书、真的写稿，大约几十秒。',
+        b: '▶ 一键跑完整流程', act: 'run-all' };
+    } else if (!avatarOk || !voiceOk) {
+      s = { t: '选一个数字人和声音', d: `稿子已经写好 ${(p.scripts || []).length} 篇了。影片里出现的那张脸和那个声音要先选好，才做得出影片。目前${!avatarOk ? '形象' : '声音'}还没选。`,
+        b: '去选形象和声音', act: 'goto', k: 'persona' };
+    } else if (making) {
+      s = { t: `有 ${making} 支正在生成中`, d: '通常 1-3 分钟。可以先去做别的，好了会自己更新，不用守着。',
+        b: '去内容资产库看进度', act: 'goto', k: 'library' };
+    } else if (pending) {
+      s = { t: `${pending} 支影片等你决定要不要做`, d: `稿子都写好了，但影片还没做——真的做要送去数字人服务，一支约 US$1-3、等 1-3 分钟，所以由你挑。到资产库点想做的那一支。`,
+        b: '去内容资产库生成影片', act: 'goto', k: 'library' };
+    } else if (made) {
+      s = { t: `已经做好 ${made} 支真影片`, d: '可以下载，或排进发布排程。发布之后平台回传的数据才会出现在「数据分析」。',
+        b: '去内容资产库看影片', act: 'goto', k: 'library' };
+    } else {
+      s = { t: '这本书的流程走完了', d: '产出的文案素材都在内容资产库里。',
+        b: '去内容资产库', act: 'goto', k: 'library' };
+    }
+
+    const attr = s.act === 'sel-stage' ? `data-act="sel-stage" data-k="${s.k}"`
+      : s.act === 'goto' ? `data-act="goto" data-route="${s.k}"` : `data-act="${s.act}"`;
+    return `
+      <div class="card" style="margin-bottom:16px;border-color:var(--violet);background:linear-gradient(180deg,rgba(124,108,255,.09),transparent)">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:240px">
+            <div style="font-size:13px;color:var(--violet-2);font-weight:700;letter-spacing:1px">接下来该做什么</div>
+            <div style="font-size:19px;font-weight:750;margin:5px 0 6px">${esc(s.t)}</div>
+            <div style="font-size:15px;color:var(--txt-2);line-height:1.75">${s.d}</div>
+          </div>
+          <button class="btn btn-primary" style="font-size:15px;padding:11px 20px" ${attr}>${esc(s.b)}</button>
+        </div>
+      </div>`;
+  }
 
   /* =======================================================
    * 生产流水线
@@ -2696,6 +2803,8 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
+    ${nextStepCard(p)}
+
     ${ENGINE.isPaused ? (() => {
       const pa = STORE.s.persona;
       const pool = DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : [];
@@ -2711,8 +2820,8 @@ window.VIEWS = window.VIEWS || {};
              ['声音', pa.realVoiceName || '（尚未选择）', 'persona'],
              ['拍摄场景', sceneNames.length ? sceneNames.join('、') : '（未选，系统自动配）', 'creative']]
             .map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px">
-              <div style="font-size:11.5px;color:var(--txt-3)">${x[0]}</div>
-              <div style="font-size:14px;font-weight:700;margin:4px 0 8px">${esc(x[1])}</div>
+              <div style="font-size:13.5px;color:var(--txt-3)">${x[0]}</div>
+              <div style="font-size:16px;font-weight:700;margin:4px 0 8px">${esc(x[1])}</div>
               <button class="btn btn-sm" data-act="goto" data-route="${x[2]}">去修改</button>
             </div>`).join('')}
         </div>
@@ -2737,7 +2846,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="card-h"><div class="card-t">总体进度</div></div>
         <div style="display:flex;gap:18px;align-items:center">
           ${CHART.ring(pct)}
-          <div style="flex:1;font-size:12.5px;line-height:2">
+          <div style="flex:1;font-size:14.5px;line-height:2">
             <div>已完成阶段 <b>${doneCount}/8</b></div>
             <div>产出脚本 <b>${(p.scripts || []).length}</b> 篇</div>
             <div>产出视频 <b>${(p.videos || []).length}</b> 支</div>
@@ -2775,8 +2884,8 @@ window.VIEWS = window.VIEWS || {};
         ${ms.length ? `<div style="margin-top:14px">${ms.map(m => `
           <div class="file-item"><div class="file-ico">${ico(m.type)}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600">${esc(m.name)}</div>
-              <div style="font-size:11px;color:var(--txt-3)">${esc(m.type)} · ${esc(m.size)}${m.note ? ' · ' + esc(m.note) : ''}</div></div>
+              <div style="font-size:15px;font-weight:600">${esc(m.name)}</div>
+              <div style="font-size:13px;color:var(--txt-3)">${esc(m.type)} · ${esc(m.size)}${m.note ? ' · ' + esc(m.note) : ''}</div></div>
             <span class="tag ${st(m.status)}"><i class="dot ${st(m.status)}"></i>${esc(m.status)}</span></div>`).join('')}
           <div style="margin-top:10px"><button class="btn btn-sm" data-act="clear-files">清空已上传资料</button></div></div>`
           : `<div class="hint" style="margin-top:14px">尚未上传任何资料。未上传时，后续步骤会使用内建的演示数据。</div>`}
@@ -2792,7 +2901,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="grid g3" style="margin-bottom:12px">
             ${[['中文字数', p.parsed.chars.toLocaleString()], ['章节标题', p.parsed.chapters.length], ['候选金句', p.parsed.quotes.length]]
               .map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
-                <div style="font-size:19px;font-weight:750">${x[1]}</div><div style="font-size:11px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
+                <div style="font-size:20.5px;font-weight:750">${x[1]}</div><div style="font-size:13px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
           </div>
           <div class="chip-list">${p.parsed.chapters.slice(0, 8).map(c => `<span class="tag c">${esc(c)}</span>`).join('')}</div>` : ''}`;
       },
@@ -2806,15 +2915,15 @@ window.VIEWS = window.VIEWS || {};
               : '未上传资料，以下为内建演示数据'}</span></div>
         </div>
         <div class="field"><div class="label">全书摘要</div>
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.85;font-size:13.5px">${esc(p.summary)}</div></div>
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.85;font-size:15.5px">${esc(p.summary)}</div></div>
         <div class="row2">
           <div><div class="label">核心论点</div>${(p.themes || []).map((t, i) => `
-            <div style="display:flex;gap:9px;padding:8px 0;font-size:13px"><b style="color:var(--violet-2)">0${i + 1}</b><span>${esc(t)}</span></div>`).join('')}</div>
+            <div style="display:flex;gap:9px;padding:8px 0;font-size:15px"><b style="color:var(--violet-2)">0${i + 1}</b><span>${esc(t)}</span></div>`).join('')}</div>
           <div><div class="label">目标读者画像</div>${(p.audiences || []).map(a => `
-            <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px">
+            <div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:14.5px">
               <span>${esc(a.name)}</span><b>${a.size}%</b></div>
               <div class="bar" style="margin-top:4px"><i style="width:${a.size * 2.2}%"></i></div>
-              <div style="font-size:11px;color:var(--txt-3);margin-top:3px">${esc(a.note)}</div></div>`).join('')}</div>
+              <div style="font-size:13px;color:var(--txt-3);margin-top:3px">${esc(a.note)}</div></div>`).join('')}</div>
         </div>
         <div class="field" style="margin-top:6px"><div class="label">高传播金句${(p.quoteSrc || []).length ? '（可溯源）' : ''}</div>
           ${((p.quoteSrc && p.quoteSrc.length) ? p.quoteSrc : (p.quotes || []).map(t => ({ text: t }))).map((q, i) => `
@@ -2831,18 +2940,18 @@ window.VIEWS = window.VIEWS || {};
 
       strategy: () => p.strategy ? `
         <div class="field"><div class="label">内容定位</div>
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13.5px;line-height:1.8">${esc(p.strategy.positioning)}</div></div>
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15.5px;line-height:1.8">${esc(p.strategy.positioning)}</div></div>
         <div class="grid g4" style="margin:14px 0">
           ${p.strategy.kpi.map(k => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px">
-            <div style="font-size:11px;color:var(--txt-3)">${k.k}</div><div style="font-size:18px;font-weight:700;margin-top:4px">${k.v}</div></div>`).join('')}
+            <div style="font-size:13px;color:var(--txt-3)">${k.k}</div><div style="font-size:19.5px;font-weight:700;margin-top:4px">${k.v}</div></div>`).join('')}
         </div>
         <div class="label">平台适配策略</div>
         <table><thead><tr><th>平台</th><th>适配度</th><th>建议支数</th><th>尺寸/时长</th><th>脚本风格</th><th>CTA</th></tr></thead><tbody>
           ${p.strategy.platforms.map(x => `<tr>
             <td><span style="display:inline-flex;align-items:center;gap:7px"><i style="width:8px;height:8px;border-radius:2px;background:${x.color}"></i><b>${x.name}</b></span></td>
             <td>${scoreBar(x.fit)}</td><td>${x.count} 支</td><td>${x.ratio} · ${x.len}</td>
-            <td style="font-size:12px;color:var(--txt-2)">${esc(x.tone)}</td>
-            <td style="font-size:12px;color:var(--txt-2)">${esc(x.cta)}</td></tr>`).join('')}
+            <td style="font-size:14px;color:var(--txt-2)">${esc(x.tone)}</td>
+            <td style="font-size:14px;color:var(--txt-2)">${esc(x.cta)}</td></tr>`).join('')}
         </tbody></table>`
         : emptyStage('尚未生成营销策略', '执行本阶段后，系统会给出各平台适配度评分、建议产出量、节奏与 CTA 方案。'),
 
@@ -2850,7 +2959,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="grid g3" style="margin-bottom:14px">
           ${[['开场', (p.opens || []).length], ['Hook', (p.hooks || []).length], ['标题', (p.titles || []).length]].map(x =>
             `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center">
-              <div style="font-size:24px;font-weight:750">${x[1]}</div><div style="font-size:12px;color:var(--txt-3)">${x[0]}</div></div>`).join('')}
+              <div style="font-size:26px;font-weight:750">${x[1]}</div><div style="font-size:14px;color:var(--txt-3)">${x[0]}</div></div>`).join('')}
         </div>
         <div class="label">场景真人对谈脚本（共 ${(p.scripts || []).length} 篇 / 每篇含场地、双人台词、镜头表、声音配置）</div>
         <table><thead><tr><th>#</th><th>模板</th><th>标题</th><th>场地</th><th>节奏</th><th>声音</th><th>评分</th><th></th></tr></thead><tbody>
@@ -2858,9 +2967,9 @@ window.VIEWS = window.VIEWS || {};
             <td class="mono">${String(s.n).padStart(2, '0')}</td>
             <td><span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${esc(s.sceneStyle || s.angleName)}</span></td>
             <td style="max-width:280px">${esc(s.title)}</td>
-            <td style="font-size:12px;color:var(--txt-2)">${esc((s.scenePlan || []).map(x => x.name).join(' / ') || '棚内')}</td>
+            <td style="font-size:14px;color:var(--txt-2)">${esc((s.scenePlan || []).map(x => x.name).join(' / ') || '棚内')}</td>
             <td><span class="tag c">${esc(s.rhythm || '口播')}</span></td>
-            <td style="font-size:12px;color:var(--txt-2)">${(s.voicePlan || []).map(x => esc(x.role)).join(' + ') || '单声线'}</td>
+            <td style="font-size:14px;color:var(--txt-2)">${(s.voicePlan || []).map(x => esc(x.role)).join(' + ') || '单声线'}</td>
             <td>${scoreBar(s.score)}</td>
             <td><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">查看</button></td></tr>`).join('')}
         </tbody></table>`
@@ -2871,12 +2980,12 @@ window.VIEWS = window.VIEWS || {};
         const demo = `<div class="label" style="margin-top:4px">改写前 / 改写后 对照</div>
           <div class="row2" style="margin-bottom:18px">
             <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px">
-              <div style="font-size:11px;color:var(--txt-3);margin-bottom:7px">AI 原稿（谁用都一样）</div>
-              <div style="font-size:13px;line-height:1.85;color:var(--txt-2)">本书提出了一个值得重视的观点：真正拉开差距的不是努力的总量，而是每一次判断所撬动的结果倍数。建议读者重新审视自己的时间分配方式。</div>
+              <div style="font-size:13px;color:var(--txt-3);margin-bottom:7px">AI 原稿（谁用都一样）</div>
+              <div style="font-size:15px;line-height:1.85;color:var(--txt-2)">本书提出了一个值得重视的观点：真正拉开差距的不是努力的总量，而是每一次判断所撬动的结果倍数。建议读者重新审视自己的时间分配方式。</div>
             </div>
             <div style="background:rgba(124,108,255,.09);border:1px solid rgba(124,108,255,.32);border-radius:12px;padding:14px">
-              <div style="font-size:11px;color:var(--violet-2);margin-bottom:7px">改写后（本人口吻）</div>
-              <div style="font-size:13px;line-height:1.85">
+              <div style="font-size:13px;color:var(--violet-2);margin-bottom:7px">改写后（本人口吻）</div>
+              <div style="font-size:15px;line-height:1.85">
                 <mark class="hl">我讲得直白一点</mark>，你不是时间不够。<br>
                 你是把时间花在了根本不产生复利的事情上。<br>
                 <mark class="hl">说句实在话</mark>，这件事我自己也是很晚才想明白的。</div>
@@ -2890,10 +2999,10 @@ window.VIEWS = window.VIEWS || {};
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
                 <div class="avatar" style="width:42px;height:42px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
                 <div><div style="font-weight:700">${pa.name} 人格模型 ${pa.version}</div>
-                  <div style="font-size:11.5px;color:var(--txt-3)">语料 ${pa.sampleCount} 段 · 相似度 ${pa.similarity}%</div></div>
+                  <div style="font-size:13.5px;color:var(--txt-3)">语料 ${pa.sampleCount} 段 · 相似度 ${pa.similarity}%</div></div>
                 <span class="tag g" style="margin-left:auto"><i class="dot g"></i>就绪</span>
               </div>
-              <div style="font-size:12.5px;color:var(--txt-2);line-height:1.9">
+              <div style="font-size:14.5px;color:var(--txt-2);line-height:1.9">
                 改写规则：按${esc(STORE.s.account.name)}的语速、语气、逻辑顺序与口头禅重写全部脚本，并做价值观一致性校验；低于 90 分的段落会被标红退回。</div>
             </div>
             <div class="label" style="margin-top:16px">口头禅植入</div>
@@ -2907,7 +3016,7 @@ window.VIEWS = window.VIEWS || {};
             <div class="label" style="margin-top:14px">一致性校验</div>
             <div style="display:flex;align-items:center;gap:14px">
               ${CHART.ring(done ? pa.similarity : 0, done ? pa.similarity + '%' : '待执行')}
-              <div style="font-size:12.5px;line-height:1.9;color:var(--txt-2)">
+              <div style="font-size:14.5px;line-height:1.9;color:var(--txt-2)">
                 ${done ? `已改写 <b>${p.scripts.length}</b> 篇<br>口头禅植入 <b>26</b> 处<br>触发禁语 <b>0</b> 处` : '执行本阶段后开始校验'}</div>
             </div>
           </div></div>`;
@@ -2931,8 +3040,8 @@ window.VIEWS = window.VIEWS || {};
             <div style="display:flex;gap:8px;flex:0 0 auto">
               ${STORE.s.persona.realPhotoPreview && STORE.s.persona.realAvatarMode === 'image'
                 ? `<img src="${esc(STORE.s.persona.realPhotoPreview)}" style="width:66px;height:66px;object-fit:cover;border-radius:18px">`
-                : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px">主</div>`}
-              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:22px;border-radius:18px;background:linear-gradient(150deg,#ff8a5b,#ffb020)">作</div>
+                : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px">主</div>`}
+              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px;background:linear-gradient(150deg,#ff8a5b,#ffb020)">作</div>
             </div>
             <div style="flex:1">
               <div style="font-weight:700;margin-bottom:6px">主持人 + 作者数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
@@ -2942,7 +3051,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="grid g3" style="margin-top:14px">
             ${[['渲染分辨率', '1080P'], ['帧率', '30 fps'], ['双声线', '主持 + 作者'], ['口型误差', '<40 ms'], ['插嘴点', '3-5 个/支'], ['场地', '3 段切换']].map(x =>
               `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
-                <div style="font-size:16px;font-weight:700">${x[1]}</div><div style="font-size:11px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
+                <div style="font-size:17.5px;font-weight:700">${x[1]}</div><div style="font-size:13px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
           </div>
         </div>
         <div>
@@ -2950,7 +3059,7 @@ window.VIEWS = window.VIEWS || {};
           ${(p.scripts || []).slice(0, 7).map((s, i) => `
             <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
               <span class="mono" style="color:var(--txt-3)">${String(i + 1).padStart(2, '0')}</span>
-              <span style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
+              <span style="flex:1;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
               <span class="tag c">${esc((s.voicePlan || []).map(v => v.role).join('+') || '双声线')}</span>
               <span class="tag ${(p.videos || []).length ? 'g' : ''}">${(p.videos || []).length ? '已渲染' : '待渲染'}</span>
             </div>`).join('') || '<div class="hint">请先完成写稿阶段</div>'}
@@ -2972,15 +3081,15 @@ window.VIEWS = window.VIEWS || {};
              ['B-roll 素材', '按语义匹配空镜', '🎞'], ['智能字幕', '自动断句 + 双语可选', '💬'],
              ['背景音乐', '按情绪匹配 + 响度平衡', '🎵'], ['品牌 Logo 与 CTA', '片尾统一模板', '🏷']
           ].map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px">
-            <div style="font-size:20px">${x[0 + 2]}</div>
-            <div style="font-weight:650;font-size:13px;margin-top:7px">${x[0]}</div>
-            <div style="font-size:11.5px;color:var(--txt-3);margin-top:4px;line-height:1.6">${x[1]}</div></div>`).join('')}
+            <div style="font-size:21.5px">${x[0 + 2]}</div>
+            <div style="font-weight:650;font-size:15px;margin-top:7px">${x[0]}</div>
+            <div style="font-size:13.5px;color:var(--txt-3);margin-top:4px;line-height:1.6">${x[1]}</div></div>`).join('')}
         </div>
         <div class="label" style="margin-top:18px">片头片尾模板</div>
         <div class="grid g3">${['知识分享型', '书单推荐型', '观点辩论型'].map((t, i) => `
           <div style="border:1px solid ${i === 0 ? 'var(--violet)' : 'var(--line)'};border-radius:12px;overflow:hidden">
             <div style="height:74px;background:${DATA.COVERS[i]}"></div>
-            <div style="padding:11px 13px;display:flex;align-items:center"><span style="font-size:13px;font-weight:600">${t}</span>
+            <div style="padding:11px 13px;display:flex;align-items:center"><span style="font-size:15px;font-weight:600">${t}</span>
               ${i === 0 ? '<span class="tag v" style="margin-left:auto">使用中</span>' : '<button class="btn btn-sm" style="margin-left:auto">启用</button>'}</div>
           </div>`).join('')}</div>`,
 
@@ -2998,24 +3107,43 @@ window.VIEWS = window.VIEWS || {};
 
   function emptyStage(t, d) {
     return `<div class="empty"><div class="big">◌</div><div style="font-weight:650;color:var(--txt-2)">${t}</div>
-      <div style="margin-top:6px;font-size:12.5px">${d}</div></div>`;
+      <div style="margin-top:6px;font-size:14.5px">${d}</div></div>`;
   }
 
+  /* 注意：卡片里的「生成这一支」按钮不要加 stopPropagation。
+   * 事件分发是 document 层的 closest('[data-act]')，内层按钮本来就会优先命中；
+   * 挡掉冒泡反而让事件到不了监听器，按钮会完全没反应。 */
   window.vidCard = function (v) {
     const live = v.status === '已发布';
+    const done = v.status === '已生成' && v.videoUrl;
+    /* 卡片上必须一眼看得出这支「到底存不存在」：
+     * 已生成 = 真的有影片档；待生成 = 只有稿子；演示数据 = 假的。
+     * 以前全部长一样，才会让人以为跑完流程就有 30 支真影片。 */
+    const badge = v.demo ? '<span class="plat" style="background:#f59e0bcc;left:auto;right:8px">演示假数据</span>'
+      : done ? '<span class="plat" style="background:#2ee6a8cc;left:auto;right:8px">真影片</span>'
+        : v.status === '生成中' ? '<span class="plat" style="background:#f59e0bcc;left:auto;right:8px">生成中…</span>'
+          : v.status === '生成失败' ? '<span class="plat" style="background:#ef4444cc;left:auto;right:8px">失败</span>'
+            : '<span class="plat" style="background:#6b7280cc;left:auto;right:8px">还没做</span>';
     return `<div class="vid" data-act="play" data-id="${v.id}">
       <div class="vid-th" style="background:${v.cover}">
         <span class="plat" style="background:${v.color}cc">${v.platformName}</span>
+        ${badge}
         <span class="dur">${v.duration}s</span>
-        <div class="vid-play"><span>▶</span></div>
+        <div class="vid-play"><span>${done ? '▶' : '✎'}</span></div>
         <div></div><div class="vid-cap">${esc(v.caption)}</div>
       </div>
       <div class="vid-b">
         <div class="vid-tt">${esc(v.title)}</div>
         <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span></div>
-        <div class="vid-m">${live
-          ? `<span>▶ ${nf(v.views)}</span><span>完播 ${v.watch}%</span>`
-          : `<span style="color:var(--txt-3)">${v.status} · 尚无数据</span>`}</div>
+        <div class="vid-m">${live && v.demo
+          ? `<span style="color:var(--amber)">▶ ${nf(v.views)}（假）</span><span style="color:var(--amber)">完播 ${v.watch}%（假）</span>`
+          : done ? '<span style="color:var(--green)">影片已做好，可播放</span>'
+            : v.status === '待生成' ? '<span style="color:var(--txt-3)">只有稿子，影片还没做</span>'
+              : `<span style="color:var(--txt-3)">${esc(v.status)}</span>`}</div>
+        ${!v.demo && (v.status === '待生成' || v.status === '生成失败')
+          ? `<button class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;justify-content:center"
+               data-act="gen-video" data-id="${v.id}">
+               ${v.status === '生成失败' ? '重试生成' : '▶ 生成这一支'}</button>` : ''}
       </div></div>`;
   };
 
@@ -3041,9 +3169,9 @@ window.VIEWS = window.VIEWS || {};
             <span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${s.angleName}</span>
             <span class="tag">${s.platformName}</span>${s.persona ? '<span class="tag g">${esc(STORE.s.account.name)}人格</span>' : ''}
             <span class="ci-a"><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">详情</button></span></div>
-          <div style="font-weight:650;font-size:13.5px;margin-bottom:6px">${esc(s.title)}</div>
-          <div style="font-size:12.5px;color:var(--txt-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(s.hook)}</div>
-          <div style="display:flex;gap:12px;margin-top:9px;font-size:11px;color:var(--txt-3)">
+          <div style="font-weight:650;font-size:15.5px;margin-bottom:6px">${esc(s.title)}</div>
+          <div style="font-size:14.5px;color:var(--txt-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(s.hook)}</div>
+          <div style="display:flex;gap:12px;margin-top:9px;font-size:13px;color:var(--txt-3)">
             <span>${s.duration}s</span><span>${s.words} 字</span><span>评分 ${s.score}</span></div>
         </div>`).join('')}</div>` : `<div class="empty"><div class="big">▤</div>暂无脚本</div>`;
     } else {
@@ -3150,7 +3278,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="field">
             <div class="label">${s[1]}<span style="margin-left:auto;color:var(--violet-2);font-weight:700" id="pv-${s[0]}">${p[s[0]]}</span></div>
             <input type="range" min="0" max="100" value="${p[s[0]]}" data-act="persona-slider" data-k="${s[0]}">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--txt-3);margin-top:2px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--txt-3);margin-top:2px">
               <span>${s[2]}</span><span>${s[3]}</span></div>
           </div>`).join('')}
 
@@ -3163,9 +3291,9 @@ window.VIEWS = window.VIEWS || {};
 
         <div class="row2" style="margin-top:20px">
           <div><div class="label">价值观准则（生成时的硬约束）</div>
-            ${p.values.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:13px"><span style="color:var(--green)">✓</span>${esc(v)}</div>`).join('')}</div>
+            ${p.values.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--green)">✓</span>${esc(v)}</div>`).join('')}</div>
           <div><div class="label">禁语清单（命中即拦截）</div>
-            ${p.forbid.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:13px"><span style="color:var(--red)">✕</span>${esc(v)}</div>`).join('')}</div>
+            ${p.forbid.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--red)">✕</span>${esc(v)}</div>`).join('')}</div>
         </div>
       </div>
 
@@ -3190,7 +3318,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="card-h"><div class="card-t">一致性表现</div></div>
           <div style="display:flex;gap:16px;align-items:center">
             ${CHART.ring(p.similarity, p.similarity + '%')}
-            <div style="font-size:12.5px;line-height:2;color:var(--txt-2)">
+            <div style="font-size:14.5px;line-height:2;color:var(--txt-2)">
               近 30 支视频<br>平均一致性 <b style="color:var(--txt)">${p.similarity}%</b><br>
               低分退回 <b style="color:var(--txt)">2</b> 篇<br>禁语拦截 <b style="color:var(--txt)">0</b> 次</div>
           </div>
@@ -3223,7 +3351,7 @@ window.VIEWS = window.VIEWS || {};
         ${evs.map(e => `<div class="cal-e ${e.status === '已发布' ? 'done' : ''}" style="--ec:${e.color}dd"
             data-act="open-sched" data-id="${e.id}"
             title="${esc(e.title)}　（点击预览与编辑）">${e.hour}:00 ${esc(e.platform)}</div>`).join('')}
-        ${more > 0 ? `<div style="font-size:10px;color:var(--txt-3)">+${more} 条</div>` : ''}
+        ${more > 0 ? `<div style="font-size:12px;color:var(--txt-3)">+${more} 条</div>` : ''}
       </div>`;
     }
 
@@ -3257,7 +3385,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="card-h"><div class="card-t">平台账号</div></div>
           ${DATA.PLATFORMS.map((p, i) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
             <i style="width:9px;height:9px;border-radius:3px;background:${p.color}"></i>
-            <span style="flex:1;font-size:13px">${p.name}</span>
+            <span style="flex:1;font-size:15px">${p.name}</span>
             ${AUTHED[p.key] ? '<span class="tag g"><i class="dot g"></i>已授权</span>' : '<button class="btn btn-sm" data-act="auth-plat" data-n="' + p.name + '">去授权</button>'}
           </div>`).join('')}
         </div>
@@ -3268,8 +3396,8 @@ window.VIEWS = window.VIEWS || {};
                  data-act="open-sched" data-id="${x.id}">
               <div style="width:3px;height:32px;border-radius:3px;background:${x.color}"></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</div>
-                <div style="font-size:11px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.day} 日 ${x.hour}:00</div>
+                <div style="font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.title)}</div>
+                <div style="font-size:13px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.day} 日 ${x.hour}:00</div>
               </div>
               ${x.platform === 'Instagram Reels'
                 ? `<button class="btn btn-sm btn-primary" data-act="ig-publish" data-id="${x.id}" title="真实发布到 Instagram">真实发布</button>`
@@ -3307,10 +3435,17 @@ window.VIEWS = window.VIEWS || {};
     const totalClick = live.reduce((a, v) => a + v.click, 0);
     const avgWatch = live.length ? Math.round(live.reduce((a, v) => a + v.watch, 0) / live.length) : 0;
 
+    /* 这一页的数据全部来自 video 物件上的 views / like / watch 等栏位，
+     * 而那些栏位目前只有内建示范书才有值（而且是随机造的）。
+     * 真实产出的影片一律是 0，因为没有真的发布到任何平台、也没有平台回传数据。
+     * 所以必须先算清楚「这页现在显示的到底是真是假」，摆在最上面讲明白。 */
+    const demoLive = live.filter(v => v.demo).length;
+    const allDemo = live.length > 0 && demoLive === live.length;
+
     return `
     <div class="page-h">
       <div><div class="page-t">数据分析</div>
-        <div class="page-d">数据会自动回流到写稿引擎，高表现特征将提高后续生成权重</div></div>
+        <div class="page-d">${allDemo ? '目前显示的是内建示范书的模拟数据' : '统计已发布影片的实际表现'}</div></div>
       <div class="right">
         <div class="seg" data-seg="ana-scope">
           <button data-v="all" class="${scope === 'all' ? 'on' : ''}">全部项目</button>
@@ -3320,14 +3455,26 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
-    <div class="explain" style="margin-bottom:16px;border-left-color:var(--cyan)">
-      <div class="ex-r"><span class="ex-k">统计范围</span><span>共 <b>${videos.length}</b> 支影片，其中<b>已发布 ${live.length} 支</b>。
-        以下数据只统计已发布的——没发布出去的影片不会有观看、按赞或点击。</span></div>
-    </div>
+    ${live.length === 0
+      ? `<div class="explain" style="margin-bottom:16px;border-left-color:var(--amber)">
+           <div class="ex-r"><span class="ex-k">这页现在是空的</span><span>共 <b>${videos.length}</b> 支影片，<b>一支都还没发布</b>，所以没有任何数据。</span></div>
+           <div class="ex-r"><span class="ex-k">数据从哪来</span><span>影片要先<b>真的生成出来</b>（在内容资产库逐支生成），再<b>真的发布到平台</b>，平台回传之后这里才会有数字。</span></div>
+           <div class="ex-r"><span class="ex-k">下面的图</span><span>下面的折线、圆饼、漏斗<b>全是示意用的假图</b>，不代表任何真实表现。</span></div>
+         </div>`
+      : allDemo
+        ? `<div class="explain" style="margin-bottom:16px;border-left-color:var(--amber)">
+             <div class="ex-r"><span class="ex-k" style="color:var(--amber)">⚠ 全部是假数据</span><span>
+               这页现在显示的 <b>${live.length}</b> 支「已发布」影片，<b>全部来自内建示范书</b>，
+               播放量、完播率、按赞、转化漏斗<b>都是随机产生的假数字</b>，不是真实表现。</span></div>
+             <div class="ex-r"><span class="ex-k">怎么看到真的</span><span>自己建一本书跑完流程 → 在资产库逐支生成影片 → 发布到平台，之后这里才会出现真数据。</span></div>
+           </div>`
+        : `<div class="explain" style="margin-bottom:16px;border-left-color:var(--cyan)">
+             <div class="ex-r"><span class="ex-k">统计范围</span><span>共 <b>${videos.length}</b> 支影片，已发布 <b>${live.length}</b> 支${demoLive ? `，其中 <b style="color:var(--amber)">${demoLive} 支是示范书的假数据</b>` : ''}。</span></div>
+           </div>`}
 
     ${live.length ? '' : `<div class="card empty" style="margin-bottom:16px"><div class="big">◷</div>
       <div style="font-weight:650;color:var(--txt-2)">这个范围内还没有任何影片发布</div>
-      <div style="margin-top:6px;font-size:12.5px">到「发布排程」发布之后，数据才会开始累积。</div></div>`}
+      <div style="margin-top:6px;font-size:14.5px">到「发布排程」发布之后，数据才会开始累积。</div></div>`}
 
     <div class="grid g4" style="margin-bottom:16px">
       ${[['总播放量', nf(an.total), '已发布 ' + live.length + ' 支', ''],
@@ -3375,7 +3522,7 @@ window.VIEWS = window.VIEWS || {};
    * ===================================================== */
   VIEWS.settings = function () {
     const st = STORE.s.settings;
-    const sw = (k, t, d) => `<div class="setting-row"><div><div style="font-size:13.5px;font-weight:600">${t}</div>
+    const sw = (k, t, d) => `<div class="setting-row"><div><div style="font-size:15.5px;font-weight:600">${t}</div>
       <div class="hint">${d}</div></div><div class="right"><div class="switch ${st[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div></div>`;
 
     return `
@@ -3423,10 +3570,10 @@ window.VIEWS = window.VIEWS || {};
           <div class="card-h"><div class="card-t">合规与安全</div></div>
           ${sw('compliance', '内容合规校验', '拦截绝对化用语、未证实数据、医疗与投资承诺')}
           ${sw('watermark', 'AI 生成标识与水印', '按平台与地区法规要求，在成片中标注 AI 生成')}
-          <div class="setting-row"><div><div style="font-size:13.5px;font-weight:600">书籍原文使用范围</div>
+          <div class="setting-row"><div><div style="font-size:15.5px;font-weight:600">书籍原文使用范围</div>
             <div class="hint">仅用于本项目生成，不进入任何模型训练集</div></div>
             <div class="right"><span class="tag g">已锁定</span></div></div>
-          <div class="setting-row"><div><div style="font-size:13.5px;font-weight:600">声音与形象模型权限</div>
+          <div class="setting-row"><div><div style="font-size:15.5px;font-weight:600">声音与形象模型权限</div>
             <div class="hint">密钥托管，仅授权环境可调用，禁止导出</div></div>
             <div class="right"><span class="tag g">已加密</span></div></div>
         </div>
@@ -3435,7 +3582,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="card-h"><div class="card-t">用量与额度</div></div>
           <div style="display:flex;align-items:center;gap:18px">
             ${CHART.ring(Math.round(st.quotaUsed / st.quotaTotal * 100))}
-            <div style="flex:1;font-size:13px;line-height:2.1">
+            <div style="flex:1;font-size:15px;line-height:2.1">
               <div>本月已生成 <b>${st.quotaUsed}</b> / ${st.quotaTotal} 支</div>
               <div>预估本月成本 <b>内部版可见</b></div>
               <div>剩余额度 <b>${st.quotaTotal - st.quotaUsed}</b> 支</div>
@@ -3466,7 +3613,7 @@ window.VIEWS = window.VIEWS || {};
           <div class="card-h"><div class="card-t">成员与权限</div></div>
           <table><tbody>
             ${[[STORE.s.account.initial || STORE.s.account.name.slice(0,1), STORE.s.account.name, STORE.s.account.title, 'g'], ['助', '内容助理', '内容运营', 'v'], ['审', '张审核', '审核', 'c'], ['出', '远见文化', '只读', '']]
-              .map(x => `<tr><td style="width:44px"><div class="avatar" style="width:30px;height:30px;font-size:12px;border-radius:9px">${x[0]}</div></td>
+              .map(x => `<tr><td style="width:44px"><div class="avatar" style="width:30px;height:30px;font-size:14px;border-radius:9px">${x[0]}</div></td>
                 <td><b>${x[1]}</b></td><td><span class="tag ${x[3]}">${x[2]}</span></td>
                 <td style="text-align:right"><button class="btn btn-sm">管理</button></td></tr>`).join('')}
           </tbody></table>
@@ -3489,7 +3636,7 @@ window.VIEWS = window.VIEWS || {};
       return `
       <div style="margin-bottom:18px">
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
-          <span style="font-size:13px;font-weight:700">${g.name}</span>
+          <span style="font-size:15px;font-weight:700">${g.name}</span>
           <span class="hint">${g.sub}</span>
         </div>
         <div class="grid g4">
@@ -3554,11 +3701,11 @@ window.VIEWS = window.VIEWS || {};
     <div class="grid g3" style="margin-bottom:16px">
       ${people.map((p) => `<div class="engine-card ${p.id === active.id ? 'on' : ''}" data-act="engine-select" data-id="${esc(p.id)}">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-          <div><div style="font-size:17px;font-weight:760">${esc(p.name)}</div>
+          <div><div style="font-size:18.5px;font-weight:760">${esc(p.name)}</div>
             <div class="hint" style="margin-top:3px">${esc(p.status)} · ${p.materialMin} 分钟语料</div></div>
           <span class="tag ${p.status === '已训练' ? 'g' : p.status === '待训练' ? 'a' : 'v'}">${esc(p.status)}</span>
         </div>
-        <div class="engine-score" style="margin-top:14px">${p.score || '--'}<small style="font-size:12px;color:var(--txt-3)"> 相似度</small></div>
+        <div class="engine-score" style="margin-top:14px">${p.score || '--'}<small style="font-size:14px;color:var(--txt-3)"> 相似度</small></div>
         <div class="chip-list" style="margin-top:10px">${(p.moat || []).map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
         <div class="hint" style="margin-top:12px;line-height:1.65">${esc(p.next)}</div>
       </div>`).join('')}
@@ -3666,7 +3813,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="card" style="margin-bottom:12px;background:var(--panel-2)">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
             <span class="tag v">${String(i + 1).padStart(2, '0')}</span>
-            <b style="font-size:13px;flex:1">${esc(pr.label || '影片提示词')}</b>
+            <b style="font-size:15px;flex:1">${esc(pr.label || '影片提示词')}</b>
             <b data-act="del-prompt" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px">✕</b>
           </div>
           <textarea class="input" data-act="edit-prompt" data-i="${i}" rows="3"
@@ -3768,9 +3915,9 @@ window.VIEWS = window.VIEWS || {};
       ${plans.map(plan => `
         <div class="card" style="position:relative;min-height:360px;display:flex;flex-direction:column">
           ${plan.recommended ? '<div class="tag g" style="position:absolute;right:14px;top:14px">推荐</div>' : ''}
-          <div style="font-size:15px;font-weight:800;margin-bottom:8px">${esc(plan.name)}</div>
+          <div style="font-size:17px;font-weight:800;margin-bottom:8px">${esc(plan.name)}</div>
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
-            <span style="font-size:30px;font-weight:850">${esc(plan.price)}</span><span class="hint">${esc(plan.cadence)}</span>
+            <span style="font-size:32px;font-weight:850">${esc(plan.price)}</span><span class="hint">${esc(plan.cadence)}</span>
           </div>
           <div class="card-s" style="min-height:44px">${esc(plan.desc)}</div>
           <div style="margin:14px 0"><span class="tag v">${esc(plan.quota)}</span></div>
@@ -4144,6 +4291,7 @@ window.TOUR = (function () {
 
     switch (act) {
       case 'goto': return go(el.dataset.route);
+      case 'gen-video': return genVideoModal(el.dataset.id);
       case 'open-proj': STORE.setCurrent(el.dataset.id); return go('pipeline');
       case 'new-proj': return newProjectModal();
       case 'sel-stage': return go('pipeline', { s: el.dataset.k });
@@ -4205,7 +4353,7 @@ window.TOUR = (function () {
       case 'publish-all': {
         const n = STORE.s.schedule.filter(x => x.status === '待发布').length;
         if (!n) return toast('没有待发布内容', 'warn');
-        return modal('批量确认发布', `<div style="font-size:13.5px;line-height:1.9">
+        return modal('批量确认发布', `<div style="font-size:15.5px;line-height:1.9">
             即将发布 <b>${n}</b> 条内容到已授权平台。<br>发布后可在数据分析中查看表现。</div>
             <div class="hint" style="margin-top:12px">提示：发布是不可撤回的对外动作，请确认内容已审核通过。</div>`,
           `<button class="btn" onclick="UI.closeModal()">取消</button>
@@ -4300,7 +4448,7 @@ window.TOUR = (function () {
         if (!hasSubject || !HG.voiceId || !textEl || !textEl.value.trim()) return toast('请先选好形象、声音，并填台词', 'warn');
         HG.text = textEl.value.trim();
         return modal('确定要真的生成吗？',
-          '<div style="font-size:13.5px">这会真的呼叫外部数字人生成服务产出一支影片，从你的额度扣钱（约 US$1-3，按秒计费），送出后无法撤销、无法退款。</div>',
+          '<div style="font-size:15.5px">这会真的呼叫外部数字人生成服务产出一支影片，从你的额度扣钱（约 US$1-3，按秒计费），送出后无法撤销、无法退款。</div>',
           `<button class="btn" onclick="UI.closeModal()">取消</button>
            <button class="btn btn-primary" data-modal-act="confirm-hg-gen">确认生成（会扣钱）</button>`);
       }
@@ -4329,7 +4477,7 @@ window.TOUR = (function () {
         return;
       }
       case 'reset-demo': {
-        return modal('重置演示数据', '<div style="font-size:13.5px">将清空当前所有项目、排程与设置，恢复到初始演示状态。此操作不可撤销。</div>',
+        return modal('重置演示数据', '<div style="font-size:15.5px">将清空当前所有项目、排程与设置，恢复到初始演示状态。此操作不可撤销。</div>',
           `<button class="btn" onclick="UI.closeModal()">取消</button>
            <button class="btn btn-primary" data-modal-act="confirm-reset">确认重置</button>`);
       }
@@ -4372,7 +4520,7 @@ window.TOUR = (function () {
         const p = STORE.s.persona;
         tryVoice(p.voiceMode === 'library' ? p.voiceActor : p.voiceMode);
         return modal('风格样例试听', `
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;line-height:2;font-size:14px">
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;line-height:2;font-size:16px">
             「${p.habits[0] || '我讲得直白一点'}，这本书我读了两遍。<br>
             第一遍我觉得它在讲方法，第二遍我才发现——它在讲代价。<br>
             ${p.habits[2] || '说句实在话'}，很多人不是不知道该怎么做，是不愿意付那个代价。<br>
@@ -4429,6 +4577,8 @@ window.TOUR = (function () {
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
+    if (a === 'confirm-gen-video') return doGenVideo(el.dataset.id);
+    if (a === 'goto-persona') { closeModal(); return go('persona'); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'confirm-prompt-video') { const i = +el.dataset.i; closeModal(); return doPromptVideo(i); }
     if (a === 'ai-rewrite') return aiRewriteScript(el.dataset.id);
@@ -4652,7 +4802,7 @@ window.TOUR = (function () {
    * 错误，不如直接讲清楚这是展示版。 */
   function hgDemoNotice() {
     modal('这是公开展示版', `
-      <div style="font-size:13.5px;line-height:1.9">
+      <div style="font-size:15.5px;line-height:1.9">
         这一页的<b>形象与声音是真的</b>，可以随便浏览、试听。<br><br>
         但「上传照片 / 上传录音克隆 / 生成影片」会<b>真的产生费用</b>（约 US$1-3 一支），
         所以只开放在内部版操作，公开网址上不开放。
@@ -4734,13 +4884,13 @@ window.TOUR = (function () {
         ${HG.avatars.slice(0, 6).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
             style="border:1px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center">
           ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px">` : ''}
-          <div style="font-size:11.5px;font-weight:600">${esc(a.name || a.id)}</div>
+          <div style="font-size:13.5px;font-weight:600">${esc(a.name || a.id)}</div>
         </div>`).join('')}
         <div class="hg-avatar ${HG.mode === 'image' ? 'on' : ''}" data-act="hg-upload-photo-btn"
             style="border:1px dashed ${HG.mode === 'image' ? 'var(--violet-2)' : 'var(--line-2)'};border-radius:12px;padding:6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:96px">
           ${HG.mode === 'image' && HG.assetPreview
-            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px"><div style="font-size:11.5px;font-weight:600">你上传的照片</div>`
-            : `<div style="font-size:20px;color:var(--txt-3)">＋</div><div style="font-size:11.5px;color:var(--txt-2);margin-top:3px">上传照片</div>`}
+            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:5px"><div style="font-size:13.5px;font-weight:600">你上传的照片</div>`
+            : `<div style="font-size:21.5px;color:var(--txt-3)">＋</div><div style="font-size:13.5px;color:var(--txt-2);margin-top:3px">上传照片</div>`}
         </div>
       </div>
       <div class="hint">上传照片建议<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」，无法生成。上传本身免费，真正花钱的是下面的「生成」那一步。</div>`;
@@ -4776,13 +4926,13 @@ window.TOUR = (function () {
       <div class="grid g3" style="margin-bottom:12px">
         ${HG.voices.slice(0, 9).map(v => `<div class="hg-avatar ${v.id === HG.voiceId ? 'on' : ''}" data-act="hg-pick-voice" data-id="${esc(v.id)}"
             style="border:1px solid ${v.id === HG.voiceId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:10px;cursor:pointer">
-          <div style="font-size:13px;font-weight:700">${esc(v.name)}</div>
+          <div style="font-size:15px;font-weight:700">${esc(v.name)}</div>
           <div class="hint" style="margin-top:3px">${esc(v.language || '')}${v.gender ? ' · ' + esc(v.gender) : ''}</div>
           ${v.preview ? `<audio src="${esc(v.preview)}" controls style="width:100%;height:28px;margin-top:6px" onclick="event.stopPropagation()"></audio>` : ''}
         </div>`).join('')}
         <div class="hg-avatar" data-act="hg-upload-audio-btn"
             style="border:1px dashed var(--line-2);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90px">
-          <div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:12px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
+          <div style="font-size:24px;color:var(--txt-3)">＋</div><div style="font-size:14px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
         </div>
       </div>
       <div class="hint">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音，克隆完成后会自动加进上面的列表。上传免费，<b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
@@ -4801,7 +4951,7 @@ window.TOUR = (function () {
     } catch (e) { return toast('上传失败：' + e.message, 'err'); }
 
     modal('确定要克隆这段声音吗？',
-      '<div style="font-size:13.5px">录音已经上传好了。按下面「确认克隆」会真的送去训练一个新声音，从你的额度扣一点钱，无法撤销。</div>',
+      '<div style="font-size:15.5px">录音已经上传好了。按下面「确认克隆」会真的送去训练一个新声音，从你的额度扣一点钱，无法撤销。</div>',
       `<button class="btn" onclick="UI.closeModal()">取消</button>
        <button class="btn btn-primary" data-modal-act="confirm-hg-clone" data-asset="${esc(assetId)}">确认克隆（会扣钱）</button>`);
   }
@@ -4887,6 +5037,155 @@ window.TOUR = (function () {
     tick();
   }
 
+  /* ============================================================
+   * 影片按需生成：把某一支的稿子，用你选好的数字人与声音真的做成影片
+   *
+   * 为什么是「一支一支做」而不是跑完流程就有 30 支：
+   *   真的生成要送去外部数字人服务，一支约 US$1-3、要等 1-3 分钟。
+   *   一本书 30 支就是 US$30-90，不该在使用者没同意的情况下自动花掉。
+   *
+   * 轮询刻意放在模块层级、不绑在弹窗上：使用者关掉弹窗或切到别页，
+   * 生成仍会继续，完成后结果写回 STORE，回来就看得到。
+   * ========================================================== */
+  const videoJobs = {};   // videoId -> true，挡住同一支被重复送出
+
+  function findVideo(id) {
+    let hit = null;
+    STORE.s.projects.forEach(p => (p.videos || []).forEach(v => { if (v.id === id) hit = { v, p }; }));
+    return hit;
+  }
+
+  /* 把一篇双人对谈稿拼成一段可以念的台词。
+   * 现实限制：数字人服务一次只能让「一个形象 + 一个声音」念一段话，
+   * 做不出两个人真的对谈。所以这里是同一个数字人把两边的台词都念完，
+   * 介面上必须把这件事讲清楚，不能让人以为会出现两个人。 */
+  function scriptToSpeech(v, p) {
+    const s = (p.scripts || []).find(x => x.id === v.scriptId);
+    if (!s || !(s.dialogue || []).length) return v.title || '';
+    return s.dialogue.map(l => l.text).join('  ');
+  }
+
+  function genVideoModal(id) {
+    const hit = findVideo(id);
+    if (!hit) return;
+    const { v, p } = hit;
+    const pa = STORE.s.persona;
+    const avLabel = pa.realAvatarMode === 'image' ? '你上传的照片' : (pa.realAvatarName || '');
+    const voLabel = pa.realVoiceName || '';
+
+    if (!avLabel || !voLabel) {
+      return modal('还没选好数字人和声音', `
+        <div class="explain" style="margin:0;border-left-color:var(--amber)">
+          <div class="ex-r"><span class="ex-k">缺什么</span><span>
+            形象：<b>${avLabel ? esc(avLabel) : '还没选'}</b>　声音：<b>${voLabel ? esc(voLabel) : '还没选'}</b></span></div>
+          <div class="ex-r"><span class="ex-k">为什么要先选</span><span>影片里出现的那张脸、那个声音，就是这里选的。两个都选好才做得出影片。</span></div>
+        </div>`,
+        `<button class="btn" onclick="UI.closeModal()">取消</button>
+         <button class="btn btn-primary" data-modal-act="goto-persona">去选形象和声音</button>`);
+    }
+
+    const text = scriptToSpeech(v, p);
+    modal('要真的生成这一支影片吗？', `
+      <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px">${esc(v.title)}</div>
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">会用谁</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b></span></div>
+        <div class="ex-r"><span class="ex-k">会花多少</span><span><b style="color:var(--amber)">这一步真的会产生费用</b>，一支约 US$1-3，从你的额度扣。做出来之后无法退。</span></div>
+        <div class="ex-r"><span class="ex-k">要等多久</span><span>通常 1-3 分钟。送出后你可以关掉这个窗、去看别的，做好了会自己更新。</span></div>
+        <div class="ex-r"><span class="ex-k">一个人还是两个人</span><span>稿子写的是主持人与作者对谈，但数字人服务<b>一次只能让一个形象、一个声音念一段话</b>。所以这支会是<b>同一个数字人把两边台词都念完</b>，不会出现两个人。</span></div>
+      </div>
+      <div class="field"><div class="label">实际要念的台词（可以改）</div>
+        <textarea class="input" id="gv-text" style="min-height:120px;line-height:1.75">${esc(text)}</textarea></div>
+      <div class="hint">约 ${text.length} 字。太长会让影片变长、费用变高，可以自行删减。</div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="confirm-gen-video" data-id="${esc(id)}">确认生成（会扣钱）</button>`);
+  }
+
+  async function doGenVideo(id) {
+    const hit = findVideo(id);
+    if (!hit) return;
+    const { v } = hit;
+    if (videoJobs[id]) return toast('这一支已经在生成中了', 'warn');
+
+    const ta = $('#gv-text');
+    const text = ta ? ta.value.trim() : '';
+    closeModal();
+    if (!text) return toast('台词是空的，没东西可念', 'warn');
+
+    const pa = STORE.s.persona;
+    videoJobs[id] = true;
+    v.status = '生成中'; v.error = null;
+    v.avatarName = pa.realAvatarMode === 'image' ? '你上传的照片' : (pa.realAvatarName || '');
+    v.voiceName = pa.realVoiceName || '';
+    STORE.update(); render();
+    toast('已送出，生成中，通常 1-3 分钟', 'ok');
+
+    try {
+      const r = await hgFetch('/api/heygen/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: pa.realAvatarMode || 'avatar',
+          avatarId: pa.realAvatarId, assetId: pa.realPhotoAssetId,
+          voiceId: pa.realVoiceId, text
+        })
+      });
+      v.heygenId = r.videoId;
+      STORE.update();
+      STORE.log('ok', `送出生成：${v.title}`);
+      pollVideo(id);
+    } catch (e) {
+      delete videoJobs[id];
+      v.status = '生成失败'; v.error = e.message;
+      STORE.update(); render();
+      toast('送出失败：' + e.message, 'err');
+    }
+  }
+
+  function pollVideo(id) {
+    const tick = async () => {
+      const hit = findVideo(id);
+      if (!hit) { delete videoJobs[id]; return; }   // 项目被删了
+      const { v } = hit;
+      if (!v.heygenId) { delete videoJobs[id]; return; }
+      try {
+        const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(v.heygenId));
+        if (s.status === 'completed' && s.videoUrl) {
+          delete videoJobs[id];
+          v.status = '已生成'; v.videoUrl = s.videoUrl;
+          // 额度只在这里扣：影片真的做出来了才算用掉一支
+          const st = STORE.s.settings;
+          st.quotaUsed = Math.min(st.quotaTotal, st.quotaUsed + 1);
+          STORE.update(); render();
+          STORE.log('ok', `影片已生成：${v.title}`);
+          toast(`《${v.title}》已生成好了`, 'ok');
+          return;
+        }
+        if (s.status === 'failed') {
+          delete videoJobs[id];
+          v.status = '生成失败'; v.error = s.error || '未知原因';
+          STORE.update(); render();
+          toast('生成失败：' + v.error, 'err');
+          return;
+        }
+        setTimeout(tick, 5000);
+      } catch (e) {
+        // 查询失败通常是暂时的（网络断一下），继续再试，不要直接判死
+        setTimeout(tick, 8000);
+      }
+    };
+    tick();
+  }
+
+  /* 页面重新载入时，把「上次关掉页面时还在生成」的那几支接回来继续查。
+   * 没有这段的话，重整一次就永远卡在「生成中」。 */
+  function resumePendingVideos() {
+    STORE.s.projects.forEach(p => (p.videos || []).forEach(v => {
+      if (v.status === '生成中' && v.heygenId && !videoJobs[v.id]) {
+        videoJobs[v.id] = true;
+        pollVideo(v.id);
+      }
+    }));
+  }
+
   /* YouTube 上传弹窗：直接选本机影片档，不需要公开网址 */
   function ytPublishModal(schedId) {
     const it = STORE.s.schedule.find(x => x.id === schedId);
@@ -4948,7 +5247,7 @@ window.TOUR = (function () {
           }
           if (s.state === 'error') {
             clearInterval(timer); btn.disabled = false; line('✘ ' + s.error);
-            if (s.detail) box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px"><code style="font-size:11px">${esc(JSON.stringify(s.detail))}</code></div>`;
+            if (s.detail) box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px"><code style="font-size:13px">${esc(JSON.stringify(s.detail))}</code></div>`;
           }
         } catch (e) { clearInterval(timer); btn.disabled = false; line('✘ ' + e.message); }
       }, 1500);
@@ -5072,7 +5371,7 @@ window.TOUR = (function () {
           if (j.state === 'error') {
             clearInterval(timer); btn.disabled = false;
             line('✘ ' + j.error, 'hint');
-            box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px">Meta 回传的原始错误：<br><code style="font-size:11px">${esc(JSON.stringify(j.detail || {}))}</code></div>`;
+            box.innerHTML += `<div class="hint" style="color:var(--amber);margin-top:6px">Meta 回传的原始错误：<br><code style="font-size:13px">${esc(JSON.stringify(j.detail || {}))}</code></div>`;
           }
         } catch (e) { clearInterval(timer); btn.disabled = false; line('✘ ' + e.message); }
       }, 2000);
@@ -5225,7 +5524,7 @@ window.TOUR = (function () {
         ${s.persona ? '<span class="tag g">已套用'+STORE.s.account.name+'人格</span>' : '<span class="tag a">未套用人格</span>'}
       </div>
       <div class="field"><div class="label">标题</div>
-        <div style="font-size:15px;font-weight:680">${esc(s.title)}</div></div>
+        <div style="font-size:17px;font-weight:680">${esc(s.title)}</div></div>
       <div class="field"><div class="label">开场 Hook（前 3 秒）</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;line-height:1.8">${esc(s.hook)}</div></div>
       <div class="row2">
@@ -5241,7 +5540,7 @@ window.TOUR = (function () {
       <div class="label" style="margin-top:18px">分镜表</div>
       ${shots.map((sh, i) => `<div class="shot">
         <div class="shot-n">${String(i + 1).padStart(2, '0')}</div>
-        <div><div style="font-size:12px;color:var(--violet-2);font-weight:650;margin-bottom:3px">${sh.t}</div>
+        <div><div style="font-size:14px;color:var(--violet-2);font-weight:650;margin-bottom:3px">${sh.t}</div>
           <div class="shot-t">${esc(sh.txt)}</div>
           <div class="shot-d"><span>🎥 ${sh.cam}</span><span>🖼 ${sh.vis}</span><span>⏱ ${sh.dur}</span></div></div>
       </div>`).join('')}`,
@@ -5518,7 +5817,7 @@ ${ctx}
     if (!(pr.text || '').trim()) return toast('提示词是空的，先写点东西', 'warn');
 
     modal('确定要生成这支短片吗？',
-      `<div style="font-size:13.5px;line-height:1.9">这会真的呼叫外部服务生成一支约 5 秒的影片，从额度扣钱，送出后无法撤销。<br><br>
+      `<div style="font-size:15.5px;line-height:1.9">这会真的呼叫外部服务生成一支约 5 秒的影片，从额度扣钱，送出后无法撤销。<br><br>
         <b>用的提示词：</b><br>
         <span style="color:var(--txt-2)">${esc(pr.text)}</span></div>`,
       `<button class="btn" onclick="UI.closeModal()">取消</button>
@@ -5888,41 +6187,70 @@ ${ctx}
     const script = (p.scripts || []).find(s => s.id === v.scriptId) || (p.scripts || [])[0];
     const shots = script ? DATA.genShots(script, p) : [];
 
-    modal('成片预览', `
+    const done = v.status === '已生成' && v.videoUrl;
+    modal(done ? '影片（真的做出来了）' : v.demo ? '分镜预览（演示数据）' : '分镜预览（影片还没生成）', `
       <div style="display:flex;gap:22px;flex-wrap:wrap">
         <div style="flex:0 0 232px">
-          ${phoneFrame(v, shots, v.caption, p)}
-          <div class="hint" style="margin-top:10px;text-align:center;line-height:1.6">这是<b>分镜预览</b>：按真实时间轴逐镜播放脚本内容。<br>演示环境不含真实影片档案。</div>
+          ${done
+            ? `<video src="${esc(v.videoUrl)}" controls playsinline style="width:100%;border-radius:16px;background:#000"></video>
+               <div class="hint" style="margin-top:10px;line-height:1.7">这是<b style="color:var(--green)">真的影片</b>，用${esc(v.avatarName || '你选的形象')}＋${esc(v.voiceName || '你选的声音')}生成。<br>
+                 影片网址约 <b>7 天后失效</b>，要留请尽快下载。</div>`
+            : `${phoneFrame(v, shots, v.caption, p)}
+               <div class="hint" style="margin-top:10px;line-height:1.7">
+                 <b style="color:var(--amber)">这不是影片</b>，是拿脚本文字做的分镜示意动画。<br>
+                 上面那个卡通小人是画上去的固定图案，<b>跟你选的数字人无关</b>。<br>
+                 要真的影片，用右边的「生成这一支」。</div>`}
         </div>
         <div style="flex:1;min-width:250px">
-          <div style="font-size:16px;font-weight:700;line-height:1.5">${esc(v.title)}</div>
+          <div style="font-size:17.5px;font-weight:700;line-height:1.5">${esc(v.title)}</div>
           <div class="chip-list" style="margin:12px 0">
             <span class="tag v">${v.angle}</span><span class="tag">${v.ratio}</span>
             <span class="tag">《${esc(p.title)}》</span>${UI.statusTag(v.status)}</div>
-          ${v.status === '已发布'
-            ? (v.views > 0
-              ? `<div class="grid g2" style="gap:10px">
-                  ${[['播放量', nf(v.views)], ['完播率', v.watch + '%'], ['点赞', nf(v.like)], ['分享', nf(v.share)],
-                     ['书链点击', nf(v.click)], ['点击率', ((v.click / v.views) * 100).toFixed(2) + '%']]
+          ${v.demo
+            ? `<div class="explain" style="border-left-color:var(--amber);margin:0">
+                 <div class="ex-r"><span class="ex-k">演示数据</span><span>这一支属于<b>内建示范书</b>，播放量、完播率、按赞全是<b>随机编出来的假数字</b>，不是真的。</span></div>
+                 <div class="ex-r"><span class="ex-k">想看真的</span><span>自己新建一本书、上传资料跑一遍，产出的才是真稿子、真影片。</span></div>
+               </div>
+               ${v.views > 0 ? `<div class="grid g2" style="gap:10px;margin-top:12px;opacity:.55">
+                  ${[['播放量', nf(v.views)], ['完播率', v.watch + '%'], ['点赞', nf(v.like)], ['分享', nf(v.share)]]
                     .map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px">
-                      <div style="font-size:11px;color:var(--txt-3)">${x[0]}</div>
-                      <div style="font-size:16px;font-weight:700;margin-top:2px">${x[1]}</div></div>`).join('')}
-                </div>`
-              : `<div class="explain" style="border-left-color:var(--cyan);margin:0">
-                   <div class="ex-r"><span class="ex-k">数据</span><span>刚发布，平台还没回传数据。通常发布后 1–2 小时开始有观看数。</span></div>
-                 </div>`)
+                      <div style="font-size:14px;color:var(--txt-3)">${x[0]}<span style="color:var(--amber)"> · 假</span></div>
+                      <div style="font-size:18.5px;font-weight:700;margin-top:2px">${x[1]}</div></div>`).join('')}
+                </div>` : ''}`
+            : v.status === '待生成'
+              ? `<div class="explain" style="border-left-color:var(--violet);margin:0">
+                   <div class="ex-r"><span class="ex-k">目前状态</span><span><b>稿子写好了，影片还没做</b>。左边看到的是分镜示意，不是影片。</span></div>
+                   <div class="ex-r"><span class="ex-k">怎么做出来</span><span>点下面「生成这一支」，会用你选的数字人和声音真的做一支影片出来。约 US$1-3、等 1-3 分钟。</span></div>
+                 </div>`
+            : v.status === '生成中'
+              ? `<div class="explain" style="border-left-color:var(--amber);margin:0">
+                   <div class="ex-r"><span class="ex-k">正在生成</span><span><b>已送出，通常 1-3 分钟</b>。可以关掉这个窗去做别的，好了会自己更新。</span></div>
+                   <div class="ex-r"><span class="ex-k">用的是</span><span>形象 <b>${esc(v.avatarName || '—')}</b>　声音 <b>${esc(v.voiceName || '—')}</b></span></div>
+                 </div>`
+            : v.status === '生成失败'
+              ? `<div class="explain" style="border-left-color:var(--red);margin:0">
+                   <div class="ex-r"><span class="ex-k">生成失败</span><span>${esc(v.error || '未知原因')}</span></div>
+                   <div class="ex-r"><span class="ex-k">常见原因</span><span>上传的照片没侦测到脸（要正脸、五官完整）、台词太长、或额度用完。可以改完再试一次。</span></div>
+                 </div>`
+            : v.status === '已生成'
+              ? `<div class="explain" style="border-left-color:var(--green);margin:0">
+                   <div class="ex-r"><span class="ex-k">已经做出来了</span><span>用形象 <b>${esc(v.avatarName || '—')}</b>、声音 <b>${esc(v.voiceName || '—')}</b> 生成，左边可以直接播。</span></div>
+                   <div class="ex-r"><span class="ex-k">还没发布</span><span>播放、按赞这些数字要真的发到平台、平台回传才会有。现在是 0 很正常。</span></div>
+                 </div>`
             : `<div class="explain" style="border-left-color:var(--amber);margin:0">
-                 <div class="ex-r"><span class="ex-k">目前状态</span><span><b>${v.status}</b>——这支还没发布出去</span></div>
-                 <div class="ex-r"><span class="ex-k">所以没有数据</span><span>观看、完播、按赞这些都要影片真的发布到平台、由平台回传才会有。没发布就是没有。</span></div>
-                 <div class="ex-r"><span class="ex-k">怎么发布</span><span>到「发布排程」里点这支的「发布」，或先用下面的「加入排程」排时间。</span></div>
+                 <div class="ex-r"><span class="ex-k">目前状态</span><span><b>${esc(v.status)}</b></span></div>
                </div>`}
           <div class="label" style="margin-top:16px">发布文案</div>
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:13px;line-height:1.8">
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:15px;line-height:1.8">
             ${esc(v.title)}<br><span style="color:var(--cyan)">${(p.hots || ['#读书', '#新书推荐']).join(' ')}</span></div>
           <div style="display:flex;gap:9px;margin-top:14px;flex-wrap:wrap">
+            ${!v.demo && (v.status === '待生成' || v.status === '生成失败')
+              ? `<button class="btn btn-sm btn-primary" data-act="gen-video" data-id="${v.id}">
+                   ${v.status === '生成失败' ? '重试生成' : '▶ 生成这一支'}（真的花钱）</button>` : ''}
+            ${done ? `<a class="btn btn-sm btn-primary" href="${esc(v.videoUrl)}" download target="_blank">下载影片</a>` : ''}
             <button class="btn btn-sm" data-modal-act="copy-cap" data-t="${esc(v.title + '\n' + (p.hots || []).join(' '))}">复制文案</button>
             <button class="btn btn-sm" data-modal-act="dl-shots" data-id="${v.id}">下载脚本与分镜</button>
-            <button class="btn btn-sm btn-primary" data-modal-act="add-sched" data-id="${v.id}">加入排程</button>
+            ${done || v.demo ? `<button class="btn btn-sm" data-modal-act="add-sched" data-id="${v.id}">加入排程</button>` : ''}
           </div>
         </div>
       </div>
@@ -5982,7 +6310,7 @@ ${ctx}
           <div id="mv-sub" class="mv-sub">${esc(first ? first.txt : capFallback)}</div>
           <div id="mv-vis" class="mv-meta" style="margin-top:6px">${first ? first.cam + '　|　' + first.vis : ''}</div>
           <div class="mv-cta" id="mv-cta">📖 ${esc((p && p.title) || '本书')} · 点击左下角购书连结</div>
-          <div class="mv-sign"><div class="avatar" style="width:24px;height:24px;font-size:10px;border-radius:7px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
+          <div class="mv-sign"><div class="avatar" style="width:24px;height:24px;font-size:12px;border-radius:7px">${esc(STORE.s.account.initial || STORE.s.account.name.slice(0,1))}</div>
             <span>${esc(STORE.s.account.name)} · AI 生成</span></div>
           <div class="mv-track"><div id="pv-bar"></div></div>
         </div>
@@ -5997,7 +6325,7 @@ ${ctx}
     return `<div id="pv-shots">${shots.map((sh, i) => `
       <div class="shot ${i === 0 ? 'on' : ''}">
         <div class="shot-n">${String(i + 1).padStart(2, '0')}</div>
-        <div><div style="font-size:12px;color:var(--violet-2);font-weight:650;margin-bottom:3px">${sh.t}</div>
+        <div><div style="font-size:14px;color:var(--violet-2);font-weight:650;margin-bottom:3px">${sh.t}</div>
           <div class="shot-t">${esc(sh.txt)}</div>
           <div class="shot-d"><span>🎥 ${sh.cam}</span><span>🖼 ${sh.vis}</span><span>⏱ ${sh.dur}</span></div></div>
       </div>`).join('')}</div>`;
@@ -6070,8 +6398,8 @@ ${ctx}
         <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)">
           <div style="width:3px;height:36px;border-radius:3px;background:${x.color}"></div>
           <div style="flex:1;min-width:0;cursor:pointer" data-modal-act="open-sched" data-id="${x.id}">
-            <div style="font-size:13px;font-weight:620">${esc(x.title)}</div>
-            <div style="font-size:11.5px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.hour}:00</div></div>
+            <div style="font-size:15px;font-weight:620">${esc(x.title)}</div>
+            <div style="font-size:13.5px;color:var(--txt-3)">《${esc(x.bookTitle)}》 · ${x.platform} · ${x.hour}:00</div></div>
           ${UI.statusTag(x.status)}
           <button class="btn btn-sm" data-modal-act="open-sched" data-id="${x.id}">预览 / 编辑</button>
           ${x.status !== '待发布' ? ''
@@ -6139,6 +6467,7 @@ ${ctx}
   if (STORE.s.settings.themeSet) document.documentElement.setAttribute('data-theme', STORE.s.settings.theme);
   render();
   I18N.set('hant');   // 全站固定台湾繁体中文，不提供切换
+  resumePendingVideos();   // 接回上次没查完的影片生成，否则重整后会永远卡在「生成中」
 
   // 首次进入自动播放导览；看过之后只在点「导览」时出现
   if (!STORE.s.settings.tourDone) setTimeout(() => TOUR.start(0), 500);
