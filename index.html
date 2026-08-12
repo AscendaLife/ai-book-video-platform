@@ -3132,7 +3132,7 @@ window.VIEWS = window.VIEWS || {};
       <div id="hg-voice-panel"><div class="hint">点上面「检测」连线后读取。</div></div>
     </div>
 
-    <div class="hint" style="margin-bottom:16px">上面选好形象和声音后，去「一键生成短视频」的 STEP 6 就能真的试跑一支。</div>
+    <div id="hg-choice-summary" style="margin-bottom:16px"></div>
 
 
     <div class="explain" style="margin-bottom:16px">
@@ -4245,11 +4245,13 @@ window.TOUR = (function () {
       case 'hg-check': return hgCheck();
       case 'hg-pick-avatar': {
         HG.mode = 'avatar'; HG.avatarId = el.dataset.id; HG.assetId = null;
-        hgSaveChoice(); hgRenderAvatars(); hgRenderGenerate(); return;
+        hgSaveChoice(); hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
+        toast('已选定这个数字人形象', 'ok'); return;
       }
       case 'hg-pick-voice': {
         HG.voiceId = el.dataset.id;
-        hgSaveChoice(); hgRenderVoices(); hgRenderGenerate(); return;
+        hgSaveChoice(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
+        toast('已选定这个声音', 'ok'); return;
       }
       case 'ai-scene-image': return aiSceneImage(el.dataset.id);
       /* ---- 提示词直接生成短片（不受固定场景限制）---- */
@@ -4662,12 +4664,33 @@ window.TOUR = (function () {
    * 也不会打断正在进行中的生成/克隆轮询。 */
   function hgAutoCheck() {
     if (HG.avatars.length || HG.voices.length) {
-      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRepaintStatus();
+      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRepaintStatus(); hgRenderChoiceSummary();
       return;
     }
     if (hgTried) return;
     hgTried = true;
     hgCheck();
+  }
+
+  /* 选好形象/声音之后要有明确反馈，不然使用者点完不知道有没有生效、
+   * 接下来该干嘛。这里显示目前选到哪，以及缺哪一样、下一步去哪做。 */
+  function hgRenderChoiceSummary() {
+    const box = $('#hg-choice-summary');
+    if (!box) return;
+    const avName = HG.mode === 'image' ? '你上传的照片' : (HG.avatars.find(a => a.id === HG.avatarId) || {}).name;
+    const voName = (HG.voices.find(v => v.id === HG.voiceId) || {}).name;
+    if (!avName && !voName) {
+      box.innerHTML = '<div class="hint">先在上面选一个形象、选一个声音。</div>';
+      return;
+    }
+    box.innerHTML = `
+      <div class="explain" style="margin:0">
+        <div class="ex-r"><span class="ex-k">目前选好的</span><span>
+          <span class="tag ${avName ? 'v' : ''}">形象：${avName ? esc(avName) : '还没选'}</span>
+          <span class="tag ${voName ? 'c' : ''}" style="margin-left:6px">声音：${voName ? esc(voName) : '还没选'}</span>
+          ${avName && voName ? '　<b style="color:var(--green)">✓ 已选好，会用在这本书接下来生成的所有影片上</b>　→ 去「一键生成短视频」的 STEP 6 就能真的试跑一支' : '　两个都选了才能生成影片，再选一下缺的那个'}
+        </span></div>
+      </div>`;
   }
 
   function hgRepaintStatus() {
@@ -4692,7 +4715,7 @@ window.TOUR = (function () {
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
       hgSaveChoice();      // 把（可能刚补上的）预设值也存起来，流水线才读得到
-      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate();
+      hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
     } catch (e) {
       hgTried = false; // 失败了，下次进这一页还可以再自动试一次
       status.innerHTML = `<div class="hint" style="color:var(--amber)">连不上数字人生成服务（${esc(e.message)}）</div>
@@ -4737,7 +4760,7 @@ window.TOUR = (function () {
       // （blob:）一关页面就失效，存了下次读回来是破图
       HG.assetPreview = j.url || HG.assetPreview;
       hgSaveChoice();
-      toast('照片已上传，之后生成影片会用这张', 'ok'); hgRenderGenerate();
+      toast('照片已上传，之后生成影片会用这张', 'ok'); hgRenderGenerate(); hgRenderChoiceSummary();
     } catch (e) {
       toast('上传失败：' + e.message, 'err'); HG.mode = 'avatar'; hgRenderAvatars();
     }
@@ -4797,7 +4820,8 @@ window.TOUR = (function () {
           if (s.status === 'complete') {
             HG.voices.unshift({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview });
             HG.voiceId = s.voiceId;
-            toast('声音克隆完成', 'ok'); hgRenderVoices(); hgRenderGenerate();
+            hgSaveChoice();
+            toast('声音克隆完成，已自动选用这个新声音', 'ok'); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
             return;
           }
           if (s.status === 'failed') { toast('克隆失败', 'err'); hgRenderVoices(); return; }
