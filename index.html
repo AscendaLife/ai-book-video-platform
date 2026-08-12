@@ -1589,7 +1589,9 @@ window.DATA = (function () {
         if (seen[s]) return false;
         seen[s] = 1; return true;
       });
-    return { chars, chapters: heads, quotes: quotes.slice(0, 24) };
+    // raw 保留一段原始内文，给「真的用 AI 读这本书」用；
+    // 只留前 20000 字，避免整本书塞进 localStorage 撑爆容量
+    return { chars, chapters: heads, quotes: quotes.slice(0, 24), raw: text.slice(0, 20000) };
   }
 
   /* ---------- 支付与方案（演示用途：仅展示三档订阅方案，未接入真实收费） ---------- */
@@ -1658,6 +1660,7 @@ window.STORE = (function () {
       tts: 'zhao-voice-v3',
       avatarEngine: 'ZD-Avatar 2.0 (口型+表情+手势)',
       autoPersona: true, autoSubtitle: true, autoBroll: true, autoBgm: true,
+      realAI: true,   // STEP 2/4 用真实模型（约 US$0.6/本）；关掉就走模板
       compliance: true, watermark: true, autoPublish: false,
       quotaUsed: 186, quotaTotal: 500
     },
@@ -2059,11 +2062,17 @@ window.ENGINE = (function () {
       // 阶段完成
       p.stages[running.stageIndex].state = 'done';
       addLog('l-ok', `✔ ${stage.n} ${stage.t} — 完成`);
-      applyStageResult(p, stage.key);
-      running.stageIndex++; running.taskIndex = -1;
-      p.progress = Math.round((running.stageIndex / DATA.STAGES.length) * 100);
-      STORE.update(); emit('stage');
-      running.timer = setTimeout(step, 420);
+      const advance = () => {
+        if (!running) return;             // 中途被中止了
+        running.stageIndex++; running.taskIndex = -1;
+        p.progress = Math.round((running.stageIndex / DATA.STAGES.length) * 100);
+        STORE.update(); emit('stage');
+        running.timer = setTimeout(step, 420);
+      };
+      // 有些阶段现在会真的呼叫 AI（非同步），要等它跑完再进下一步
+      const r = applyStageResult(p, stage.key);
+      if (r && typeof r.then === 'function') r.then(advance, advance);
+      else advance();
       return;
     }
 
@@ -2091,9 +2100,90 @@ window.ENGINE = (function () {
     return (m[key] && m[key][i]) ? '（' + m[key][i] + '）' : '';
   }
 
-  /* 每个阶段产出实际数据 */
+  /* 每个阶段产出实际数据。
+   * read / script 两个阶段会尽量走真实 AI，接不上就自动退回模板，
+   * 并在日志里明确写出这一步到底是真的还是模板——不让人误会。 */
   function applyStageResult(p, key) {
     if (key === 'read') {
+      // 真的把上传的内文送进模型读一遍
+      if (window.AIREAL && AIREAL.canUse() && p.parsed && p.parsed.raw) {
+        addLog('l-run', '  └ 正在用真实 AI 阅读上传的内文…');
+        return AIREAL.readBook(p).then(r => {
+          if (!r) throw new Error('没有可读的内文');
+          const d = r.data;
+          p.summary = d.summary || p.summary;
+          if (d.themes && d.themes.length) p.themes = d.themes;
+          if (d.quotes && d.quotes.length) {
+            p.quotes = d.quotes;
+            p.quoteSrc = d.quotes.map(t => ({ text: t, chapter: null, page: null }));
+          }
+          if (d.audiences && d.audiences.length) p.audiences = d.audiences;
+          if (d.pains && d.pains.length) p.pains = d.pains;
+          if (d.hots && d.hots.length) p.hots = d.hots;
+          p.readByAI = true;
+          addLog('l-ok', `  └ ✨ 真实 AI 阅读完成（模型：${r.model || '未知'}）：论点 ${(d.themes || []).length} 条 / 金句 ${(d.quotes || []).length} 条`);
+          STORE.update();
+        }).catch(e => {
+          addLog('l-warn', `  └ 真实 AI 阅读失败（${e.message}），改用本地规则抽取`);
+          applyReadFallback(p);
+        });
+      }
+      applyReadFallback(p);
+    }
+    if (key === 'strategy') p.strategy = DATA.genStrategy(p);
+    if (key === 'script') {
+      // 真的让模型写标题 / Hook / 开场白 与几篇完整对谈稿
+      if (window.AIREAL && AIREAL.canUse()) {
+        addLog('l-run', '  └ 正在用真实 AI 写稿…');
+        return AIREAL.writeScripts(p).then(r => {
+          const d = r.data;
+          p.titles = (d.titles && d.titles.length) ? d.titles : DATA.genTitles(p, 20);
+          p.hooks = (d.hooks && d.hooks.length) ? d.hooks : DATA.genHooks(p, 20);
+          p.opens = (d.opens && d.opens.length) ? d.opens : DATA.genOpens(p);
+          // 先用模板产生 14 篇骨架（场地、镜头表、声音配置都在里面），
+          // 再把 AI 真的写好的对谈稿覆盖到前几篇上
+          p.scripts = DATA.genScripts(p, 14);
+          const real = (d.scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
+          real.forEach((rs, i) => {
+            if (!p.scripts[i]) return;
+            p.scripts[i] = Object.assign({}, p.scripts[i], {
+              title: rs.title || p.scripts[i].title,
+              hook: rs.hook || p.scripts[i].hook,
+              dialogue: rs.dialogue,
+              cta: rs.cta || p.scripts[i].cta,
+              aiWritten: true, aiModel: r.model || null
+            });
+          });
+          addLog('l-ok', `  └ ✨ 真实 AI 写稿完成（模型：${r.model || '未知'}）：${p.titles.length} 标题 / ${p.hooks.length} Hook / ${real.length} 篇完整对谈稿`);
+          if (real.length < p.scripts.length) {
+            addLog('l-info', `  └ 其余 ${p.scripts.length - real.length} 篇仍为模板骨架，可在脚本详情里逐篇按「用真实 AI 重写」`);
+          }
+          STORE.update();
+        }).catch(e => {
+          addLog('l-warn', `  └ 真实 AI 写稿失败（${e.message}），改用模板产生`);
+          applyScriptFallback(p);
+        });
+      }
+      applyScriptFallback(p);
+    }
+    if (key === 'persona' && STORE.s.settings.autoPersona) p.scripts = p.scripts.map(DATA.applyPersona);
+    if (key === 'avatar') p.videos = DATA.genVideos(p, p.scripts);
+    if (key === 'export') {
+      p.videos = p.videos.concat(DATA.genVideos(p, DATA.genScripts(p, 16)));
+      (p.videos || []).slice(0, 12).forEach(v => STORE.s.schedule.push({
+        id: DATA.uid('sc'), projectId: p.id, bookTitle: p.title, videoId: v.id, title: v.title,
+        platform: v.platformName, color: v.color, day: v.day, hour: [8, 12, 18, 20, 21][Math.floor(Math.random() * 5)], status: '待发布'
+      }));
+    }
+  }
+
+  function applyScriptFallback(p) {
+    p.titles = DATA.genTitles(p, 20); p.hooks = DATA.genHooks(p, 20);
+    p.opens = DATA.genOpens(p); p.scripts = DATA.genScripts(p, 14);
+  }
+
+  function applyReadFallback(p) {
+    {
       if (p.source && p.source.kind === 'profile') {
         // 已汇入完整书籍档案：直接采用，不覆写
         addLog('l-ok', `  └ 使用上传的书籍档案：论点 ${p.themes.length} 条 / 金句 ${p.quoteSrc.length} 条（含出处）`);
@@ -2113,20 +2203,6 @@ window.ENGINE = (function () {
         p.audiences = s.audiences; p.pains = s.pains; p.hots = s.hots;
         addLog('l-warn', '  └ 未上传任何资料，本阶段使用内建演示数据');
       }
-    }
-    if (key === 'strategy') p.strategy = DATA.genStrategy(p);
-    if (key === 'script') {
-      p.titles = DATA.genTitles(p, 20); p.hooks = DATA.genHooks(p, 20);
-      p.opens = DATA.genOpens(p); p.scripts = DATA.genScripts(p, 14);
-    }
-    if (key === 'persona' && STORE.s.settings.autoPersona) p.scripts = p.scripts.map(DATA.applyPersona);
-    if (key === 'avatar') p.videos = DATA.genVideos(p, p.scripts);
-    if (key === 'export') {
-      p.videos = p.videos.concat(DATA.genVideos(p, DATA.genScripts(p, 16)));
-      (p.videos || []).slice(0, 12).forEach(v => STORE.s.schedule.push({
-        id: DATA.uid('sc'), projectId: p.id, bookTitle: p.title, videoId: v.id, title: v.title,
-        platform: v.platformName, color: v.color, day: v.day, hour: [8, 12, 18, 20, 21][Math.floor(Math.random() * 5)], status: '待发布'
-      }));
     }
   }
 
@@ -2609,6 +2685,9 @@ window.VIEWS = window.VIEWS || {};
           ${STORE.s.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>《${esc(x.title)}》</option>`).join('')}
         </select>
         <button class="btn" data-act="goto" data-route="creative">✦ 设计创意分镜</button>
+        <span class="tag ${(window.AIREAL && AIREAL.canUse()) ? 'g' : 'a'}" title="STEP 2 读书与 STEP 4 写稿是否真的呼叫大模型">
+          ${(window.AIREAL && AIREAL.canUse()) ? '真实 AI 已开' : '模板模式'}
+        </span>
         ${ENGINE.isRunning
           ? `<button class="btn" data-act="stop-run">■ 中止任务</button>`
           : `<button class="btn btn-primary" data-act="run-all">▶ 一键跑完整流程</button>`}
@@ -3328,6 +3407,7 @@ window.VIEWS = window.VIEWS || {};
 
         <div class="card">
           <div class="card-h"><div class="card-t">自动化开关</div></div>
+          ${sw('realAI', '用真实 AI 读书与写稿', 'STEP 2 与 STEP 4 真的呼叫大模型（约 US$0.6/本）。关掉则用模板产生，不花钱')}
           ${sw('autoPersona', '自动套用' + STORE.s.account.name + '人格', '写稿完成后自动进入人格改写，无需手动触发')}
           ${sw('autoSubtitle', '自动字幕', '自动断句并按平台样式生成字幕')}
           ${sw('autoBroll', '自动 B-roll 匹配', '按语义匹配空镜与素材，提升观感')}
@@ -5254,6 +5334,107 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
    * ========================================================== */
 
   /* AI 根据书的内容写几组影片提示词（花钱很少，约 US$0.01-0.05） */
+  /* ============================================================
+   * 给生产流水线用的「真实 AI」接口
+   *
+   * STEP 2「AI 读完整本书」与 STEP 4「AI 批量写稿」以前都是模板产生的，
+   * 名字叫 AI 但没有 AI。这里把它们接上真实模型。engine.js 透过
+   * window.AIREAL 呼叫，接不上或关闭时会自动退回原本的模板逻辑，
+   * 不会把流程弄坏。
+   * ========================================================== */
+  function aiJson(content) {
+    try { return JSON.parse(content); }
+    catch (e) {
+      const m = (content || '').match(/\{[\s\S]*\}/);
+      if (!m) throw new Error('模型没有回传可解析的 JSON');
+      return JSON.parse(m[0]);
+    }
+  }
+
+  window.AIREAL = {
+    /* 公开展示版没有写入凭证，一律走模板；使用者也可以在系统设置关掉 */
+    canUse: () => hgCanWrite() && STORE.s.settings.realAI !== false,
+
+    /* STEP 2：真的把上传的内文送进模型读一遍 */
+    async readBook(p) {
+      const text = (p.parsed && p.parsed.raw) || '';
+      if (!text.trim()) return null;          // 没有原始内文就没得读，交回模板逻辑
+      const r = await hgFetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: '你是出版社的内容编辑，只输出 JSON，不要任何解释文字。',
+          quality: 'auto', maxTokens: 2500, wantJson: true,
+          prompt: `读完下面这本书的内文，做一份分析。
+
+【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【内文】
+${text.slice(0, 12000)}
+
+只输出这个 JSON：
+{"summary":"全书摘要 200-300 字",
+ "themes":["核心论点，5 条"],
+ "quotes":["书中金句，8-12 条，要从内文原句里挑，不要自己编"],
+ "audiences":[{"name":"读者画像名称","size":30,"note":"特征"}],
+ "pains":["这些读者的痛点，4 条"],
+ "hots":["可搭配的热点话题标签，5 个，带 # 号"]}`
+        })
+      });
+      const j = aiJson(r.content);
+      if (!j.summary) throw new Error('模型没有回传摘要');
+      return { data: j, model: r.model };
+    },
+
+    /* STEP 4：真的写标题、Hook、开场白与几篇完整对谈稿。
+     * 拆成两次呼叫——一次要模型同时产出这么多内容会跑超过 30 秒，
+     * 容易撞到闸道器的执行时间上限（实测过一次 502）。分开跑各自都很快，
+     * 而且其中一段失败还能保住另一段。 */
+    async writeScripts(p) {
+      const ctx = `【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【摘要】${(p.summary || '（未提供）').slice(0, 600)}
+【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
+【金句】${(p.quotes || []).slice(0, 6).join('；') || '（未提供）'}
+【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}`;
+
+      const call = (prompt, maxTokens) => hgFetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: '你是短视频编剧，只输出 JSON，不要任何解释文字。',
+          quality: 'auto', maxTokens, wantJson: true, prompt
+        })
+      });
+
+      // 第一段：标题 / Hook / 开场白（输出短，很快）
+      const r1 = await call(`帮这本书写短视频文案。
+
+${ctx}
+
+要求：标题要有具体信息或反差，不要「这本书改变了我」这种空话；Hook 是前 3 秒的第一句，要让人停下来。
+
+只输出：{"titles":["20 个标题"],"hooks":["20 个 Hook"],"opens":["10 个开场白，比 Hook 长一点"]}`, 2500);
+      const d1 = aiJson(r1.content);
+      if (!d1.titles || !d1.titles.length) throw new Error('模型没有回传标题');
+
+      // 第二段：完整对谈稿（输出较大，单独跑）
+      let scripts = [];
+      try {
+        const r2 = await call(`帮这本书写 3 篇 60 秒双人对谈短视频脚本。
+
+${ctx}
+
+角色：主持人（语速快、爱追问、会插嘴）＋ 作者（先给结论再解释）。
+要像两个人真的在聊天：有打断、有接话、有反问，不要一人一段轮流演讲。每篇 10 句左右。
+
+只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-3.8s","speaker":"主持人","cue":"语气提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3500);
+        scripts = (aiJson(r2.content).scripts || []);
+      } catch (e) {
+        // 对谈稿失败不影响标题/Hook，照样把第一段的结果交回去
+        scripts = [];
+      }
+
+      return { data: Object.assign({}, d1, { scripts }), model: r1.model };
+    }
+  };
+
   async function aiWritePrompts() {
     const p = STORE.current;
     if (!p) return;
