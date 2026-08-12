@@ -1013,11 +1013,11 @@ window.DATA = (function () {
       you: '看适配度评分，觉得某个平台不想做，后面可以不发。',
       out: '八个平台各自的建议支数、时长、语气和引导语。',
       tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
-    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '场地 / 双人对谈 / 插嘴节奏 / 镜头表 / 声音配置',
-      why: '不是写普通旁白稿，而是一次生成可拍、可剪、可交给数字人服务的短视频方案：先决定场地，再写主持人与作者的对谈，还要安排插嘴、停顿、换景和书摘图卡。',
-      you: '挑你喜欢的场景和对谈节奏，不喜欢的可以让它重写单条。',
-      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇场景对谈脚本，每条都带场地、镜头表、双人台词、声音配置与预估表现分。',
-      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成场景真人对谈脚本', '安排插嘴与停顿节奏', '生成镜头表与声音配置', '可读性与合规校验'] },
+    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 画面场地 / 镜头表 / 停顿节奏',
+      why: '写的是<b>一个人对着镜头讲</b>的口播稿——因为数字人一次只能一个形象、一个声音，所以稿子就照这个来写，写出来是什么样，生成的影片就是什么样。',
+      you: '看看稿子讲得对不对，不喜欢的可以单篇点「用真实 AI 重写」。',
+      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇口播稿，每篇都带画面场地、镜头表与停顿提示。',
+      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成单人口播稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
     { key: 'persona', n: 'STEP 5', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
       why: 'AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式把稿子重写一遍：语速快慢、口气软硬、先讲结论还是先讲故事、习惯用哪些口头禅。',
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
@@ -1246,7 +1246,14 @@ window.DATA = (function () {
     return SCENE_TEMPLATES;
   }
 
-  /* 生成双数字人（主持人 + 作者）的场景对谈脚本：带插嘴、接话、停顿等真人节奏 */
+  /* 生成单人口播脚本。
+   *
+   * 为什么是单人不是双人对谈：数字人服务一次只能让「一个形象 + 一个声音」
+   * 念一段话，做不出两个人真的对谈。以前这里写的是主持人＋作者的双人对谈稿，
+   * 但生成时只能由同一个数字人把两边台词都念完——稿子和实际做得出来的东西
+   * 对不上，等于给人看一份永远拍不出来的剧本。
+   * 改成单人口播后，稿子写什么、影片就是什么，完全一致。
+   * 资料结构维持 [{t, speaker, cue, text}] 不变，分镜表与预览都能沿用。 */
   function genSceneDialogue(b, angle, i) {
     const q = (b.quotes && b.quotes[i % b.quotes.length]) || '把力气用在真正会变大的地方。';
     const pain = (b.pains && b.pains[i % b.pains.length]) || '很努力却看不到结果';
@@ -1268,27 +1275,29 @@ window.DATA = (function () {
       know: '知识图解',
       excerpt: '书摘讨论',
       author: '作者观察'
-    }[angle] || '场景对谈';
+    }[angle] || '口播';
+    /* 单人口播：一个人对着镜头把这本书讲清楚。
+     * 每句都是同一个人说的，所以 speaker 一律是主讲人——影片里也就只会
+     * 出现这一个数字人、这一个声音，跟你在「数字人/声音」页选的完全一致。 */
+    const me = OWNER();
     const dialogue = [
-      { t: '0.0-3.8s', speaker: '主持人', cue: '快、直接', text: `等一下，先别讲大道理。《${b.title}》普通人为什么要看？` },
-      { t: '3.2-8.8s', speaker: '作者', cue: '稳、先给结论', text: `因为它讲的不是成功学。它讲的是，面对「${pain}」时，你怎么少走弯路。` },
-      { t: '8.2-12.5s', speaker: '主持人', cue: '插嘴、质疑', text: '少走弯路？这个说法有点虚。有没有具体一点？' },
-      { t: '11.8-18.6s', speaker: '作者', cue: '被打断后接住', text: `具体说，就是${theme}。书里有句话很狠：${q}` },
-      { t: '18.0-24.0s', speaker: '主持人', cue: '接话', text: '我插一句，所以不是更努力，而是先看这件事会不会变大？' },
-      { t: '23.4-31.0s', speaker: '作者', cue: '解释', text: '对。低倍数的努力，只会让你越来越忙；高倍数的判断，才会让结果自己长出来。' },
-      { t: '30.2-36.8s', speaker: '主持人', cue: '反方问题', text: '那观众今天看完，能马上做的一件事是什么？别给太复杂的。' },
-      { t: '36.2-45.0s', speaker: '作者', cue: '行动建议', text: '今晚列三栏：消耗、维持、放大。先删掉一个消耗你的任务，再固定一个能放大的动作。' },
-      { t: '44.2-51.5s', speaker: '主持人', cue: '轻松收束', text: '这句像人话。不是鸡汤，是回去就能做。' },
-      { t: '51.0-60.0s', speaker: '作者', cue: 'CTA', text: `想看《${b.title}》第一章书摘，留言「书摘」，下一支直接拆方法。` }
+      { t: '0.0-4.0s', speaker: me, cue: '直接抛问题，别铺陈', text: `先别急着说你没时间。${pain}——这件事《${b.title}》讲得比我狠。` },
+      { t: '4.0-10.0s', speaker: me, cue: '给结论，语速稳下来', text: `这本书讲的不是成功学，是面对「${pain}」的时候，你到底该怎么少走弯路。` },
+      { t: '10.0-17.0s', speaker: me, cue: '停一下再讲重点', text: `它的核心其实就一句：${theme}。` },
+      { t: '17.0-24.0s', speaker: me, cue: '念金句，放慢、加重', text: `书里有句话我抄下来了：${q}` },
+      { t: '24.0-31.0s', speaker: me, cue: '解释为什么', text: '为什么这句重要？因为低倍数的努力只会让你越来越忙，高倍数的判断才会让结果自己长出来。' },
+      { t: '31.0-38.0s', speaker: me, cue: '预设反驳，自问自答', text: '你可能会说，道理我都懂。但问题从来不是懂不懂，是你有没有真的停下来算过这笔账。' },
+      { t: '38.0-46.0s', speaker: me, cue: '给具体动作，语速回快', text: '所以今晚做一件事就够：拿张纸列三栏——消耗、维持、放大。先删掉一个消耗你的任务。' },
+      { t: '46.0-52.0s', speaker: me, cue: '收束，讲人话', text: '不用一次改完。删掉一个，你这周就能感觉到差别。' },
+      { t: '52.0-60.0s', speaker: me, cue: 'CTA，自然一点别硬推', text: `想看《${b.title}》第一章的书摘，留言「书摘」，下一支我直接拆里面的方法。` }
     ];
     return {
-      template: '场景真人对谈',
+      template: '单人口播',
       style,
-      rhythm: '插嘴、接话、短停顿、反问、语速差',
+      rhythm: '短句、停顿、自问自答、语速有快慢差',
       scenePlan: scenes,
       voicePlan: [
-        { role: '主持人', voice: '年轻女声 / 语速快 / 反应多 / 可插嘴', pace: '205-220 wpm', emotion: '好奇、追问、带一点吐槽' },
-        { role: '作者', voice: '成熟男声 / 语速稳 / 停顿明显', pace: '160-175 wpm', emotion: '专业、耐心、收束观点' }
+        { role: '主讲人', voice: '用你在「数字人 / 声音 / 克隆」页选好的那个声音', pace: '180-200 wpm', emotion: '像跟朋友讲话，有停顿、有轻重' }
       ],
       dialogue
     };
@@ -1345,15 +1354,20 @@ window.DATA = (function () {
       const first = scenes[0] || { name: '马路街访', visual: '街景与路人', role: '开场' };
       const second = scenes[1] || { name: '专业访谈室', visual: '书架与沙发', role: '观点' };
       const third = scenes[2] || { name: '车内聊天', visual: '车窗城市', role: '收尾' };
+      /* 单人口播的镜头语言：全程同一个人，靠景别、书封、金句卡和换场做变化，
+       * 不再有「双人交叉剪」「插嘴重叠」这种数字人做不出来的东西。
+       * txt 直接取台词本文，不加「谁说的」前缀——反正全篇只有一个人在讲。 */
+      const say = (...idx) => idx.map(n => lines[n]).filter(Boolean).map(x => x.text).join('\n');
       return [
-        { t: first.name + '大景', txt: `${first.visual}。主持人先把观众带到真实场地。`, cam: '广角环境镜头，人物只占画面 25%', vis: first.role, t0: 0, t1: 4, dur: '0–4s' },
-        { t: '主持人开问', txt: lines[0] ? `${lines[0].speaker}：${lines[0].text}` : s.hook, cam: '主持人中景，背后仍看得见场地', vis: '问题字幕 + 环境声', t0: 4, t1: 9, dur: '4–9s' },
-        { t: '作者接话 + 插嘴', txt: [lines[1], lines[2]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '双人交叉剪，主持人在话尾插入', vis: '插嘴时间线 + 声波重叠', t0: 9, t1: 16, dur: '9–16s' },
-        { t: '书封与金句', txt: lines[3] ? `${lines[3].speaker}：${lines[3].text}` : rand(b.quotes), cam: '人物让位，切书封、书页划线、金句卡', vis: '书摘图卡 + 引文标注', t0: 16, t1: 24, dur: '16–24s' },
-        { t: second.name + '换场', txt: `${second.visual}。用更专业的场地讲核心观点。`, cam: '场地大景转双人同框', vis: second.role, t0: 24, t1: 31, dur: '24–31s' },
-        { t: '反方追问', txt: [lines[4], lines[5], lines[6]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '主持人侧脸追问，作者停顿后回应', vis: '关键词大字 + 反方问题卡', t0: 31, t1: 42, dur: '31–42s' },
-        { t: third.name + '收尾', txt: [lines[7], lines[8]].filter(Boolean).map(x => `${x.speaker}：${x.text}`).join('\n'), cam: '车内双人中景，窗外城市移动', vis: third.role, t0: 42, t1: 52, dur: '42–52s' },
-        { t: 'CTA 与 AI 标识', txt: lines[9] ? `${lines[9].speaker}：${lines[9].text}` : s.cta, cam: '书封 + 双人小窗 + 留言提示', vis: '留言书摘 / 试读 / AI 生成声明', t0: 52, t1: D, dur: `52–${D}s` }
+        { t: first.name + '开场', txt: say(0) || s.hook, cam: '中景，背后看得见场地，人物占画面 45%', vis: '前 3 秒字幕大字 + 环境声', t0: 0, t1: 4, dur: '0–4s' },
+        { t: '给结论', txt: say(1), cam: '正面中近景，轻微推镜', vis: '结论关键词大字', t0: 4, t1: 10, dur: '4–10s' },
+        { t: '讲核心观点', txt: say(2), cam: '近景，语速稳', vis: '书封插入 + 核心句字幕', t0: 10, t1: 17, dur: '10–17s' },
+        { t: '金句停顿', txt: say(3), cam: '人物让位，切书页划线与金句卡', vis: '全屏金句卡 + 停顿留白', t0: 17, t1: 24, dur: '17–24s' },
+        { t: second.name + '换场解释', txt: say(4), cam: `换到${second.visual}，中景`, vis: second.role, t0: 24, t1: 31, dur: '24–31s' },
+        { t: '自问自答', txt: say(5), cam: '正面近景，直视镜头', vis: '反问字幕卡', t0: 31, t1: 38, dur: '31–38s' },
+        { t: '给具体做法', txt: say(6), cam: '中景，语速回快', vis: '三栏清单动画（消耗/维持/放大）', t0: 38, t1: 46, dur: '38–46s' },
+        { t: third.name + '收束', txt: say(7), cam: `${third.visual}，中景`, vis: third.role, t0: 46, t1: 52, dur: '46–52s' },
+        { t: 'CTA 与 AI 标识', txt: say(8) || s.cta, cam: '书封 + 人物小窗 + 留言提示', vis: '留言书摘 / 试读 / AI 生成声明', t0: 52, t1: D, dur: `52–${D}s` }
       ];
     }
     const parts = [
@@ -1630,7 +1644,7 @@ window.DATA = (function () {
       cadence: '每月',
       quota: '60 支制作包 / 月',
       desc: '适合单本书测试市场反应，先跑制作包与少量短视频。',
-      features: ['8 节点制作包（规划中）', '30 种场景模板', '双人对谈脚本', '基础发布文案'],
+      features: ['8 节点制作包（规划中）', '30 种场景模板', '单人口播脚本', '基础发布文案'],
       stripePriceEnv: 'STRIPE_PRICE_STARTER'
     },
     {
@@ -1727,6 +1741,21 @@ window.STORE = (function () {
             ['已发布', '待审核', '排程中', '草稿'].indexOf(v.status) >= 0) v.demo = true;
       });
       if (!Array.isArray(p.stages)) p.stages = DATA.STAGES.map(s => ({ key: s.key, state: 'todo' }));
+      /* 旧版稿子是「主持人＋作者」双人对谈，但数字人一次只能一个形象一个声音，
+       * 那种稿子永远拍不出来。凡是还带双人台词的，一律重新产生成单人口播稿，
+       * 否则使用者拿旧稿去生成，出来的东西还是跟稿子对不上。
+       * 判断依据：dialogue 里出现两个以上不同的 speaker。 */
+      const isTwoPerson = s => new Set((s.dialogue || []).map(x => x.speaker)).size > 1;
+      if (p.scripts.length && p.scripts.some(isTwoPerson)) {
+        const fresh = DATA.genScripts(p, p.scripts.length);
+        p.scripts = p.scripts.map((s, i) => Object.assign({}, s, {
+          sceneMode: fresh[i].sceneMode,
+          rhythm: fresh[i].rhythm,
+          voicePlan: fresh[i].voicePlan,
+          dialogue: fresh[i].dialogue,
+          aiWritten: false        // 重新产生过，不能再挂着「AI 写的」标记
+        }));
+      }
       // 旧版脚本没有场景对谈栏位（scenePlan / dialogue / voicePlan），补生成一份，
       // 否则「创意分镜」与脚本详情弹窗读到 undefined 会直接崩掉
       if (p.scripts.length && p.scripts.some(s => !s.scenePlan || !s.dialogue || !s.voicePlan)) {
@@ -2961,7 +2990,7 @@ window.VIEWS = window.VIEWS || {};
             `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center">
               <div style="font-size:26px;font-weight:750">${x[1]}</div><div style="font-size:14px;color:var(--txt-3)">${x[0]}</div></div>`).join('')}
         </div>
-        <div class="label">场景真人对谈脚本（共 ${(p.scripts || []).length} 篇 / 每篇含场地、双人台词、镜头表、声音配置）</div>
+        <div class="label">单人口播稿（共 ${(p.scripts || []).length} 篇 / 每篇含画面场地、台词、镜头表）</div>
         <table><thead><tr><th>#</th><th>模板</th><th>标题</th><th>场地</th><th>节奏</th><th>声音</th><th>评分</th><th></th></tr></thead><tbody>
           ${p.scripts.map(s => `<tr>
             <td class="mono">${String(s.n).padStart(2, '0')}</td>
@@ -2969,11 +2998,11 @@ window.VIEWS = window.VIEWS || {};
             <td style="max-width:280px">${esc(s.title)}</td>
             <td style="font-size:14px;color:var(--txt-2)">${esc((s.scenePlan || []).map(x => x.name).join(' / ') || '棚内')}</td>
             <td><span class="tag c">${esc(s.rhythm || '口播')}</span></td>
-            <td style="font-size:14px;color:var(--txt-2)">${(s.voicePlan || []).map(x => esc(x.role)).join(' + ') || '单声线'}</td>
+            <td style="font-size:14px;color:var(--txt-2)">${(s.voicePlan || []).map(x => esc(x.role)).join(' + ') || '主讲人'}</td>
             <td>${scoreBar(s.score)}</td>
             <td><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">查看</button></td></tr>`).join('')}
         </tbody></table>`
-        : emptyStage('尚未生成脚本', '执行本阶段后，系统会一次性生成开场、Hook、标题与场景真人对谈脚本。'),
+        : emptyStage('尚未生成脚本', '执行本阶段后，系统会一次性生成开场、Hook、标题与单人口播稿。'),
 
       persona: () => {
         const pa = STORE.s.persona, done = (p.scripts || []).some(s => s.persona);
@@ -3024,16 +3053,16 @@ window.VIEWS = window.VIEWS || {};
 
       avatar: () => `<div class="row2">
         <div>
-          <div class="label">双数字人与声音</div>
+          <div class="label">这批影片会用的形象与声音</div>
           ${(() => {
             const pa = STORE.s.persona;
             const label = pa.realAvatarMode === 'image' ? '你上传的照片' : (pa.realAvatarName || '');
             return (label || pa.realVoiceName)
               ? `<div class="explain" style="margin:0 0 12px;border-left-color:var(--green)">
-                   <div class="ex-r"><span class="ex-k">目前设定</span><span>形象 <b>${esc(label || '未选')}</b>　声音 <b>${esc(pa.realVoiceName || '未选')}</b>　—— 下面「真实试跑一支」会用这组设定</span></div>
+                   <div class="ex-r"><span class="ex-k">目前设定</span><span>形象 <b>${esc(label || '未选')}</b>　声音 <b>${esc(pa.realVoiceName || '未选')}</b>　—— 生成影片时就用这一组</span></div>
                  </div>`
               : `<div class="explain" style="margin:0 0 12px;border-left-color:var(--amber)">
-                   <div class="ex-r"><span class="ex-k">还没设定</span><span>去「数字人 / 声音 / 克隆」选好形象与声音，这里才知道要用谁来生成。</span></div>
+                   <div class="ex-r"><span class="ex-k">还没设定</span><span>去「数字人 / 声音 / 克隆」选好形象与声音，否则影片做不出来。</span></div>
                  </div>`;
           })()}
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;gap:16px;align-items:center">
@@ -3041,33 +3070,37 @@ window.VIEWS = window.VIEWS || {};
               ${STORE.s.persona.realPhotoPreview && STORE.s.persona.realAvatarMode === 'image'
                 ? `<img src="${esc(STORE.s.persona.realPhotoPreview)}" style="width:66px;height:66px;object-fit:cover;border-radius:18px">`
                 : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px">主</div>`}
-              <div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px;background:linear-gradient(150deg,#ff8a5b,#ffb020)">作</div>
             </div>
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:6px">主持人 + 作者数字人 · ${esc(STORE.s.settings.avatarEngine)}</div>
-              <div class="chip-list"><span class="tag g">两种声音</span><span class="tag g">插嘴重叠</span><span class="tag g">双人口型同步</span><span class="tag g">场景站位</span></div>
-              <div class="wave" style="margin-top:10px">${Array.from({ length: 26 }).map((_, i) => `<i style="animation-delay:${(i * .06).toFixed(2)}s;height:${20 + (i * 7) % 70}%"></i>`).join('')}</div>
+              <div style="font-weight:700;margin-bottom:6px">单人口播 · 一个形象 + 一个声音</div>
+              <div class="chip-list"><span class="tag g">用你选的形象</span><span class="tag g">用你选的声音</span><span class="tag g">口型同步</span></div>
+              <div class="hint" style="margin-top:8px">影片里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。</div>
             </div></div>
-          <div class="grid g3" style="margin-top:14px">
-            ${[['渲染分辨率', '1080P'], ['帧率', '30 fps'], ['双声线', '主持 + 作者'], ['口型误差', '<40 ms'], ['插嘴点', '3-5 个/支'], ['场地', '3 段切换']].map(x =>
-              `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center">
-                <div style="font-size:17.5px;font-weight:700">${x[1]}</div><div style="font-size:13px;color:var(--txt-3);margin-top:3px">${x[0]}</div></div>`).join('')}
+          <div class="explain" style="margin:14px 0 0">
+            <div class="ex-r"><span class="ex-k">这一步做什么</span><span>把每篇稿子对应成一支「待生成」的影片，<b>不会真的生成</b>。</span></div>
+            <div class="ex-r"><span class="ex-k">什么时候才真的做</span><span>到<b>内容资产库</b>逐支点「生成这一支」。一支约 US$1-3、等 1-3 分钟，所以由你挑要做哪几支。</span></div>
           </div>
         </div>
         <div>
-          <div class="label">合成队列</div>
-          ${(p.scripts || []).slice(0, 7).map((s, i) => `
+          <div class="label">影片待办（每篇稿子一支）</div>
+          ${(p.scripts || []).slice(0, 7).map((s, i) => {
+            const v = (p.videos || []).find(x => x.scriptId === s.id);
+            const st = v ? v.status : '待建立';
+            return `
             <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
               <span class="mono" style="color:var(--txt-3)">${String(i + 1).padStart(2, '0')}</span>
               <span style="flex:1;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
-              <span class="tag c">${esc((s.voicePlan || []).map(v => v.role).join('+') || '双声线')}</span>
-              <span class="tag ${(p.videos || []).length ? 'g' : ''}">${(p.videos || []).length ? '已渲染' : '待渲染'}</span>
-            </div>`).join('') || '<div class="hint">请先完成写稿阶段</div>'}
+              <span class="tag">单人口播</span>
+              ${statusTag(st)}
+            </div>`;
+          }).join('') || '<div class="hint">请先完成写稿阶段</div>'}
+          ${(p.videos || []).length ? `<div style="margin-top:12px">
+            <button class="btn btn-sm btn-primary" data-act="goto" data-route="library">去内容资产库生成影片 →</button></div>` : ''}
         </div></div>
 
         <div class="card" style="margin-top:16px">
-          <div class="card-h"><div><div class="card-t">真实试跑一支</div>
-              <div class="card-s">用「数字人 / 声音 / 克隆」页选好的形象和声音，真的生成一支会说话的影片，不是上面的模拟</div></div>
+          <div class="card-h"><div><div class="card-t">先试一支看看效果</div>
+              <div class="card-s">不确定形象和声音搭起来好不好？在这里用一小段话先试生成一支，确认满意再去资产库批量做</div></div>
             <div class="right"><span class="tag a">每次生成都花钱，约 US$1-3</span></div></div>
           <div id="hg-gen-panel"><div class="hint">先去「数字人 / 声音 / 克隆」页选好形象和声音。</div></div>
         </div>`,
@@ -3075,8 +3108,8 @@ window.VIEWS = window.VIEWS || {};
       package: () => `
         <div class="label">包装元素（可在系统设置中统一开关）</div>
         <div class="grid g4">
-          ${[['场地大景', '每段开头先看到马路 / 访谈室 / 车内', '▣'], ['双人中景', '主持人与作者同框或交叉剪', '◫'],
-             ['插嘴字幕', '打断、接话、重叠声音用不同颜色标注', '↯'], ['书封插入', '每支视频 0-3s 与结尾出现', '📕'],
+          ${[['场地大景', '每段开头先看到马路 / 访谈室 / 车内', '▣'], ['景别变化', '近景讲重点、中景讲故事', '◫'],
+             ['停顿留白', '金句前后留白，让观众记住', '↯'], ['书封插入', '每支视频 0-3s 与结尾出现', '📕'],
              ['关键词大字', '金句自动放大 + 卡点', '🅰'], ['动态图表', '数据类内容自动生成', '📊'],
              ['B-roll 素材', '按语义匹配空镜', '🎞'], ['智能字幕', '自动断句 + 双语可选', '💬'],
              ['背景音乐', '按情绪匹配 + 响度平衡', '🎵'], ['品牌 Logo 与 CTA', '片尾统一模板', '🏷']
@@ -3832,8 +3865,14 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div class="card" style="margin-bottom:18px">
-      <div class="card-h"><div><div class="card-t">可直接播放的 60 秒样片</div>
-        <div class="card-s">这里放的是实际 MP4，不是分镜占位：有声音、直式 1080x1920、场地背景与双人对谈节奏</div></div></div>
+      <div class="card-h"><div><div class="card-t">画面风格参考样片</div>
+        <div class="card-s">实际 MP4，有声音、直式 1080x1920，用来看「场地感」能做到什么程度</div></div>
+        <div class="right"><span class="tag a">参考用，不是本系统产出</span></div></div>
+      <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
+        <div class="ex-r"><span class="ex-k">先讲清楚</span><span>这几支是<b>事先做好的参考片</b>，里面有两个人对谈。
+          但本系统的数字人<b>一次只能一个形象、一个声音</b>，实际生成出来的是<b>单人口播</b>——一个人对着镜头讲完。</span></div>
+        <div class="ex-r"><span class="ex-k">那看它做什么</span><span>看<b>场地与画面风格</b>：街头、访谈室、车内这些背景感，是你挑场景时的参考。</span></div>
+      </div>
       <div class="sample-grid">
         ${samples.map(x => `
           <div class="sample-card">
@@ -5055,10 +5094,9 @@ window.TOUR = (function () {
     return hit;
   }
 
-  /* 把一篇双人对谈稿拼成一段可以念的台词。
-   * 现实限制：数字人服务一次只能让「一个形象 + 一个声音」念一段话，
-   * 做不出两个人真的对谈。所以这里是同一个数字人把两边的台词都念完，
-   * 介面上必须把这件事讲清楚，不能让人以为会出现两个人。 */
+  /* 取出这支影片要念的台词。
+   * 稿子本身就是单人口播（一个人从头讲到尾），所以直接把每句接起来就是
+   * 完整台词——念的人、稿子、成品三者一致，不需要任何取舍或说明。 */
   function scriptToSpeech(v, p) {
     const s = (p.scripts || []).find(x => x.id === v.scriptId);
     if (!s || !(s.dialogue || []).length) return v.title || '';
@@ -5091,7 +5129,7 @@ window.TOUR = (function () {
         <div class="ex-r"><span class="ex-k">会用谁</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b></span></div>
         <div class="ex-r"><span class="ex-k">会花多少</span><span><b style="color:var(--amber)">这一步真的会产生费用</b>，一支约 US$1-3，从你的额度扣。做出来之后无法退。</span></div>
         <div class="ex-r"><span class="ex-k">要等多久</span><span>通常 1-3 分钟。送出后你可以关掉这个窗、去看别的，做好了会自己更新。</span></div>
-        <div class="ex-r"><span class="ex-k">一个人还是两个人</span><span>稿子写的是主持人与作者对谈，但数字人服务<b>一次只能让一个形象、一个声音念一段话</b>。所以这支会是<b>同一个数字人把两边台词都念完</b>，不会出现两个人。</span></div>
+        <div class="ex-r"><span class="ex-k">出来会是什么</span><span>一支<b>单人口播</b>短片——<b>${esc(avLabel)}</b>对着镜头，用<b>${esc(voLabel)}</b>把下面这段话讲完。稿子写的就是成品的样子。</span></div>
       </div>
       <div class="field"><div class="label">实际要念的台词（可以改）</div>
         <textarea class="input" id="gv-text" style="min-height:120px;line-height:1.75">${esc(text)}</textarea></div>
@@ -5516,11 +5554,11 @@ window.TOUR = (function () {
     const dialogueText = (s.dialogue || []).map(x => `【${x.t}｜${x.speaker}｜${x.cue}】\n${x.text}`).join('\n\n');
     const sceneText = (s.scenePlan || []).map(x => `【${x.name}】${x.visual}；用途：${x.role}`).join('\n');
     const voiceText = (s.voicePlan || []).map(x => `【${x.role}】${x.voice}；${x.pace}；${x.emotion}`).join('\n');
-    const full = `【标题】${s.title}\n【平台】${s.platformName} · ${s.sceneMode || s.angleName} · ${s.duration}s\n\n【场地计划】\n${sceneText}\n\n【声音配置】\n${voiceText}\n\n【双人对谈脚本】\n${dialogueText}\n\n【CTA】\n${s.cta}`;
+    const full = `【标题】${s.title}\n【平台】${s.platformName} · ${s.sceneMode || s.angleName} · ${s.duration}s\n\n【场地计划】\n${sceneText}\n\n【声音配置】\n${voiceText}\n\n【口播稿】\n${dialogueText}\n\n【CTA】\n${s.cta}`;
     modal(`脚本详情 · ${esc(s.sceneMode || s.angleName)}`, `
       <div class="chip-list" style="margin-bottom:14px">
         <span class="tag v">${s.platformName}</span><span class="tag">${s.duration} 秒</span>
-        <span class="tag">${s.words} 字</span><span class="tag c">${esc(s.rhythm || '对谈节奏')}</span><span class="tag c">预估评分 ${s.score}</span>
+        <span class="tag">${s.words} 字</span><span class="tag c">${esc(s.rhythm || '口播节奏')}</span><span class="tag c">预估评分 ${s.score}</span>
         ${s.persona ? '<span class="tag g">已套用'+STORE.s.account.name+'人格</span>' : '<span class="tag a">未套用人格</span>'}
       </div>
       <div class="field"><div class="label">标题</div>
@@ -5533,7 +5571,7 @@ window.TOUR = (function () {
         <div class="field"><div class="label">声音配置</div>
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.9;white-space:pre-wrap">${esc(voiceText || '未配置')}</div></div>
       </div>
-      <div class="field"><div class="label">双人对谈脚本（含插嘴与语气提示）</div>
+      <div class="field"><div class="label">口播稿（这就是数字人会念的内容，含语气与停顿提示）</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.95;white-space:pre-wrap">${esc(dialogueText || s.body)}</div></div>
       <div class="field"><div class="label">结尾 CTA</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(s.cta)}</div></div>
@@ -5565,8 +5603,11 @@ window.TOUR = (function () {
 
     const pa = STORE.s.persona;
     const scenes = (s.scenePlan || []).map(x => `${x.name}（${x.visual}）`).join('、') || '棚内访谈';
-    const system = '你是短视频编剧，专写中文双人对谈短片脚本。只输出 JSON，不要任何解释文字。';
-    const prompt = `帮我写一支 60 秒的双人对谈短视频脚本，用来推荐这本书。
+    /* 必须是单人口播：数字人服务一次只能一个形象、一个声音。
+     * 写成双人对谈的话，生成时只能由同一个人念完两边台词，稿子会对不上成品。 */
+    const speaker = STORE.s.account.name || '主讲人';
+    const system = '你是短视频编剧，专写中文单人口播短片脚本。只输出 JSON，不要任何解释文字。';
+    const prompt = `帮我写一支 60 秒的单人口播短视频脚本，用来推荐这本书。
 
 【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
 【全书摘要】${p.summary || '（未提供）'}
@@ -5574,19 +5615,23 @@ window.TOUR = (function () {
 【书中金句】${(p.quotes || []).slice(0, 6).join('；') || '（未提供）'}
 【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
 
-【拍摄场地】依序是：${scenes}
-【角色】主持人（年轻女声、语速快、爱追问、会插嘴）＋ 作者（成熟男声、语速稳、先给结论再解释）
+【形式】**一个人对着镜头讲**，全程只有一个说话的人，不要写成两个人对谈、不要有问答角色。
+这个人叫「${speaker}」，所有台词的 speaker 都填「${speaker}」。
+【画面场地】依序是：${scenes}（只是背景变化，人物始终是同一个）
 【口吻要求】语速 ${pa.speed}/100、亲和 ${pa.warmth}/100、正式度 ${pa.formal}/100（数字越高越正式）
 ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要每句都用：' + pa.habits.join('、') : ''}
 
 要求：
-- 真的像两个人在聊天：有打断、有接话、有反问，不要一人一段轮流演讲
+- 开头 3 秒就要让人停下来，别铺陈、别说「大家好」
+- 讲人话、短句，像跟朋友说话，不要书面语和排比句
+- 中间要有一次自问自答（先讲出观众可能的反驳，再回应）
+- 引用书里的一句原话，前后留停顿
 - 讲书里真正的观点，不要空泛的「这本书很好看」
-- 10 句左右，每句给时间区间，总长不超过 60 秒
-- 最后一句是引导留言或试读的 CTA
+- 8-10 句，每句给时间区间，总长不超过 60 秒，全篇 260-320 字
+- 最后给一个今天就能做的具体动作，再带出引导留言或试读的 CTA
 
 只输出这个 JSON 结构：
-{"title":"一句吸引人的标题","hook":"前3秒开场白","dialogue":[{"t":"0.0-3.8s","speaker":"主持人","cue":"语气提示","text":"台词"}],"cta":"结尾引导语"}`;
+{"title":"一句吸引人的标题","hook":"前3秒开场白","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}`;
 
     const body = $('#modal-body');
     if (body) body.insertAdjacentHTML('afterbegin',
@@ -5739,20 +5784,33 @@ ${ctx}
       const d1 = aiJson(r1.content);
       if (!d1.titles || !d1.titles.length) throw new Error('模型没有回传标题');
 
-      // 第二段：完整对谈稿（输出较大，单独跑）
+      /* 第二段：完整口播稿（输出较大，单独跑）
+       *
+       * 一定要写「单人口播」而不是双人对谈：数字人服务一次只能让一个形象、
+       * 一个声音念一段话。写成对谈的话，生成时只能由同一个人把两边台词都念完，
+       * 稿子和做得出来的影片对不上。 */
+      const speaker = (window.STORE && STORE.s.account && STORE.s.account.name) || '主讲人';
       let scripts = [];
       try {
-        const r2 = await call(`帮这本书写 3 篇 60 秒双人对谈短视频脚本。
+        const r2 = await call(`帮这本书写 3 篇 60 秒短视频口播稿。
 
 ${ctx}
 
-角色：主持人（语速快、爱追问、会插嘴）＋ 作者（先给结论再解释）。
-要像两个人真的在聊天：有打断、有接话、有反问，不要一人一段轮流演讲。每篇 10 句左右。
+形式：**一个人对着镜头讲**，全程只有一个说话的人，不要写成两个人对谈、不要有主持人问答。
+这个人叫「${speaker}」，所有台词的 speaker 都填「${speaker}」。
 
-只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-3.8s","speaker":"主持人","cue":"语气提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3500);
+写法要求：
+- 开头 3 秒就要让人停下来，别铺陈、别说「大家好」
+- 讲人话，短句，像跟朋友说话，不要书面语和排比句
+- 中间要有一次自问自答（预设观众的反驳，然后回应）
+- 要引用书里的一句原话，并留一个停顿
+- 结尾给一个今天就能做的具体动作，再自然带出引导语
+- 每篇 8-10 句，全篇加起来 260-320 字（60 秒念得完）
+
+只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3500);
         scripts = (aiJson(r2.content).scripts || []);
       } catch (e) {
-        // 对谈稿失败不影响标题/Hook，照样把第一段的结果交回去
+        // 口播稿失败不影响标题/Hook，照样把第一段的结果交回去
         scripts = [];
       }
 
