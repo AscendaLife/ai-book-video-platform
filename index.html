@@ -4068,7 +4068,7 @@ window.TOUR = (function () {
       note: '演示原型：介面与流程是真实设计，影片与数据为模拟生成。'
     },
     {
-      route: 'persona', sel: '.card',
+      route: 'persona', sel: '.card', centerPop: true,
       title: '第一步：选数字人形象和声音',
       text: '位置在左侧选单：<b>先设定一次 → 数字人 / 声音 / 克隆</b>。<br><br>' +
             '<b>这一步要在生成之前做</b>，否则生成完才发现脸或口吻不对，整批要重跑。<br><br>' +
@@ -4183,7 +4183,7 @@ window.TOUR = (function () {
 
       if (target && visible(target)) {
         target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        setTimeout(() => place(target, pad), 220);
+        setTimeout(() => place(target, pad, !!s.centerPop), 220);
       } else {
         hole.style.opacity = '0';
         pop.className = 'tour-pop center';
@@ -4201,7 +4201,7 @@ window.TOUR = (function () {
       && r.left < innerWidth && r.top < innerHeight;
   }
 
-  function place(target, pad) {
+  function place(target, pad, centerPop) {
     const r = target.getBoundingClientRect();
     hole.style.opacity = '1';
     hole.style.left = (r.left - pad) + 'px';
@@ -4209,7 +4209,12 @@ window.TOUR = (function () {
     hole.style.width = (r.width + pad * 2) + 'px';
     hole.style.height = (r.height + pad * 2) + 'px';
 
-    pop.className = 'tour-pop';
+    pop.className = centerPop ? 'tour-pop center' : 'tour-pop';
+    if (centerPop) {
+      pop.style.left = '';
+      pop.style.top = '';
+      return;
+    }
     const pw = 340, ph = pop.offsetHeight || 240;
     let left = r.left, top = r.bottom + 16;
     if (top + ph > window.innerHeight - 12) top = Math.max(12, r.top - ph - 16);
