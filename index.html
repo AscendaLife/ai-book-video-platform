@@ -1434,13 +1434,15 @@ window.DATA = (function () {
   /* 构建一个完整项目 */
   function buildProject(seed, full) {
     const b = Object.assign({ id: uid('bk'), createdAt: Date.now(), materials: [] }, seed);
-    b.materials = [
-      { name: `${b.title}_内文.pdf`, type: 'PDF', size: '8.4 MB', status: '已解析' },
-      { name: `${b.title}_书封.jpg`, type: '图片', size: '1.2 MB', status: '已解析' },
-      { name: '作者介绍与推荐序.docx', type: '文档', size: '286 KB', status: '已解析' },
-      { name: '出版社宣传资料.pptx', type: '文档', size: '4.1 MB', status: '已解析' }
-    ];
     if (full) {
+      // 只有内建的示范项目（工作台上那几本already-done的书）才假装「本来就有资料」；
+      // 使用者自己新建的项目必须从空列表开始，不然会跟真的上传结果混在一起，分不清哪些是自己传的。
+      b.materials = [
+        { name: `${b.title}_内文.pdf`, type: 'PDF', size: '8.4 MB', status: '已解析' },
+        { name: `${b.title}_书封.jpg`, type: '图片', size: '1.2 MB', status: '已解析' },
+        { name: '作者介绍与推荐序.docx', type: '文档', size: '286 KB', status: '已解析' },
+        { name: '出版社宣传资料.pptx', type: '文档', size: '4.1 MB', status: '已解析' }
+      ];
       b.strategy = genStrategy(b);
       b.titles = genTitles(b, 20);
       b.hooks = genHooks(b, 20);
