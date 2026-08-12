@@ -132,6 +132,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .btn-primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 22px rgba(124,108,255,.35)}
 .btn-primary:hover{box-shadow:0 12px 28px rgba(124,108,255,.5)}
 .btn-ghost{background:transparent}
+/* 不可逆动作用红底，跟旁边的「取消」在视觉上分清楚 */
+.btn-danger{background:var(--red);border:0;color:#fff}
+.btn-danger:hover{filter:brightness(1.1);box-shadow:0 8px 20px rgba(239,68,68,.4)}
 .btn-sm{padding:5px 11px;font-size:14px;border-radius:8px}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
@@ -227,6 +230,12 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .book-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.55))}
 .book-cover .bt{position:relative;z-index:2;color:#fff;font-weight:750;font-size:17.5px;text-shadow:0 2px 12px rgba(0,0,0,.5)}
 .book-cover .st{position:absolute;top:12px;right:12px;z-index:2}
+/* 删除钮：平常半透明、滑到卡片上才明显，按下去会跳确认窗，不会直接删 */
+.book-del{position:absolute;top:10px;left:10px;z-index:3;width:30px;height:30px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.34);color:#fff;font-size:14px;
+  cursor:pointer;opacity:0;transition:.16s;display:grid;place-items:center;padding:0;backdrop-filter:blur(4px)}
+.book-card:hover .book-del{opacity:.85}
+.book-del:hover{opacity:1;background:var(--red);border-color:var(--red);transform:scale(1.06)}
 .book-b{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:9px}
 .book-meta{font-size:14px;color:var(--txt-3)}
 .book-stats{display:flex;gap:14px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
@@ -2730,6 +2739,10 @@ window.VIEWS = window.VIEWS || {};
       <div class="book-card" data-act="open-proj" data-id="${p.id}">
         <div class="book-cover" style="background:${p.cover}">
           <div class="st">${statusTag(p.status)}</div>
+          ${/* 删除钮放左上、跟状态标签分开，避免手滑点错。
+                不加 stopPropagation：事件分发走 document 层的 closest('[data-act]')，
+                内层按钮本来就会优先命中。 */''}
+          <button class="book-del" data-act="del-proj" data-id="${p.id}" title="删除这本书">✕</button>
           <div class="bt">《${esc(p.title)}》</div>
         </div>
         <div class="book-b">
@@ -4331,6 +4344,7 @@ window.TOUR = (function () {
     switch (act) {
       case 'goto': return go(el.dataset.route);
       case 'gen-video': return genVideoModal(el.dataset.id);
+      case 'del-proj': return delProjectModal(el.dataset.id);
       case 'open-proj': STORE.setCurrent(el.dataset.id); return go('pipeline');
       case 'new-proj': return newProjectModal();
       case 'sel-stage': return go('pipeline', { s: el.dataset.k });
@@ -4618,6 +4632,20 @@ window.TOUR = (function () {
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'confirm-gen-video') return doGenVideo(el.dataset.id);
     if (a === 'goto-persona') { closeModal(); return go('persona'); }
+    if (a === 'confirm-del-proj') {
+      const id = el.dataset.id;
+      const p = STORE.s.projects.find(x => x.id === id);
+      const name = p ? p.title : '';
+      STORE.removeProject(id);
+      STORE.log('warn', `已删除书籍项目《${name}》`);
+      closeModal(); render();
+      return toast(`《${name}》已删除`, 'ok');
+    }
+    if (a === 'goto-lib-before-del') {
+      STORE.setCurrent(el.dataset.id);
+      closeModal(); return go('library');
+    }
+    if (a === 'new-proj-from-del') { closeModal(); return newProjectModal(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'confirm-prompt-video') { const i = +el.dataset.i; closeModal(); return doPromptVideo(i); }
     if (a === 'ai-rewrite') return aiRewriteScript(el.dataset.id);
@@ -5526,6 +5554,55 @@ window.TOUR = (function () {
       $('#np-cover').dataset.sel = ci;
     });
     $('#np-cover').dataset.sel = 0;
+  }
+
+  /* 删除一本书。删掉之后拿不回来，所以先把「会失去什么」算出来摊开讲，
+   * 不用「确定要删除吗」这种看不出后果的问法。 */
+  function delProjectModal(id) {
+    const p = STORE.s.projects.find(x => x.id === id);
+    if (!p) return;
+
+    // 正在跑的不给删：引擎还握着这个专案，删掉会让它对着不存在的资料继续跑
+    if (ENGINE.isRunning && STORE.current && STORE.current.id === id) {
+      return modal('这本书正在生产中', `
+        <div class="explain" style="margin:0;border-left-color:var(--amber)">
+          <div class="ex-r"><span class="ex-k">现在不能删</span><span>《${esc(p.title)}》的流程还在跑，要先中止才能删除。</span></div>
+        </div>`,
+        `<button class="btn btn-primary" onclick="UI.closeModal()">知道了</button>`);
+    }
+
+    // 全删光会让很多页面没有资料可显示，所以至少留一本
+    if (STORE.s.projects.length <= 1) {
+      return modal('至少要留一本', `
+        <div class="explain" style="margin:0;border-left-color:var(--amber)">
+          <div class="ex-r"><span class="ex-k">为什么</span><span>这是最后一本了，删掉之后工作台、资产库这些页面就没有东西可显示。</span></div>
+          <div class="ex-r"><span class="ex-k">想换掉它</span><span>先新建一本，再回来删这本。</span></div>
+        </div>`,
+        `<button class="btn" onclick="UI.closeModal()">取消</button>
+         <button class="btn btn-primary" data-modal-act="new-proj-from-del">去新建一本</button>`);
+    }
+
+    const vs = p.videos || [];
+    const made = vs.filter(v => v.videoUrl).length;
+    const sched = STORE.s.schedule.filter(s => s.projectId === id).length;
+    const items = [
+      [`${(p.scripts || []).length} 篇稿子`, true],
+      [`${(p.titles || []).length} 个标题 · ${(p.hooks || []).length} 个 Hook`, true],
+      [`${vs.length} 支影片待办`, vs.length > 0],
+      [`${made} 支已经生成好的影片`, made > 0],
+      [`${sched} 条发布排程`, sched > 0],
+      [`${(p.materials || []).length} 个上传的文件记录`, (p.materials || []).length > 0]
+    ].filter(x => x[1]).map(x => x[0]);
+
+    modal(`确定要删除《${esc(p.title)}》吗？`, `
+      <div class="explain" style="margin:0 0 14px;border-left-color:var(--red)">
+        <div class="ex-r"><span class="ex-k" style="color:var(--red)">会一起删掉</span><span>${items.join('、')}。</span></div>
+        <div class="ex-r"><span class="ex-k">拿得回来吗</span><span><b>拿不回来</b>。资料存在这台电脑的浏览器里，删了就没了。</span></div>
+        ${made ? `<div class="ex-r"><span class="ex-k" style="color:var(--amber)">⚠ 花过钱的</span><span>其中 <b>${made} 支影片是真的生成过的</b>（花过钱）。影片网址会一起消失，要留请<b>先去下载</b>再回来删。</span></div>` : ''}
+      </div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       ${made ? `<button class="btn" data-modal-act="goto-lib-before-del" data-id="${esc(id)}">先去下载影片</button>` : ''}
+       <button class="btn btn-danger" data-modal-act="confirm-del-proj" data-id="${esc(id)}">确定删除</button>`);
   }
 
   function createProject() {
