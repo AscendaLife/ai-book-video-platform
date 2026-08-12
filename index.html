@@ -1032,11 +1032,11 @@ window.DATA = (function () {
       you: '看适配度评分，觉得某个平台不想做，后面可以不发。',
       out: '八个平台各自的建议支数、时长、语气和引导语。',
       tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
-    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 画面场地 / 镜头表 / 停顿节奏',
-      why: '写的是<b>一个人对着镜头讲</b>的口播稿——因为数字人一次只能一个形象、一个声音，所以稿子就照这个来写，写出来是什么样，生成的影片就是什么样。',
+    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 双人访谈 / 画面场地 / 镜头表',
+      why: '默认先写稳定的单人口播稿；如果影片形式改成双人访谈，生成时会把稿子转成主持人追问、来宾回答的对谈任务送到 AI Platform。',
       you: '看看稿子讲得对不对，不喜欢的可以单篇点「用真实 AI 重写」。',
-      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇口播稿，每篇都带画面场地、镜头表与停顿提示。',
-      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成单人口播稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
+      out: '20 标题 + 20 Hook + 10 开场白 + 14 篇短视频稿，每篇都带画面场地、镜头表与停顿提示。',
+      tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成短视频稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
     { key: 'persona', n: 'STEP 5', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
       why: 'AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式把稿子重写一遍：语速快慢、口气软硬、先讲结论还是先讲故事、习惯用哪些口头禅。',
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
@@ -1460,7 +1460,7 @@ window.DATA = (function () {
       return {
         id: uid('v'), scriptId: s.id, title: s.title, caption: s.hook.slice(0, 26) + '…',
         platform: s.platform, platformName: p.name, color: p.color, ratio: p.ratio,
-        angle: s.angleName, duration: s.duration, cover: COVERS[i % COVERS.length],
+        angle: s.angleName, duration: s.duration, format: defaultVideoMode(), cover: COVERS[i % COVERS.length],
         status: '待生成',
         videoUrl: null,      // 真的生成出来才有，有了才播得了、下载得了
         heygenId: null,      // 送去生成后的任务编号，用来查进度
@@ -1633,6 +1633,11 @@ window.DATA = (function () {
     realPhotoPreview: null,    // 照片预览图网址
     realVoiceId: null,
     realVoiceName: '',
+    videoMode: 'single',        // single 单人口播 / conversation 双人访谈
+    guestName: '来宾',
+    guestAvatarId: '',
+    guestVoiceId: '',
+    conversationScene: 'professional_interview_room',
     cloneSamples: [{ name: '录音样本_01.wav', min: 42 }, { name: '录音样本_02.wav', min: 86 }],
     habits: ['我讲得直白一点', '你听我说完', '说句实在话', '这里我要停一下', '我自己的体会是'],
     values: ['尊重常识', '不夸大结论', '先讲代价再讲收益', '给具体做法而不是口号'],
@@ -1811,6 +1816,7 @@ window.STORE = (function () {
       p.videos.forEach(v => {
         if (v.demo === undefined && !v.videoUrl &&
             ['已发布', '待审核', '排程中', '草稿'].indexOf(v.status) >= 0) v.demo = true;
+        if (!v.format) v.format = state.persona.videoMode || d.persona.videoMode;
       });
       if (!Array.isArray(p.stages)) p.stages = DATA.STAGES.map(s => ({ key: s.key, state: 'todo' }));
       /* 旧版稿子是「主持人＋作者」双人对谈，但数字人一次只能一个形象一个声音，
@@ -3184,9 +3190,11 @@ window.VIEWS = window.VIEWS || {};
                 : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px">主</div>`}
             </div>
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:6px">单人口播 · 一个形象 + 一个声音</div>
-              <div class="chip-list"><span class="tag g">用你选的形象</span><span class="tag g">用你选的声音</span><span class="tag g">口型同步</span></div>
-              <div class="hint" style="margin-top:8px">影片里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。</div>
+              <div style="font-weight:700;margin-bottom:6px">${STORE.s.persona.videoMode === 'conversation' ? '双人访谈 · 主持人 + 来宾' : '单人口播 · 一个形象 + 一个声音'}</div>
+              <div class="chip-list"><span class="tag g">用你选的主持人形象</span><span class="tag g">用你选的主持人声音</span><span class="tag ${STORE.s.persona.videoMode === 'conversation' ? 'v' : 'g'}">${STORE.s.persona.videoMode === 'conversation' ? 'AI Platform 双人任务' : '口型同步'}</span></div>
+              <div class="hint" style="margin-top:8px">${STORE.s.persona.videoMode === 'conversation'
+                ? '双人访谈会送 conversation_video，让 AI Platform 负责来宾、分段生成、剪辑和最终 MP4。'
+                : '单人口播里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。'}</div>
             </div></div>
           <div class="explain" style="margin:14px 0 0">
             <div class="ex-r"><span class="ex-k">这一步做什么</span><span>把每篇稿子对应成一支「待生成」的影片，<b>不会真的生成</b>。</span></div>
@@ -3202,7 +3210,7 @@ window.VIEWS = window.VIEWS || {};
             <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
               <span class="mono" style="color:var(--txt-3)">${String(i + 1).padStart(2, '0')}</span>
               <span style="flex:1;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
-              <span class="tag">单人口播</span>
+              <span class="tag">${v && v.format === 'conversation' ? '双人访谈' : '单人口播'}</span>
               ${statusTag(st)}
             </div>`;
           }).join('') || '<div class="hint">请先完成写稿阶段</div>'}
@@ -3264,6 +3272,7 @@ window.VIEWS = window.VIEWS || {};
     /* 卡片上必须一眼看得出这支「到底存不存在」：
      * 已生成 = 真的有影片档；待生成 = 只有稿子；演示数据 = 假的。
      * 以前全部长一样，才会让人以为跑完流程就有 30 支真影片。 */
+    const format = v.format || defaultVideoMode();
     const badge = v.demo ? '<span class="plat" style="background:#f59e0bcc;left:auto;right:8px">演示假数据</span>'
       : done ? '<span class="plat" style="background:#2ee6a8cc;left:auto;right:8px">真影片</span>'
         : v.status === '生成中' ? '<span class="plat" style="background:#f59e0bcc;left:auto;right:8px">生成中…</span>'
@@ -3279,7 +3288,14 @@ window.VIEWS = window.VIEWS || {};
       </div>
       <div class="vid-b">
         <div class="vid-tt">${esc(v.title)}</div>
-        <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span></div>
+        <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span><span>${format === 'conversation' ? '双人访谈' : '单人口播'}</span></div>
+        <div class="vid-m" style="align-items:center;gap:8px">
+          <span>形式</span>
+          <select class="input" data-act="video-format" data-id="${v.id}" style="flex:1;padding:6px 8px;border-radius:9px">
+            <option value="single" ${format !== 'conversation' ? 'selected' : ''}>单人口播</option>
+            <option value="conversation" ${format === 'conversation' ? 'selected' : ''}>双人访谈</option>
+          </select>
+        </div>
         <div class="vid-m" style="align-items:center;gap:8px">
           <span>片长</span>
           <input class="input" type="number" min="15" max="180" step="5" value="${Number(v.duration) || defaultVideoDuration()}"
@@ -3403,6 +3419,45 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">③ 影片形式</div>
+          <div class="card-s">正式生成时决定是一人讲，还是两个人访谈交流</div></div>
+        <div class="right"><span class="tag ${p.videoMode === 'conversation' ? 'v' : 'g'}">${p.videoMode === 'conversation' ? '双人访谈' : '单人口播'}</span></div></div>
+      <div class="row2">
+        <div>
+          <div class="field"><div class="label">默认影片形式</div>
+            <select class="input" data-act="persona-set" data-k="videoMode">
+              <option value="single" ${p.videoMode !== 'conversation' ? 'selected' : ''}>单人口播：一个数字人 + 一个声音</option>
+              <option value="conversation" ${p.videoMode === 'conversation' ? 'selected' : ''}>双人访谈：主持人 + 来宾对谈</option>
+            </select></div>
+          <div class="field"><div class="label">访谈场景</div>
+            <select class="input" data-act="persona-set" data-k="conversationScene">
+              ${[
+                ['professional_interview_room', '专业访谈室'],
+                ['street_interview', '马路街访'],
+                ['car_conversation', '车内聊天'],
+                ['bookstore_talk', '书店圆桌'],
+                ['podcast_studio', '播客录音室']
+              ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
+            </select></div>
+        </div>
+        <div>
+          <div class="field"><div class="label">来宾名称</div>
+            <input class="input" value="${esc(p.guestName || '来宾')}" data-act="persona-set" data-k="guestName"></div>
+          <div class="row2">
+            <div class="field"><div class="label">来宾 Avatar ID</div>
+              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 AI Platform 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
+            <div class="field"><div class="label">来宾 Voice ID</div>
+              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 AI Platform 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
+          </div>
+        </div>
+      </div>
+      <div class="explain" style="margin:12px 0 0;border-left-color:${p.videoMode === 'conversation' ? 'var(--violet)' : 'var(--amber)'}">
+        <div class="ex-r"><span class="ex-k">正式双人生成</span><span>会送到 AI Platform 的 <b>task: "conversation_video"</b>，由后端接 HeyGen / 剪辑 / 转存，前台只拿最终 MP4 URL。</span></div>
+        <div class="ex-r"><span class="ex-k">没有来宾 ID 也能送</span><span>但这表示交给 AI Platform 自动选来宾形象和声音；要指定真人或固定角色，就把来宾 Avatar / Voice ID 填上。</span></div>
+      </div>
+    </div>
 
     ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
          默认收起来，免得把真正要做的两件事淹没掉。 */''}
@@ -3976,7 +4031,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="right"><span class="tag a">参考用，不是本系统产出</span></div></div>
       <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
         <div class="ex-r"><span class="ex-k">先讲清楚</span><span>这几支是<b>事先做好的参考片</b>，里面有两个人对谈。
-          但本系统的数字人<b>一次只能一个形象、一个声音</b>，实际生成出来的是<b>单人口播</b>——一个人对着镜头讲完。</span></div>
+          现在正式生成可选<b>单人口播</b>或<b>双人访谈</b>；双人访谈会送 AI Platform 的 conversation_video 任务，完成后回最终 MP4。</span></div>
         <div class="ex-r"><span class="ex-k">那看它做什么</span><span>看<b>场地与画面风格</b>：街头、访谈室、车内这些背景感，是你挑场景时的参考。</span></div>
       </div>
       <div class="sample-grid">
@@ -4701,6 +4756,13 @@ window.TOUR = (function () {
     if (el.dataset.act === 'switch-proj') { STORE.setCurrent(el.value); render(); }
     if (el.dataset.act === 'plat-filter') go('publish', { p: el.value });
     if (el.dataset.act === 'set') { STORE.s.settings[el.dataset.k] = el.value; STORE.update(); toast('已保存', 'ok'); }
+    if (el.dataset.act === 'persona-set') {
+      STORE.s.persona[el.dataset.k] = el.value;
+      STORE.update(); render(); toast('已保存', 'ok');
+    }
+    if (el.dataset.act === 'video-format') {
+      setVideoFormat(el.dataset.id, el.value, true);
+    }
     if (el.dataset.act === 'set-number') {
       STORE.s.settings[el.dataset.k] = clampDuration(el.value);
       STORE.update(); render(); toast('已保存', 'ok');
@@ -4720,6 +4782,12 @@ window.TOUR = (function () {
     const dur = e.target.closest('[data-act="video-duration"]');
     if (dur) {
       setVideoDuration(dur.dataset.id, dur.value, false);
+      return;
+    }
+    const ps = e.target.closest('[data-act="persona-set"]');
+    if (ps) {
+      STORE.s.persona[ps.dataset.k] = ps.value;
+      STORE.update();
       return;
     }
     const el = e.target.closest('[data-act="persona-slider"]');
@@ -4746,6 +4814,7 @@ window.TOUR = (function () {
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'confirm-gen-video') return doGenVideo(el.dataset.id);
+    if (a === 'confirm-conversation-video') return doGenConversationVideo(el.dataset.id);
     if (a === 'goto-persona') { closeModal(); return go('persona'); }
     if (a === 'confirm-del-proj') {
       const id = el.dataset.id;
@@ -5306,6 +5375,72 @@ window.TOUR = (function () {
     return s.dialogue.map(l => l.text).join('  ');
   }
 
+  function scriptToConversation(v, p) {
+    const s = (p.scripts || []).find(x => x.id === v.scriptId);
+    const pa = STORE.s.persona;
+    const host = STORE.s.account.name || '主持人';
+    const guest = pa.guestName || '来宾';
+    const lines = (s && Array.isArray(s.dialogue) ? s.dialogue : []).filter(x => x && x.text);
+    const speakers = Array.from(new Set(lines.map(x => x.speaker).filter(Boolean)));
+    if (speakers.length > 1) {
+      return lines.map((l, i) => ({
+        t: l.t || '',
+        speaker: i % 2 ? 'guest' : 'host',
+        speakerName: l.speaker,
+        cue: l.cue || '',
+        text: l.text
+      }));
+    }
+    const seed = lines.length ? lines : [{ text: v.title || p.title || '这本书值得聊一聊', cue: '开场' }];
+    const out = [];
+    seed.slice(0, 8).forEach((l, i) => {
+      if (i === 0) {
+        out.push({ speaker: 'host', speakerName: host, cue: '开场提问，语气自然', text: `我们今天聊《${p.title}》。你觉得这本书最值得先讲的是什么？` });
+      }
+      out.push({
+        speaker: 'guest',
+        speakerName: guest,
+        cue: l.cue || '回答，不要像念稿',
+        text: l.text
+      });
+      if (i < seed.length - 1) {
+        out.push({
+          speaker: 'host',
+          speakerName: host,
+          cue: i % 2 ? '追问，稍微插话' : '接话，提出观众疑问',
+          text: i % 2
+            ? '等一下，这里我想插一句。普通读者听到这里，最容易误会的点是什么？'
+            : '所以这不是一句漂亮话，它具体会怎么影响一个人的选择？'
+        });
+      }
+    });
+    out.push({ speaker: 'host', speakerName: host, cue: '收束 CTA', text: `如果大家想看《${p.title}》更完整的拆解，留言「书摘」，我们下一支继续聊。` });
+    return scaleConversation(out, Number(v.duration) || defaultVideoDuration());
+  }
+
+  function scaleConversation(lines, duration) {
+    const list = Array.isArray(lines) ? lines : [];
+    const D = clampDuration(duration);
+    return list.map((line, i) => {
+      const t0 = +(i * D / list.length).toFixed(1);
+      const t1 = +((i + 1) * D / list.length).toFixed(1);
+      return Object.assign({}, line, { t: `${t0.toFixed(1)}-${t1.toFixed(1)}s` });
+    });
+  }
+
+  function conversationToText(lines) {
+    return (lines || []).map(l => `${l.speaker === 'guest' ? '来宾' : '主持人'}：${l.text}`).join('\n');
+  }
+
+  function parseConversationText(text) {
+    return String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean).map(line => {
+      const m = line.match(/^(主持人|主理人|host|來賓|来宾|guest|作者|嘉宾|嘉賓)\s*[：:]\s*(.+)$/i);
+      if (!m) return { speaker: 'guest', text: line };
+      const raw = m[1].toLowerCase();
+      return { speaker: /host|主持|主理/.test(raw) ? 'host' : 'guest', text: m[2].trim() };
+    }).filter(x => x.text);
+  }
+
   function genVideoModal(id) {
     const hit = findVideo(id);
     if (!hit) return;
@@ -5323,6 +5458,40 @@ window.TOUR = (function () {
         </div>`,
         `<button class="btn" onclick="UI.closeModal()">取消</button>
          <button class="btn btn-primary" data-modal-act="goto-persona">去选形象和声音</button>`);
+    }
+
+    const format = v.format || defaultVideoMode();
+    if (format === 'conversation') {
+      const lines = scriptToConversation(v, p);
+      const guestAuto = !pa.guestAvatarId || !pa.guestVoiceId;
+      return modal('要真的生成双人访谈影片吗？', `
+        <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px">${esc(v.title)}</div>
+        <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
+          <div class="ex-r"><span class="ex-k">会送到哪里</span><span>AI Platform <b>/v1/tasks</b>，任务类型 <b>conversation_video</b>。BookReel 不直接接第三方金钥。</span></div>
+          <div class="ex-r"><span class="ex-k">主持人</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b></span></div>
+          <div class="ex-r"><span class="ex-k">来宾</span><span>${esc(pa.guestName || '来宾')}　Avatar <b>${esc(pa.guestAvatarId || 'AI Platform 自动配')}</b>　Voice <b>${esc(pa.guestVoiceId || 'AI Platform 自动配')}</b></span></div>
+          <div class="ex-r"><span class="ex-k">要等多久</span><span>双人访谈需要分段生成与剪辑，通常比单人口播久。完成后要回传不失效的 MP4 URL。</span></div>
+          ${guestAuto ? '<div class="ex-r"><span class="ex-k">提醒</span><span>来宾 Avatar / Voice 目前空白，会交给 AI Platform 自动配；要固定角色，请回「数字人 / 声音」填写 ID。</span></div>' : ''}
+        </div>
+        <div class="row2">
+          <div class="field"><div class="label">访谈场景</div>
+            <select class="input" id="gv-scene">
+              ${[
+                ['professional_interview_room', '专业访谈室'],
+                ['street_interview', '马路街访'],
+                ['car_conversation', '车内聊天'],
+                ['bookstore_talk', '书店圆桌'],
+                ['podcast_studio', '播客录音室']
+              ].map(x => `<option value="${x[0]}" ${pa.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
+            </select></div>
+          <div class="field"><div class="label">片长</div>
+            <input class="input" id="gv-duration" type="number" min="15" max="180" step="5" value="${Number(v.duration) || defaultVideoDuration()}"></div>
+        </div>
+        <div class="field"><div class="label">双人对谈台词（可以改）</div>
+          <textarea class="input" id="gv-dialogue" style="min-height:190px;line-height:1.75">${esc(conversationToText(lines))}</textarea></div>
+        <div class="hint">格式用「主持人：」和「来宾：」。送出后会保留 speaker，不会合成成单一旁白。</div>`,
+        `<button class="btn" onclick="UI.closeModal()">取消</button>
+         <button class="btn btn-primary" data-modal-act="confirm-conversation-video" data-id="${esc(id)}">确认生成双人访谈（会扣钱）</button>`, true);
     }
 
     const text = scriptToSpeech(v, p);
@@ -5381,6 +5550,159 @@ window.TOUR = (function () {
     }
   }
 
+  async function aipTask(payload) {
+    return hgFetch('/api/ai-platform/tasks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, 30000);
+  }
+
+  async function aipStatus(taskId) {
+    return hgFetch('/api/ai-platform/tasks/' + encodeURIComponent(taskId), null, 20000);
+  }
+
+  function taskResult(body) {
+    return body && (body.result || body.data || body.task || body);
+  }
+
+  function taskIdOf(body) {
+    const r = taskResult(body) || {};
+    return r.id || r.task_id || r.taskId || r.job_id || body?.id || body?.task_id || body?.taskId;
+  }
+
+  function taskStatusOf(body) {
+    const r = taskResult(body) || {};
+    return String(r.status || body?.status || '').toLowerCase();
+  }
+
+  function taskErrorOf(body) {
+    const r = taskResult(body) || {};
+    return r.error || r.message || body?.error || body?.message || '';
+  }
+
+  function taskVideoUrlOf(body) {
+    const r = taskResult(body) || {};
+    const a = r.completed_assets || r.completedAssets || r.assets || r.output || body?.completed_assets || {};
+    return a.final_video_url || a.conversation_video_url || a.avatar_video_url || a.video_url ||
+      r.final_video_url || r.conversation_video_url || r.avatar_video_url || r.video_url || r.url || body?.videoUrl;
+  }
+
+  function isTaskDone(status) {
+    return ['completed', 'complete', 'succeeded', 'success', 'done'].includes(status);
+  }
+
+  function isTaskFailed(status) {
+    return ['failed', 'error', 'canceled', 'cancelled'].includes(status);
+  }
+
+  async function doGenConversationVideo(id) {
+    const hit = findVideo(id);
+    if (!hit) return;
+    const { v, p } = hit;
+    if (videoJobs[id]) return toast('这一支已经在生成中了', 'warn');
+
+    const dialogue = parseConversationText(($('#gv-dialogue') || {}).value || '');
+    const scene = (($('#gv-scene') || {}).value || STORE.s.persona.conversationScene || 'professional_interview_room');
+    const duration = clampDuration((($('#gv-duration') || {}).value) || v.duration || defaultVideoDuration());
+    closeModal();
+    if (dialogue.length < 2) return toast('双人访谈至少要两句对谈', 'warn');
+
+    const pa = STORE.s.persona;
+    const hostAvatar = pa.realAvatarMode === 'image'
+      ? { mode: 'image', asset_id: pa.realPhotoAssetId, name: '你上传的照片' }
+      : { mode: 'avatar', avatar_id: pa.realAvatarId, name: pa.realAvatarName || STORE.s.account.name };
+    const payload = {
+      task: 'conversation_video',
+      quality: 'balanced',
+      ratio: v.ratio || '9:16',
+      duration_seconds: duration,
+      callback_id: `bookreel_${v.id}`,
+      scene,
+      title: v.title,
+      source: {
+        app: 'bookreel',
+        project_id: p.id,
+        script_id: v.scriptId,
+        book: { title: p.title, author: p.author, publisher: p.publisher }
+      },
+      speakers: [
+        { id: 'host', role: 'host', name: STORE.s.account.name || '主持人', avatar: hostAvatar, voice_id: pa.realVoiceId, voice_name: pa.realVoiceName },
+        { id: 'guest', role: 'guest', name: pa.guestName || '来宾', avatar_id: pa.guestAvatarId || 'auto', voice_id: pa.guestVoiceId || 'auto' }
+      ],
+      dialogue,
+      output: {
+        format: 'mp4',
+        store: true,
+        completed_assets: ['final_video_url', 'conversation_video_url']
+      }
+    };
+
+    videoJobs[id] = true;
+    v.status = '生成中'; v.error = null; v.format = 'conversation'; v.duration = duration;
+    v.avatarName = `${STORE.s.account.name || '主持人'} + ${pa.guestName || '来宾'}`;
+    v.voiceName = `${pa.realVoiceName || '主持人声音'} + ${pa.guestVoiceId ? '来宾声音' : 'AI Platform 自动配音'}`;
+    STORE.update(); render();
+    toast('双人访谈已送出，等待 AI Platform 生成', 'ok');
+
+    try {
+      const created = await aipTask(payload);
+      const url = taskVideoUrlOf(created);
+      if (url) {
+        delete videoJobs[id];
+        v.status = '已生成'; v.videoUrl = url; v.aiPlatformTaskId = taskIdOf(created) || '';
+        STORE.update(); render();
+        toast('双人访谈影片已生成', 'ok');
+        return;
+      }
+      const taskId = taskIdOf(created);
+      if (!taskId) throw new Error('AI Platform 没有回传 result.id / task_id，无法轮询');
+      v.aiPlatformTaskId = taskId;
+      STORE.update();
+      STORE.log('ok', `送出双人访谈：${v.title}`);
+      pollAiPlatformVideo(id);
+    } catch (e) {
+      delete videoJobs[id];
+      v.status = '生成失败'; v.error = e.message;
+      STORE.update(); render();
+      toast('双人访谈送出失败：' + e.message, 'err');
+    }
+  }
+
+  function pollAiPlatformVideo(id) {
+    const tick = async () => {
+      const hit = findVideo(id);
+      if (!hit) { delete videoJobs[id]; return; }
+      const { v } = hit;
+      if (!v.aiPlatformTaskId) { delete videoJobs[id]; return; }
+      try {
+        const s = await aipStatus(v.aiPlatformTaskId);
+        const status = taskStatusOf(s);
+        const url = taskVideoUrlOf(s);
+        if ((isTaskDone(status) && url) || url) {
+          delete videoJobs[id];
+          v.status = '已生成'; v.videoUrl = url;
+          const st = STORE.s.settings;
+          st.quotaUsed = Math.min(st.quotaTotal, st.quotaUsed + 1);
+          STORE.update(); render();
+          STORE.log('ok', `双人访谈已生成：${v.title}`);
+          toast(`《${v.title}》双人访谈已生成好了`, 'ok');
+          return;
+        }
+        if (isTaskFailed(status)) {
+          delete videoJobs[id];
+          v.status = '生成失败'; v.error = taskErrorOf(s) || 'AI Platform 回报失败';
+          STORE.update(); render();
+          toast('双人访谈生成失败：' + v.error, 'err');
+          return;
+        }
+        setTimeout(tick, 6000);
+      } catch (e) {
+        setTimeout(tick, 9000);
+      }
+    };
+    tick();
+  }
+
   function pollVideo(id) {
     const tick = async () => {
       const hit = findVideo(id);
@@ -5423,6 +5745,10 @@ window.TOUR = (function () {
       if (v.status === '生成中' && v.heygenId && !videoJobs[v.id]) {
         videoJobs[v.id] = true;
         pollVideo(v.id);
+      }
+      if (v.status === '生成中' && v.aiPlatformTaskId && !videoJobs[v.id]) {
+        videoJobs[v.id] = true;
+        pollAiPlatformVideo(v.id);
       }
     }));
   }
@@ -6815,6 +7141,26 @@ function setVideoDuration(videoId, value, notify) {
   if (notify) {
     render();
     UI.toast(`片长已设为 ${duration} 秒`, 'ok');
+  }
+}
+
+function defaultVideoMode() {
+  const mode = window.STORE && STORE.s && STORE.s.persona ? STORE.s.persona.videoMode : 'single';
+  return mode === 'conversation' ? 'conversation' : 'single';
+}
+
+function setVideoFormat(videoId, value, notify) {
+  const format = value === 'conversation' ? 'conversation' : 'single';
+  let hit = null;
+  (STORE.s.projects || []).forEach(p => (p.videos || []).forEach(v => {
+    if (v.id === videoId) hit = { p, v };
+  }));
+  if (!hit) return;
+  hit.v.format = format;
+  STORE.update();
+  if (notify) {
+    render();
+    UI.toast(format === 'conversation' ? '已改为双人访谈' : '已改为单人口播', 'ok');
   }
 }
 
