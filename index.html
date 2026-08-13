@@ -3878,7 +3878,7 @@ window.VIEWS = window.VIEWS || {};
  * 合并自同事版本：把「单数字人口播」升级成「场景 + 双数字人真人对谈」，
  * 并新增订阅方案页（演示 UI，未接入真实收费）。
  * 端口说明：
- *   - 原始素材里涉及外部 AI Platform 路由与 Stripe 收款的文案，
+ *   - 原始素材里涉及外部 Model Router 路由与 Stripe 收款的文案，
  *     一律改成「规划中 / 需自行部署」的诚实框架，不宣称本演示已经
  *     接上真实的数字人生成或真实收款。
  *   - 原文里混入的繁体字（雙/場/談/節…）已统一改回简体，
@@ -5787,7 +5787,7 @@ window.TOUR = (function () {
   }
 
   /* ============================================================
-   * 真实 AI 写稿（接 AI Platform 的 chat）
+   * 真实 AI 写稿（接 Model Router 的 chat）
    *
    * 现况：STEP 4 产出的对谈稿是模板拼出来的，句型固定、换本书也
    * 只有书名变。这里让它真的送进大模型重写一遍，成本约 US$0.01-0.05
@@ -5866,7 +5866,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     }
   }
 
-  /* ---- 真实场景示意图（AI Platform 的 image 任务）----
+  /* ---- 真实场景示意图（Model Router 的 image 任务）----
    * $0.03-0.07 一张，所以一次只生一张、按一次生一次，不做批次。 */
   async function aiSceneImage(templateId) {
     const t = (DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : []).find(x => x.id === templateId);
