@@ -1,0 +1,5 @@
+third-party-output/
+ai-platform-output/
+payment-output/
+.env
+.env.local

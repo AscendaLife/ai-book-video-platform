@@ -1,0 +1,72 @@
+{
+  "version": "bookreel.third_party_render.v1",
+  "project": {
+    "title": "認知槓桿",
+    "author": "林亦然",
+    "publisher": "遠見文化",
+    "summary": "一本關於判斷力、注意力和高倍數行動的新書。",
+    "themes": ["注意力是稀缺資產", "高槓桿決策", "把經驗變成模型"],
+    "quotes": ["你不是時間不夠，你是把時間花在了槓桿率最低的事情上。"]
+  },
+  "target": {
+    "platform": "douyin",
+    "ratio": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "durationSeconds": 60,
+    "language": "zh-TW / zh-CN"
+  },
+  "scripts": [
+    {
+      "id": "sample_script_01",
+      "title": "火星基地裡的一本生存手冊",
+      "sceneMode": "場景真人對談",
+      "rhythm": "插嘴、接話、短停頓、反問、語速差",
+      "scenePlan": [
+        {
+          "name": "火星基地",
+          "visual": "紅色荒原、基地艙、氧氣警報、星空",
+          "role": "用資源有限的極端環境講決策"
+        },
+        {
+          "name": "專業訪談室",
+          "visual": "沙發、書架、桌面書封、補光",
+          "role": "講核心觀點"
+        },
+        {
+          "name": "車內聊天",
+          "visual": "車窗城市、副駕視角、路燈移動",
+          "role": "用朋友語氣收尾"
+        }
+      ],
+      "voicePlan": [
+        {
+          "role": "主持人",
+          "voice": "年輕女聲 / 語速快 / 反應多 / 可插嘴",
+          "pace": "205-220 wpm",
+          "emotion": "好奇、追問、帶一點吐槽"
+        },
+        {
+          "role": "作者",
+          "voice": "成熟男聲 / 語速穩 / 停頓明顯",
+          "pace": "160-175 wpm",
+          "emotion": "專業、耐心、收束觀點"
+        }
+      ],
+      "dialogue": [
+        {
+          "t": "0.0-3.8s",
+          "speaker": "主持人",
+          "cue": "快、直接",
+          "text": "等一下，先別講大道理。這本書在火星基地裡為什麼會變成生存手冊？"
+        },
+        {
+          "t": "3.2-8.8s",
+          "speaker": "作者",
+          "cue": "穩、先給結論",
+          "text": "因為資源有限時，你最需要的不是努力，而是判斷。"
+        }
+      ]
+    }
+  ]
+}
