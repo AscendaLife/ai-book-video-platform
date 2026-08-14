@@ -1033,7 +1033,7 @@ window.DATA = (function () {
       out: '八个平台各自的建议支数、时长、语气和引导语。',
       tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
     { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 双人访谈 / 画面场地 / 镜头表',
-      why: '默认先写稳定的单人口播稿；如果影片形式改成双人访谈，生成时会把稿子转成主持人追问、来宾回答的对谈任务送到 AI Platform。',
+      why: '默认先写稳定的单人口播稿；如果影片形式改成双人访谈，生成时会把稿子转成主持人追问、来宾回答的对谈任务送到 Model Router。',
       you: '看看稿子讲得对不对，不喜欢的可以单篇点「用真实 AI 重写」。',
       out: '20 标题 + 20 Hook + 10 开场白 + 14 篇短视频稿，每篇都带画面场地、镜头表与停顿提示。',
       tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成短视频稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
@@ -3192,9 +3192,9 @@ window.VIEWS = window.VIEWS || {};
             </div>
             <div style="flex:1">
               <div style="font-weight:700;margin-bottom:6px">${STORE.s.persona.videoMode === 'conversation' ? '双人访谈 · 主持人 + 来宾' : '单人口播 · 一个形象 + 一个声音'}</div>
-              <div class="chip-list"><span class="tag g">用你选的主持人形象</span><span class="tag g">用你选的主持人声音</span><span class="tag ${STORE.s.persona.videoMode === 'conversation' ? 'v' : 'g'}">${STORE.s.persona.videoMode === 'conversation' ? 'AI Platform 双人任务' : '口型同步'}</span></div>
+              <div class="chip-list"><span class="tag g">用你选的主持人形象</span><span class="tag g">用你选的主持人声音</span><span class="tag ${STORE.s.persona.videoMode === 'conversation' ? 'v' : 'g'}">${STORE.s.persona.videoMode === 'conversation' ? 'Model Router 双人任务' : '口型同步'}</span></div>
               <div class="hint" style="margin-top:8px">${STORE.s.persona.videoMode === 'conversation'
-                ? '双人访谈会送 conversation_video，让 AI Platform 负责来宾、分段生成、剪辑和最终 MP4。'
+                ? '双人访谈会送 conversation_video，让 Model Router 负责来宾、分段生成、剪辑和最终 MP4。'
                 : '单人口播里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。'}</div>
             </div></div>
           <div class="explain" style="margin:14px 0 0">
@@ -3442,7 +3442,7 @@ window.VIEWS = window.VIEWS || {};
                 ['podcast_studio', '播客录音室']
               ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
             </select></div>
-          <div class="field"><div class="label">HeyGen 双人模板 ID</div>
+          <div class="field"><div class="label">双人对谈模板 ID</div>
             <input class="input" value="${esc(p.conversationTemplateId || 'bookreel_fixed_interview_v1')}" data-act="persona-set" data-k="conversationTemplateId">
             <div class="hint" style="margin-top:6px">第一版使用固定 5 段结构：主持人开场 → 来宾回答 → 主持人追问 → 来宾补充 → 主持人 CTA。</div>
           </div>
@@ -3452,15 +3452,15 @@ window.VIEWS = window.VIEWS || {};
             <input class="input" value="${esc(p.guestName || '来宾')}" data-act="persona-set" data-k="guestName"></div>
           <div class="row2">
             <div class="field"><div class="label">来宾 Avatar ID</div>
-              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 AI Platform 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
+              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
             <div class="field"><div class="label">来宾 Voice ID</div>
-              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 AI Platform 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
+              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
           </div>
         </div>
       </div>
       <div class="explain" style="margin:12px 0 0;border-left-color:${p.videoMode === 'conversation' ? 'var(--violet)' : 'var(--amber)'}">
-        <div class="ex-r"><span class="ex-k">正式双人生成</span><span>会送到 AI Platform 的 <b>task: "conversation_video"</b>，由后端接 HeyGen / 剪辑 / 转存，前台只拿最终 MP4 URL。</span></div>
-        <div class="ex-r"><span class="ex-k">没有来宾 ID 也能送</span><span>但这表示交给 AI Platform 自动选来宾形象和声音；要指定真人或固定角色，就把来宾 Avatar / Voice ID 填上。</span></div>
+        <div class="ex-r"><span class="ex-k">正式双人生成</span><span>会送到 Model Router 的 <b>task: "conversation_video"</b>，由后端完成人像生成、剪辑与转存，前台只拿最终 MP4 URL。</span></div>
+        <div class="ex-r"><span class="ex-k">没有来宾 ID 也能送</span><span>但这表示交给 Model Router 自动选来宾形象和声音；要指定真人或固定角色，就把来宾 Avatar / Voice ID 填上。</span></div>
       </div>
     </div>
 
@@ -4036,7 +4036,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="right"><span class="tag a">参考用，不是本系统产出</span></div></div>
       <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
         <div class="ex-r"><span class="ex-k">先讲清楚</span><span>这几支是<b>事先做好的参考片</b>，里面有两个人对谈。
-          现在正式生成可选<b>单人口播</b>或<b>双人访谈</b>；双人访谈会送 AI Platform 的 conversation_video 任务，完成后回最终 MP4。</span></div>
+          现在正式生成可选<b>单人口播</b>或<b>双人访谈</b>；双人访谈会送 Model Router 的 conversation_video 任务，完成后回最终 MP4。</span></div>
         <div class="ex-r"><span class="ex-k">那看它做什么</span><span>看<b>场地与画面风格</b>：街头、访谈室、车内这些背景感，是你挑场景时的参考。</span></div>
       </div>
       <div class="sample-grid">
@@ -5502,11 +5502,11 @@ window.TOUR = (function () {
       return modal('要真的生成双人访谈影片吗？', `
         <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px">${esc(v.title)}</div>
         <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
-          <div class="ex-r"><span class="ex-k">会送到哪里</span><span>AI Platform <b>/v1/tasks</b>，任务类型 <b>conversation_video</b>。BookReel 不直接接第三方金钥。</span></div>
+          <div class="ex-r"><span class="ex-k">会送到哪里</span><span>Model Router <b>/v1/tasks</b>，任务类型 <b>conversation_video</b>。BookReel 不直接接第三方金钥。</span></div>
           <div class="ex-r"><span class="ex-k">主持人</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b></span></div>
-          <div class="ex-r"><span class="ex-k">来宾</span><span>${esc(pa.guestName || '来宾')}　Avatar <b>${esc(pa.guestAvatarId || 'AI Platform 自动配')}</b>　Voice <b>${esc(pa.guestVoiceId || 'AI Platform 自动配')}</b></span></div>
+          <div class="ex-r"><span class="ex-k">来宾</span><span>${esc(pa.guestName || '来宾')}　Avatar <b>${esc(pa.guestAvatarId || 'Model Router 自动配')}</b>　Voice <b>${esc(pa.guestVoiceId || 'Model Router 自动配')}</b></span></div>
           <div class="ex-r"><span class="ex-k">要等多久</span><span>双人访谈需要分段生成与剪辑，通常比单人口播久。完成后要回传不失效的 MP4 URL。</span></div>
-          ${guestAuto ? '<div class="ex-r"><span class="ex-k">提醒</span><span>来宾 Avatar / Voice 目前空白，会交给 AI Platform 自动配；要固定角色，请回「数字人 / 声音」填写 ID。</span></div>' : ''}
+          ${guestAuto ? '<div class="ex-r"><span class="ex-k">提醒</span><span>来宾 Avatar / Voice 目前空白，会交给 Model Router 自动配；要固定角色，请回「数字人 / 声音」填写 ID。</span></div>' : ''}
         </div>
         <div class="row2">
           <div class="field"><div class="label">访谈场景</div>
@@ -5678,9 +5678,9 @@ window.TOUR = (function () {
     videoJobs[id] = true;
     v.status = '生成中'; v.error = null; v.format = 'conversation'; v.duration = duration;
     v.avatarName = `${STORE.s.account.name || '主持人'} + ${pa.guestName || '来宾'}`;
-    v.voiceName = `${pa.realVoiceName || '主持人声音'} + ${pa.guestVoiceId ? '来宾声音' : 'AI Platform 自动配音'}`;
+    v.voiceName = `${pa.realVoiceName || '主持人声音'} + ${pa.guestVoiceId ? '来宾声音' : 'Model Router 自动配音'}`;
     STORE.update(); render();
-    toast('双人访谈已送出，等待 AI Platform 生成', 'ok');
+    toast('双人访谈已送出，等待 Model Router 生成', 'ok');
 
     try {
       const created = await aipTask(payload);
@@ -5693,7 +5693,7 @@ window.TOUR = (function () {
         return;
       }
       const taskId = taskIdOf(created);
-      if (!taskId) throw new Error('AI Platform 没有回传 result.id / task_id，无法轮询');
+      if (!taskId) throw new Error('Model Router 没有回传 result.id / task_id，无法轮询');
       v.aiPlatformTaskId = taskId;
       STORE.update();
       STORE.log('ok', `送出双人访谈：${v.title}`);
@@ -5728,7 +5728,7 @@ window.TOUR = (function () {
         }
         if (isTaskFailed(status)) {
           delete videoJobs[id];
-          v.status = '生成失败'; v.error = taskErrorOf(s) || 'AI Platform 回报失败';
+          v.status = '生成失败'; v.error = taskErrorOf(s) || 'Model Router 回报失败';
           STORE.update(); render();
           toast('双人访谈生成失败：' + v.error, 'err');
           return;
