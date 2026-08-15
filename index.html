@@ -3658,6 +3658,30 @@ window.VIEWS = window.VIEWS || {};
       <div id="hg-voice-panel"><div class="hint">读取中…</div></div>
     </div>
 
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">声音的语气</div>
+          <div class="card-s">内建声音念起来会有点平，这三项可以拉回来一些</div></div></div>
+      <div class="grid g3">
+        <div class="field"><div class="label">语速
+            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceSpeed == null ? 1 : p.voiceSpeed)}×</span></div>
+          <input type="range" min="0.8" max="1.2" step="0.05" value="${p.voiceSpeed == null ? 1 : p.voiceSpeed}"
+                 data-act="voice-set" data-k="voiceSpeed">
+          <div class="hint" style="margin-top:2px">1 是原速。讲书稍微慢一点比较好听</div></div>
+        <div class="field"><div class="label">起伏
+            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceStability == null ? 0.4 : p.voiceStability)}</span></div>
+          <input type="range" min="0.1" max="0.9" step="0.05" value="${p.voiceStability == null ? 0.4 : p.voiceStability}"
+                 data-act="voice-set" data-k="voiceStability">
+          <div class="hint" style="margin-top:2px">数字<b>越小起伏越大</b>。调太高就是新闻播报那种一板一眼</div></div>
+        <div class="field"><div class="label">情绪
+            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceStyle == null ? 0.35 : p.voiceStyle)}</span></div>
+          <input type="range" min="0" max="0.8" step="0.05" value="${p.voiceStyle == null ? 0.35 : p.voiceStyle}"
+                 data-act="voice-set" data-k="voiceStyle">
+          <div class="hint" style="margin-top:2px">越高越有戏。太高会用力过猛</div></div>
+      </div>
+      <div class="hint" style="margin-top:12px">调完之后<b>要重新生成影片才听得到差别</b>，已经做好的影片不会变。
+        真的要像本人，还是得用上面的<b>上传录音克隆</b>——内建声音再怎么调都有机器味，这是它的天花板。</div>
+    </div>
+
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
 
     ${interviewCard(p)}
@@ -5162,6 +5186,12 @@ window.TOUR = (function () {
       STORE.update();
       return;
     }
+    const vs = e.target.closest('[data-act="voice-set"]');
+    if (vs) {
+      STORE.s.persona[vs.dataset.k] = Number(vs.value);
+      STORE.update(); render();
+      return;
+    }
     const el = e.target.closest('[data-act="persona-slider"]');
     if (!el) return;
     const k = el.dataset.k;
@@ -5676,13 +5706,28 @@ window.TOUR = (function () {
     hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
   }
 
-  /* 数字人服务会对素材做人脸侦测，侧脸、半身太远、脸被遮住都会被打回。
-   * 所以不管使用者怎么描述，都强制补上这几个硬条件。 */
-  function gaPrompt(desc) {
+  /* 生成形象时的场景。这一层很重要：mode:'image' 是拿这张图去动，
+   * 图里是什么背景，影片里就是什么背景——所以「有没有书房」在这里决定，
+   * 不是之后能再补的。 */
+  const GA_SCENES = [
+    ['study', '书房', '背后是整面书架与木质书桌，暖色阅读灯，几本摊开的书'],
+    ['bookstore', '书店', '背后是书店的书架与陈列平台，自然采光'],
+    ['studio', '访谈棚', '专业访谈棚，柔和打光，背景稍微虚化'],
+    ['plain', '纯色棚', '干净的纯色背景，柔和打光']
+  ];
+
+  /* 人脸侦测过不过，取决于脸够不够正、够不够清楚；但要不要有书房背景，
+   * 是构图的事，两者不冲突。之前把「背景干净简单」写死进去，等于主动
+   * 把书房排除掉，产出的都是大头照——那不是讲书的样子。 */
+  function gaPrompt(desc, sceneKey) {
+    const sc = GA_SCENES.find(x => x[0] === sceneKey) || GA_SCENES[0];
     return `${desc.trim()}。`
-      + '正面半身人像摄影，脸部正对镜头、五官完整清晰不被遮挡，'
-      + '光线均匀柔和，背景干净简单，真实人像摄影风格，高解析度，'
-      + '不要侧脸、不要背影、不要墨镜口罩、不要多个人、不要文字浮水印。';
+      + `场景：${sc[2]}。`
+      + '中景，人物在画面中间偏一侧、上半身入镜并留出头顶空间，'
+      + '脸部正对镜头、五官完整清晰不被遮挡，光线均匀柔和，'
+      + '真实人像摄影风格，高解析度，'
+      + '不要侧脸、不要背影、不要墨镜口罩、不要多个人、'
+      + '不要任何文字、logo 或浮水印。';
   }
 
   const GA_PRESETS = [
@@ -5712,6 +5757,13 @@ window.TOUR = (function () {
         placeholder="例如：三十多岁亚洲女性，气质知性，深色西装外套，短发"></textarea>
       <div class="hint" style="margin-top:6px">正脸、五官清楚这些条件系统会自动加上，你只要描述长相、年龄、穿着、气质就好。</div>
 
+      <div class="field" style="margin-top:12px">
+        <div class="label">拍摄场景<span class="hint" style="margin-left:8px;font-weight:400">影片的背景就是这里选的，之后改不了</span></div>
+        <select class="input" id="ga-scene">
+          ${GA_SCENES.map((x, i) => `<option value="${x[0]}" ${i === 0 ? 'selected' : ''}>${x[1]} —— ${x[2]}</option>`).join('')}
+        </select>
+      </div>
+
       <div id="ga-result" style="margin-top:14px"></div>
 
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -5733,9 +5785,12 @@ window.TOUR = (function () {
     if (useBtn) { useBtn.disabled = true; useBtn.style.opacity = '.45'; useBtn.style.pointerEvents = 'none'; }
     gaRender('<div class="hint">正在生成，约需 10–30 秒…</div>');
     try {
+      const scene = ($('#ga-scene') && $('#ga-scene').value) || 'study';
       const j = await hgFetch('/api/ai/image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: gaPrompt(desc), quality: 'balanced' })
+        /* 指名 gpt-image-2：不指定的话平台会自己挑，实测挑到的模型会在
+         * 右下角打上自己的浮水印，成品直接不能发。 */
+        body: JSON.stringify({ prompt: gaPrompt(desc, scene), quality: 'balanced', model: 'gpt-image-2' })
       });
       if (!j.url) throw new Error('模型没有回传图片网址');
       GA.url = j.url;
@@ -6224,7 +6279,8 @@ window.TOUR = (function () {
         body: JSON.stringify({
           mode: pa.realAvatarMode || 'avatar',
           avatarId: pa.realAvatarId, assetId: pa.realPhotoAssetId,
-          voiceId: pa.realVoiceId, text
+          voiceId: pa.realVoiceId, text,
+          voiceSettings: voiceSettings()
         })
       });
       v.heygenId = r.videoId;
@@ -6248,6 +6304,18 @@ window.TOUR = (function () {
    * 所以：预设只跑前 5 支、同时最多 2 支在跑、每一支都看得到结果，
    * 中途可以停。
    * ========================================================== */
+  /* 声音设定：内建 TTS 预设念起来偏平，这三个值能拉回来一些。
+   * 预设不是平台预设值，而是实测比较不像机器的组合——
+   * 稳定度调低会有起伏，情绪强度拉高一点会有语气。 */
+  function voiceSettings() {
+    const p = STORE.s.persona;
+    return {
+      speed: p.voiceSpeed == null ? 1 : Number(p.voiceSpeed),
+      stability: p.voiceStability == null ? 0.4 : Number(p.voiceStability),
+      style: p.voiceStyle == null ? 0.35 : Number(p.voiceStyle)
+    };
+  }
+
   function quotaLeft() {
     const st = STORE.s.settings;
     return Math.max(0, (st.quotaTotal || 0) - (st.quotaUsed || 0));
