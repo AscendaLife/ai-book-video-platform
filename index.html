@@ -776,7 +776,7 @@ window.I18N = (function () {
     '秽穢', '荤葷', '浑渾', '获獲', '饥饑', '挤擠', '剂劑', '纪紀', '夹夾', '荚莢', '驾駕', '歼殲',
     '监監', '坚堅', '笺箋', '艰艱', '硷鹼', '拣揀', '捡撿', '俭儉', '槛檻', '剑劍', '舰艦', '姜薑',
     '浆漿', '桨槳', '奖獎', '酱醬', '胶膠', '浇澆', '骄驕', '娇嬌', '搅攪', '缴繳', '绞絞', '洁潔',
-    '诫誡', '届屆', '紧緊', '谨謹', '尽盡', '劲勁', '惊驚', '净淨', '纠糾', '旧舊', '剧劇', '惧懼',
+    '诫誡', '届屆', '较較', '紧緊', '谨謹', '尽盡', '劲勁', '惊驚', '净淨', '纠糾', '旧舊', '剧劇', '惧懼',
     '军軍', '骏駿', '壳殼', '垦墾', '恳懇', '抠摳', '侩儈', '宽寬', '矿礦', '蜡蠟', '腊臘', '兰蘭',
     '烂爛', '捞撈', '劳勞', '涝澇', '垒壘', '泪淚', '厘釐', '礼禮', '丽麗', '厉厲', '励勵', '隶隸',
     '帘簾', '联聯', '怜憐', '粮糧', '辆輛', '谅諒', '辽遼', '猎獵', '邻鄰', '岭嶺', '铃鈴', '领領',
@@ -804,6 +804,7 @@ window.I18N = (function () {
     '郑鄭', '纸紙', '挚摯', '掷擲', '帜幟', '昼晝', '猪豬', '诸諸', '烛燭', '嘱囑', '赚賺', '妆妝',
     '壮壯', '锥錐', '坠墜', '缀綴', '谆諄', '浊濁', '兹茲', '渍漬', '总總', '纵縱', '邹鄒', '钻鑽',
     '韩韓', '蒋蔣', '贾賈', '缪繆', '龚龔', '侄姪',
+    '脸臉', '虚虛', '腻膩',
     // 言字旁（中文书写高频，务必补齐）
     '讽諷', '讥譏', '讪訕', '诀訣', '诅詛', '诋詆', '诌謅', '诏詔', '诙詼', '诚誠', '诛誅', '诞誕',
     '诟詬', '诠詮', '诡詭', '诣詣', '诤諍', '诧詫', '诬誣', '诰誥', '诱誘', '诲誨', '诳誑', '诵誦',
@@ -856,6 +857,7 @@ window.I18N = (function () {
     ['阿里', '阿里'],
     ['周孟真', '周孟真'],   // 人名，周 在此不作「週」
     ['干脆', '乾脆'],       // 干 在此不作「幹」
+    ['干净', '乾淨'],
     ['恢复', '恢復'],       // 复 在此不作「複」
     ['复盘', '復盤'],
     ['日历', '日曆'],       // 历 在此不作「歷」
@@ -986,6 +988,18 @@ window.I18N = (function () {
  * 真实接入时：把 DATA.generate* 系列函数改为调用后端 API 即可，
  * 其余 UI 层无需改动。
  * ========================================================== */
+/* 影片长度的两个小工具放在这里而不是 app.js：data.js 与 store.js 都比 app.js
+ * 先执行，写在 app.js 里的话，旧资料迁移与初次生成会踩到「函数还不存在」而整页白掉。 */
+function clampDuration(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(180, Math.max(15, Math.round(n))) : 60;
+}
+
+function defaultVideoDuration() {
+  const raw = window.STORE && STORE.s && STORE.s.settings ? STORE.s.settings.videoDuration : 60;
+  return clampDuration(raw);
+}
+
 window.DATA = (function () {
 
   /* 内容里提到「这个数字人属于谁」时一律取目前登录的帐户名 */
@@ -1032,8 +1046,8 @@ window.DATA = (function () {
       you: '看适配度评分，觉得某个平台不想做，后面可以不发。',
       out: '八个平台各自的建议支数、时长、语气和引导语。',
       tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
-    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 双人访谈 / 画面场地 / 镜头表',
-      why: '默认先写稳定的单人口播稿；如果影片形式改成双人访谈，生成时会把稿子转成主持人追问、来宾回答的对谈任务送到 Model Router。',
+    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 访谈式对谈 / 画面场地 / 镜头表',
+      why: '默认先写稳定的单人口播稿；如果影片形式改成访谈式对谈，生成时会按你选的形式（AI 提问者 / 作者 / 书中主角）把稿子转成一问一答的对谈任务送到 Model Router。',
       you: '看看稿子讲得对不对，不喜欢的可以单篇点「用真实 AI 重写」。',
       out: '20 标题 + 20 Hook + 10 开场白 + 14 篇短视频稿，每篇都带画面场地、镜头表与停顿提示。',
       tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成短视频稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
@@ -1250,6 +1264,40 @@ window.DATA = (function () {
       author: `【人物】先说作者${b.author}。\n\n【经历】写这本书之前，他花了很长时间在一线做观察，而不是在书房里推演。\n\n【所以】《${b.title}》读起来不像理论书，更像一份长期跟踪的笔记。\n\n【核心】${q}\n\n【推荐语】写书的人有没有下过场，读者一翻就知道。这本，有。`
     };
     return map[angle] || map.know;
+  }
+
+  /* ---------- 访谈式对谈影片：三种可以马上落地的形式 ----------
+   * 差别只有一件事：镜头前的两个人分别是谁、谁问谁答。
+   *   ai_interviewer 主理人回答、另一个 AI 数字人负责提问与追问（最容易，不需要任何人授权）
+   *   author         主理人提问、作者本人的数字人回答（要作者授权与配合）
+   *   character      主理人提问、书里的角色回答（接「书中角色」那一段做出来的人）
+   * hostAsks 决定固定 5 段结构里，主理人拿的是「问」的位置还是「答」的位置。 */
+  const INTERVIEW_FORMATS = [
+    {
+      id: 'ai_interviewer', name: '主理人 × AI 提问者', level: '最容易', levelTag: 'g',
+      hostAsks: false, guestName: 'AI 提问者',
+      templateId: 'bookreel_fixed_interview_ai_asks_v1',
+      how: '主理人数字人负责回答，另一个数字人负责提问与追问。稿子写成一问一答，两个角色分别生成再交叉剪辑。',
+      need: '不需要任何外部授权，用现成的第二个形象与声音就能开拍。'
+    },
+    {
+      id: 'author', name: '主理人 × 作者', level: '中等', levelTag: 'a',
+      hostAsks: true, guestName: '作者',
+      templateId: 'bookreel_fixed_interview_v1',
+      how: '作者授权后建立他的数字人形象与声音，做成「作者亲自谈这本书」。主理人负责提问。',
+      need: '要作者本人配合与书面授权：至少一段正面清晰的影像与一段清晰无杂音的人声。'
+    },
+    {
+      id: 'character', name: '主理人 × 书中主角', level: '最有想像力', levelTag: 'v',
+      hostAsks: true, guestName: '书中主角',
+      templateId: 'bookreel_fixed_interview_character_v1',
+      how: '主理人访问书里的角色。角色的样子来自「书中角色」那一段生成的定妆照，等于把两个新功能接起来。',
+      need: '这本书要先在「创意分镜 · 书中角色」里读出角色并生成定妆照。'
+    }
+  ];
+
+  function interviewFormat(id) {
+    return INTERVIEW_FORMATS.find(x => x.id === id) || INTERVIEW_FORMATS[0];
   }
 
   /* ---------- 场景模板库（创意分镜：从「单人口播」升级为「场景 + 双人对谈」） ---------- */
@@ -1633,12 +1681,14 @@ window.DATA = (function () {
     realPhotoPreview: null,    // 照片预览图网址
     realVoiceId: null,
     realVoiceName: '',
-    videoMode: 'single',        // single 单人口播 / conversation 双人访谈
-    guestName: '来宾',
+    videoMode: 'single',        // single 单人口播 / conversation 访谈式对谈
+    interviewFormat: 'ai_interviewer',  // 对面坐的是谁：AI 提问者 / 作者 / 书中主角
+    guestName: 'AI 提问者',
     guestAvatarId: '',
     guestVoiceId: '',
+    guestCharacterName: '',    // 形式选「书中主角」时，绑定的角色名字
     conversationScene: 'professional_interview_room',
-    conversationTemplateId: 'bookreel_fixed_interview_v1',
+    conversationTemplateId: '',  // 留空就用该形式的预设模板 ID
     cloneSamples: [{ name: '录音样本_01.wav', min: 42 }, { name: '录音样本_02.wav', min: 86 }],
     habits: ['我讲得直白一点', '你听我说完', '说句实在话', '这里我要停一下', '我自己的体会是'],
     values: ['尊重常识', '不夸大结论', '先讲代价再讲收益', '给具体做法而不是口号'],
@@ -1748,7 +1798,7 @@ window.DATA = (function () {
   ];
 
   return {
-    PLATFORMS, ANGLES, STAGES, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
+    PLATFORMS, ANGLES, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
     applyPersona, genShots, genVideos, genPendingVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
@@ -1780,6 +1830,12 @@ window.STORE = (function () {
       autoPersona: true, autoSubtitle: true, autoBroll: true, autoBgm: true,
       videoDuration: 60,
       realAI: true,   // STEP 2/4 用真实模型（约 US$0.6/本）；关掉就走模板
+      /* 每个会花钱的 AI 步骤开跑前，先弹窗让人挑模型。
+       * 勾了「不用再问」就变 false，之后直接用 modelPicks 里记住的。 */
+      askModel: true,
+      /* 各步骤记住的模型：{ read/script/rewrite/prompts/image: '模型 id 或策略' }。
+       * 空的时候各步骤用自己的预设（文字 auto、图像 fast）。 */
+      modelPicks: {},
       compliance: true, watermark: true, autoPublish: false,
       quotaUsed: 186, quotaTotal: 500
     },
@@ -1800,15 +1856,27 @@ window.STORE = (function () {
     const d = def();
     state.persona = Object.assign({}, d.persona, state.persona || {});
     state.settings = Object.assign({}, d.settings, state.settings || {});
+    // 旧资料没有这个物件，不补齐的话选模型窗口一存就崩
+    if (!state.settings.modelPicks || typeof state.settings.modelPicks !== 'object') state.settings.modelPicks = {};
     state.account = Object.assign({}, d.account, state.account || {});
     if (!state.account.name) state.account = d.account;
     if (!Array.isArray(state.persona.cloneSamples)) state.persona.cloneSamples = d.persona.cloneSamples;
+    /* 访谈式对谈：旧资料只有一个笼统的「来宾」，没有「对面坐的是谁」这件事。
+       补成预设的 AI 提问者，旧的固定模板 ID 也一并放掉，改由形式自己决定。 */
+    if (!DATA.INTERVIEW_FORMATS.some(f => f.id === state.persona.interviewFormat)) {
+      state.persona.interviewFormat = d.persona.interviewFormat;
+    }
+    if (state.persona.conversationTemplateId === 'bookreel_fixed_interview_v1') state.persona.conversationTemplateId = '';
+    if (state.persona.guestName === '来宾') state.persona.guestName = '';
     if (!Array.isArray(state.persona.habits)) state.persona.habits = d.persona.habits;
     if (!Array.isArray(state.people) || !state.people.length) state.people = null;
     if (!Array.isArray(state.schedule)) state.schedule = [];
     if (!Array.isArray(state.activity)) state.activity = [];
     state.projects.forEach(p => {
       if (!Array.isArray(p.materials)) p.materials = [];
+      // 书中角色：旧资料没有这个栏位，不补齐的话「让主角走进影片」一读就崩
+      if (!Array.isArray(p.characters)) p.characters = [];
+      if (!Array.isArray(p.videoPrompts)) p.videoPrompts = [];
       ['titles', 'hooks', 'opens', 'scripts', 'videos'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
       /* 旧版影片全是凭空造的假数据（随机播放量、随机「已发布」状态），
        * 但没有 demo 标记，介面会把它们当成真影片显示。
@@ -2158,7 +2226,15 @@ window.ENGINE = (function () {
     if (running) { UI.toast('已有任务在执行中', 'warn'); return; }
     logs.length = 0;
     addLog('l-info', `任务队列已创建 · 项目《${project.title}》`);
-    addLog('l-info', `调用模型：${STORE.s.settings.llm} · 声音模型：${STORE.s.settings.tts}`);
+    /* 以前这行报的是设定页里那个写死的下拉选单值，跟真正送出去的模型
+     * 无关。现在读「选模型」记住的实际选择；每一步开跑前还会再问一次，
+     * 所以这里只写目前的预设，不把它讲成定局。 */
+    const mp = window.MODELPICK;
+    if (mp) {
+      addLog('l-info', `预设模型 — 读书：${mp.label('read')} · 写稿：${mp.label('script')}`
+        + (STORE.s.settings.askModel === false ? '（已设为不再询问，直接用这个）' : '（每一步开跑前会再问一次，可当场换）'));
+    }
+    addLog('l-info', `声音模型：${STORE.s.settings.tts}`);
     project.status = 'producing';
     running = { projectId: project.id, stageIndex: fromIndex || 0, taskIndex: -1, timer: null };
     project.stages = DATA.STAGES.map((s, i) => ({ key: s.key, state: i < (fromIndex || 0) ? 'done' : 'todo' }));
@@ -2299,6 +2375,8 @@ window.ENGINE = (function () {
           if (d.hots && d.hots.length) p.hots = d.hots;
           p.readByAI = true;
           addLog('l-ok', `  └ ✨ 真实 AI 阅读完成（模型：${r.model || '未知'}）：论点 ${(d.themes || []).length} 条 / 金句 ${(d.quotes || []).length} 条`);
+          // 平台没照你挑的模型跑就要讲出来，不能让日志看起来一切正常
+          if (r.note) addLog('l-warn', '  └ ' + r.note);
           STORE.update();
         }).catch(e => {
           addLog('l-warn', `  └ 真实 AI 阅读失败（${e.message}），改用本地规则抽取`);
@@ -2333,6 +2411,7 @@ window.ENGINE = (function () {
             });
           });
           addLog('l-ok', `  └ ✨ 真实 AI 写稿完成（模型：${r.model || '未知'}）：${p.titles.length} 标题 / ${p.hooks.length} Hook / ${real.length} 篇完整口播稿`);
+          if (r.note) addLog('l-warn', '  └ ' + r.note);
           if (real.length < p.scripts.length) {
             addLog('l-info', `  └ 其余 ${p.scripts.length - real.length} 篇仍为模板骨架，可在脚本详情里逐篇按「用真实 AI 重写」`);
           }
@@ -3191,11 +3270,17 @@ window.VIEWS = window.VIEWS || {};
                 : `<div class="pv" style="width:66px;height:66px;flex:0 0 66px;font-size:24px;border-radius:18px">主</div>`}
             </div>
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:6px">${STORE.s.persona.videoMode === 'conversation' ? '双人访谈 · 主持人 + 来宾' : '单人口播 · 一个形象 + 一个声音'}</div>
-              <div class="chip-list"><span class="tag g">用你选的主持人形象</span><span class="tag g">用你选的主持人声音</span><span class="tag ${STORE.s.persona.videoMode === 'conversation' ? 'v' : 'g'}">${STORE.s.persona.videoMode === 'conversation' ? 'Model Router 双人任务' : '口型同步'}</span></div>
-              <div class="hint" style="margin-top:8px">${STORE.s.persona.videoMode === 'conversation'
-                ? '双人访谈会送 conversation_video，让 Model Router 负责来宾、分段生成、剪辑和最终 MP4。'
-                : '单人口播里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。'}</div>
+              ${(() => {
+                const conv = STORE.s.persona.videoMode === 'conversation';
+                const f = DATA.interviewFormat(STORE.s.persona.interviewFormat);
+                return `
+              <div style="font-weight:700;margin-bottom:6px">${conv ? '访谈式对谈 · ' + esc(f.name) : '单人口播 · 一个形象 + 一个声音'}</div>
+              <div class="chip-list"><span class="tag g">用你选的形象</span><span class="tag g">用你选的声音</span><span class="tag ${conv ? 'v' : 'g'}">${conv ? 'Model Router 对谈任务' : '口型同步'}</span></div>
+              <div class="hint" style="margin-top:8px">${conv
+                ? '对谈会送 conversation_video：' + esc(f.hostAsks ? '你负责提问，' + f.guestName + '负责回答' : f.guestName + '负责提问，你负责回答')
+                  + '，由 Model Router 分段生成、切机位、剪成最终 MP4。'
+                : '单人口播里只会出现这一个人。稿子也是照这个写的——写什么，念出来就是什么。'}</div>`;
+              })()}
             </div></div>
           <div class="explain" style="margin:14px 0 0">
             <div class="ex-r"><span class="ex-k">这一步做什么</span><span>把每篇稿子对应成一支「待生成」的影片，<b>不会真的生成</b>。</span></div>
@@ -3211,7 +3296,7 @@ window.VIEWS = window.VIEWS || {};
             <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">
               <span class="mono" style="color:var(--txt-3)">${String(i + 1).padStart(2, '0')}</span>
               <span style="flex:1;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</span>
-              <span class="tag">${v && v.format === 'conversation' ? '双人访谈' : '单人口播'}</span>
+              <span class="tag">${v && v.format === 'conversation' ? '访谈式对谈' : '单人口播'}</span>
               ${statusTag(st)}
             </div>`;
           }).join('') || '<div class="hint">请先完成写稿阶段</div>'}
@@ -3289,12 +3374,12 @@ window.VIEWS = window.VIEWS || {};
       </div>
       <div class="vid-b">
         <div class="vid-tt">${esc(v.title)}</div>
-        <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span><span>${format === 'conversation' ? '双人访谈' : '单人口播'}</span></div>
+        <div class="vid-m"><span>${v.angle}</span><span>${v.ratio}</span><span>${format === 'conversation' ? '访谈式对谈 · ' + DATA.interviewFormat(STORE.s.persona.interviewFormat).name : '单人口播'}</span></div>
         <div class="vid-m" style="align-items:center;gap:8px">
           <span>形式</span>
           <select class="input" data-act="video-format" data-id="${v.id}" style="flex:1;padding:6px 8px;border-radius:9px">
             <option value="single" ${format !== 'conversation' ? 'selected' : ''}>单人口播</option>
-            <option value="conversation" ${format === 'conversation' ? 'selected' : ''}>双人访谈</option>
+            <option value="conversation" ${format === 'conversation' ? 'selected' : ''}>访谈式对谈</option>
           </select>
         </div>
         <div class="vid-m" style="align-items:center;gap:8px">
@@ -3362,6 +3447,12 @@ window.VIEWS = window.VIEWS || {};
         <select class="input" style="width:180px" data-act="switch-proj">
           ${STORE.s.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>《${esc(x.title)}》</option>`).join('')}
         </select>
+        ${(() => {
+          const pend = (p.videos || []).filter(v => v.status === '待生成' || v.status === '生成失败').length;
+          return pend
+            ? `<button class="btn btn-primary" data-act="batch-gen">▶ 批量生成（待生成 ${pend} 支）</button>`
+            : '';
+        })()}
         <button class="btn" data-act="export-all">⬇ 导出全部文案</button>
       </div>
     </div>
@@ -3384,6 +3475,116 @@ window.VIEWS = window.VIEWS || {};
   /* =======================================================
    * 数字人 / 声音 / 人格
    * ===================================================== */
+  /* ============================================================
+   * ③ 影片形式 —— 单人口播 / 访谈式对谈
+   *
+   * 「一个人对镜头讲」换成「两个人坐下来聊」：一问一答、有来有往、
+   * 机位在两人之间切换。对谈天然不像批量生产，也解决了 AI 念稿没人味。
+   * 三种形式差别只有一件事：对面坐的是谁。
+   *   AI 提问者 → 不用授权，现在就能开
+   *   作者      → 要作者本人授权与配合
+   *   书中主角  → 接「创意分镜 · 书中角色」已经做好的角色
+   * ========================================================== */
+  function interviewCard(p) {
+    const conv = p.videoMode === 'conversation';
+    const fmt = DATA.interviewFormat(p.interviewFormat);
+    const chars = [];
+    (STORE.s.projects || []).forEach(pr => (pr.characters || []).forEach(c => {
+      if (c.name && !chars.some(x => x.name === c.name)) chars.push({ name: c.name, book: pr.title, portrait: !!c.portraitUrl });
+    }));
+
+    return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">③ 影片形式</div>
+          <div class="card-s">正式生成时决定是一个人对镜头讲，还是两个人坐下来聊这本书</div></div>
+        <div class="right"><span class="tag ${conv ? 'v' : 'g'}">${conv ? '访谈式对谈' : '单人口播'}</span></div></div>
+
+      <div class="field"><div class="label">默认影片形式</div>
+        <select class="input" data-act="persona-set" data-k="videoMode">
+          <option value="single" ${!conv ? 'selected' : ''}>单人口播：一个数字人 + 一个声音</option>
+          <option value="conversation" ${conv ? 'selected' : ''}>访谈式对谈：两个人一问一答</option>
+        </select></div>
+
+      ${conv ? `
+      <div class="label" style="margin-top:14px">对面坐的是谁</div>
+      <div class="grid g3" style="margin-bottom:14px">
+        ${DATA.INTERVIEW_FORMATS.map(f => `
+          <div class="card ${f.id === fmt.id ? '' : ''}" data-act="persona-set" data-k="interviewFormat" data-v="${esc(f.id)}"
+               style="margin:0;cursor:pointer;background:var(--panel-2);border-color:${f.id === fmt.id ? 'var(--violet)' : 'var(--line)'}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <b style="font-size:15px;flex:1">${esc(f.name)}</b>
+              <span class="tag ${f.levelTag}">${esc(f.level)}</span>
+            </div>
+            <div class="hint" style="line-height:1.65">${esc(f.how)}</div>
+            <div class="hint" style="margin-top:8px;line-height:1.6;opacity:.85">前置：${esc(f.need)}</div>
+            ${f.id === fmt.id ? '<div class="tag v" style="margin-top:10px">目前用这个</div>' : ''}
+          </div>`).join('')}
+      </div>
+
+      <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">这个形式怎么演</span><span>
+          <b>${esc(fmt.hostAsks ? (STORE.s.account.name || '主理人') : (p.guestName || fmt.guestName))}</b> 负责问，
+          <b>${esc(fmt.hostAsks ? (p.guestName || fmt.guestName) : (STORE.s.account.name || '主理人'))}</b> 负责答，
+          固定 5 段：开场 → 回答 → 追问 → 补充 → 收尾 CTA。</span></div>
+        <div class="ex-r"><span class="ex-k">${fmt.hostAsks ? '你的形象用在' : '你的形象用在'}</span><span>
+          你在「①②」选的那张脸和那个声音，在这个形式里是<b>${fmt.hostAsks ? '提问的主持人' : '被访问、负责回答的人'}</b>。</span></div>
+      </div>
+
+      <div class="row2">
+        <div>
+          ${fmt.id === 'character' ? `
+          <div class="field"><div class="label">要访问哪个角色</div>
+            <select class="input" data-act="persona-set" data-k="guestCharacterName">
+              <option value="">${chars.length ? '用这本书的第一个角色' : '还没有任何角色'}</option>
+              ${chars.map(c => `<option value="${esc(c.name)}" ${p.guestCharacterName === c.name ? 'selected' : ''}>${esc(c.name)}（《${esc(c.book)}》${c.portrait ? '·有定妆照' : '·还没定妆照'}）</option>`).join('')}
+            </select>
+            <div class="hint" style="margin-top:6px">${chars.length
+              ? '角色来自「一键生成短视频 · 创意分镜 · 书中角色」。有定妆照的，对谈影片会直接用那张脸。'
+              : '还没有角色。先到「一键生成短视频 · 创意分镜 · 书中角色」让 AI 从书里读出角色并生成定妆照。'}</div>
+          </div>` : `
+          <div class="field"><div class="label">对方叫什么</div>
+            <input class="input" value="${esc(p.guestName || '')}" placeholder="${esc(fmt.guestName)}" data-act="persona-set" data-k="guestName">
+            <div class="hint" style="margin-top:6px">${fmt.id === 'author' ? '留空就用这本书的作者名字。' : '留空就叫「AI 提问者」。'}</div>
+          </div>`}
+          <div class="field"><div class="label">访谈场景</div>
+            <select class="input" data-act="persona-set" data-k="conversationScene">
+              ${[
+                ['professional_interview_room', '专业访谈室'],
+                ['street_interview', '马路街访'],
+                ['car_conversation', '车内聊天'],
+                ['bookstore_talk', '书店圆桌'],
+                ['podcast_studio', '播客录音室']
+              ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
+            </select></div>
+        </div>
+        <div>
+          <div class="row2">
+            <div class="field"><div class="label">对方 Avatar ID</div>
+              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
+            <div class="field"><div class="label">对方 Voice ID</div>
+              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
+          </div>
+          <div class="field"><div class="label">对谈模板 ID</div>
+            <input class="input" value="${esc(p.conversationTemplateId || '')}" placeholder="${esc(fmt.templateId)}" data-act="persona-set" data-k="conversationTemplateId">
+            <div class="hint" style="margin-top:6px">留空就用这个形式的预设模板：<b>${esc(fmt.templateId)}</b>。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="explain" style="margin:12px 0 0;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">正式生成</span><span>会送到 Model Router 的 <b>task: "conversation_video"</b>，带上 <b>interview_format: "${esc(fmt.id)}"</b>，由后端负责分段生成、切机位与剪辑，前台只拿最终 MP4 URL。</span></div>
+        <div class="ex-r"><span class="ex-k">还卡在哪</span><span>对谈要按轮次切机位，靠的是 <b>STEP 7 自动剪辑</b>。剪辑模块没到位之前，成片的切换节奏会比较朴素。</span></div>
+      </div>
+      ` : `
+      <div class="explain" style="margin:12px 0 0;border-left-color:var(--amber)">
+        <div class="ex-r"><span class="ex-k">要不要换成对谈</span><span>目前是<b>单人口播</b>：一个人从头讲到尾。
+          换成<b>访谈式对谈</b>之后，两个人一问一答、机位来回切——同样是 AI 生成，但批量感低得多，也比较不会一听就出戏。</span></div>
+        <div class="ex-r"><span class="ex-k">三种可以马上落地的形式</span><span>${DATA.INTERVIEW_FORMATS.map(f => `<b>${esc(f.name)}</b>（${esc(f.level)}）`).join('、')}。改成对谈后就会出现在这里。</span></div>
+      </div>
+      `}
+    </div>`;
+  }
+
   VIEWS.persona = function () {
     const p = STORE.s.persona;
     const ac = STORE.s.account;          // 数字人属于目前登录的人
@@ -3421,48 +3622,7 @@ window.VIEWS = window.VIEWS || {};
 
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
 
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">③ 影片形式</div>
-          <div class="card-s">正式生成时决定是一人讲，还是两个人访谈交流</div></div>
-        <div class="right"><span class="tag ${p.videoMode === 'conversation' ? 'v' : 'g'}">${p.videoMode === 'conversation' ? '双人访谈' : '单人口播'}</span></div></div>
-      <div class="row2">
-        <div>
-          <div class="field"><div class="label">默认影片形式</div>
-            <select class="input" data-act="persona-set" data-k="videoMode">
-              <option value="single" ${p.videoMode !== 'conversation' ? 'selected' : ''}>单人口播：一个数字人 + 一个声音</option>
-              <option value="conversation" ${p.videoMode === 'conversation' ? 'selected' : ''}>双人访谈：主持人 + 来宾对谈</option>
-            </select></div>
-          <div class="field"><div class="label">访谈场景</div>
-            <select class="input" data-act="persona-set" data-k="conversationScene">
-              ${[
-                ['professional_interview_room', '专业访谈室'],
-                ['street_interview', '马路街访'],
-                ['car_conversation', '车内聊天'],
-                ['bookstore_talk', '书店圆桌'],
-                ['podcast_studio', '播客录音室']
-              ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
-            </select></div>
-          <div class="field"><div class="label">双人对谈模板 ID</div>
-            <input class="input" value="${esc(p.conversationTemplateId || 'bookreel_fixed_interview_v1')}" data-act="persona-set" data-k="conversationTemplateId">
-            <div class="hint" style="margin-top:6px">第一版使用固定 5 段结构：主持人开场 → 来宾回答 → 主持人追问 → 来宾补充 → 主持人 CTA。</div>
-          </div>
-        </div>
-        <div>
-          <div class="field"><div class="label">来宾名称</div>
-            <input class="input" value="${esc(p.guestName || '来宾')}" data-act="persona-set" data-k="guestName"></div>
-          <div class="row2">
-            <div class="field"><div class="label">来宾 Avatar ID</div>
-              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
-            <div class="field"><div class="label">来宾 Voice ID</div>
-              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
-          </div>
-        </div>
-      </div>
-      <div class="explain" style="margin:12px 0 0;border-left-color:${p.videoMode === 'conversation' ? 'var(--violet)' : 'var(--amber)'}">
-        <div class="ex-r"><span class="ex-k">正式双人生成</span><span>会送到 Model Router 的 <b>task: "conversation_video"</b>，由后端完成人像生成、剪辑与转存，前台只拿最终 MP4 URL。</span></div>
-        <div class="ex-r"><span class="ex-k">没有来宾 ID 也能送</span><span>但这表示交给 Model Router 自动选来宾形象和声音；要指定真人或固定角色，就把来宾 Avatar / Voice ID 填上。</span></div>
-      </div>
-    </div>
+    ${interviewCard(p)}
 
     ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
          默认收起来，免得把真正要做的两件事淹没掉。 */''}
@@ -3717,6 +3877,18 @@ window.VIEWS = window.VIEWS || {};
    * ===================================================== */
   VIEWS.settings = function () {
     const st = STORE.s.settings;
+    /* 每一步目前预设用哪个模型。点「更改」会开跟执行前一模一样的选择窗口，
+     * 不另外做一套介面——两边看到的清单与价钱永远一致。 */
+    const mpRows = () => {
+      const mp = window.MODELPICK;
+      if (!mp) return '<div class="hint">模型选择功能尚未载入</div>';
+      const steps = mp.steps();
+      return Object.keys(steps).map(k => `<div class="setting-row">
+        <div><div style="font-size:15px;font-weight:600">${esc(steps[k].t)}</div>
+          <div class="hint">目前：${esc(mp.label(k))}</div></div>
+        <div class="right"><button class="btn" data-act="pick-model" data-k="${k}">更改</button></div>
+      </div>`).join('');
+    };
     const sw = (k, t, d) => `<div class="setting-row"><div><div style="font-size:15.5px;font-weight:600">${t}</div>
       <div class="hint">${d}</div></div><div class="right"><div class="switch ${st[k] ? 'on' : ''}" data-act="toggle" data-k="${k}"></div></div></div>`;
 
@@ -3730,14 +3902,13 @@ window.VIEWS = window.VIEWS || {};
       <div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-h"><div class="card-t">模型与引擎</div></div>
-          <div class="field"><div class="label">内容理解与写稿模型</div>
-            <select class="input" data-act="set" data-k="llm">
-              ${[['claude-opus-5', 'Claude Opus 5（推荐 · 长上下文理解整本书）'],
-                 ['claude-sonnet-5', 'Claude Sonnet 5（速度与成本平衡）'],
-                 ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5（批量清洗与分类）']]
-                .map(o => `<option value="${o[0]}" ${st.llm === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}
-            </select>
-            <div class="hint" style="margin-top:6px">建议：主链路用 Opus 5 保证理解质量，批量分类与去噪用 Haiku 降本。</div>
+          <div class="field">
+            <div class="label">每一步用哪个模型</div>
+            <div class="hint" style="margin:0 0 10px">
+              这里是「预设」。只要下面的开关是开的，每一步真的开跑前都还会再弹一次窗，
+              让你当场换模型、并看到那一步大概花多少钱。
+            </div>
+            ${mpRows()}
           </div>
           <div class="field"><div class="label">声音模型</div>
             <select class="input" data-act="set" data-k="tts">
@@ -3756,6 +3927,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="card">
           <div class="card-h"><div class="card-t">自动化开关</div></div>
           ${sw('realAI', '用真实 AI 读书与写稿', 'STEP 2 与 STEP 4 真的呼叫大模型（约 US$0.6/本）。关掉则用模板产生，不花钱')}
+          ${sw('askModel', '每一步开跑前先问我用哪个模型', '关掉就直接用上面记住的预设，中途不打断。会花钱的每一步都适用')}
           ${sw('autoPersona', '自动套用' + STORE.s.account.name + '人格', '写稿完成后自动进入人格改写，无需手动触发')}
           ${sw('autoSubtitle', '自动字幕', '自动断句并按平台样式生成字幕')}
           ${sw('autoBroll', '自动 B-roll 匹配', '按语义匹配空镜与素材，提升观感')}
@@ -3778,15 +3950,26 @@ window.VIEWS = window.VIEWS || {};
         </div>
 
         <div class="card" style="margin-bottom:16px">
-          <div class="card-h"><div class="card-t">用量与额度</div></div>
+          <div class="card-h"><div><div class="card-t">用量与额度</div>
+              <div class="card-s">这是花钱的闸门：用满就不给再生成，避免账单失控</div></div></div>
           <div style="display:flex;align-items:center;gap:18px">
             ${CHART.ring(Math.round(st.quotaUsed / st.quotaTotal * 100))}
             <div style="flex:1;font-size:15px;line-height:2.1">
               <div>本月已生成 <b>${st.quotaUsed}</b> / ${st.quotaTotal} 支</div>
               <div>预估本月成本 <b>内部版可见</b></div>
-              <div>剩余额度 <b>${st.quotaTotal - st.quotaUsed}</b> 支</div>
+              <div>剩余额度 <b style="color:${st.quotaTotal - st.quotaUsed <= 0 ? 'var(--red)' : 'var(--green)'}">${Math.max(0, st.quotaTotal - st.quotaUsed)}</b> 支</div>
             </div>
           </div>
+          <div class="row2" style="margin-top:14px">
+            <div class="field"><div class="label">本月上限（支）</div>
+              <input class="input" type="number" min="0" value="${st.quotaTotal}" data-act="set-quota-total"></div>
+            <div class="field"><div class="label">已用掉（支）</div>
+              <input class="input" type="number" min="0" value="${st.quotaUsed}" data-act="set-quota-used">
+              <div class="hint" style="margin-top:4px">新的一个月开始时，把这个改回 0</div></div>
+          </div>
+          ${st.quotaTotal - st.quotaUsed <= 0
+            ? `<div class="hint" style="color:var(--red);margin-top:8px"><b>额度已用完，目前无法生成新影片。</b>要继续做的话，把上面的「本月上限」调高。</div>`
+            : ''}
           <div class="hint" style="margin-top:12px">成本按「大模型 + TTS + 数字人渲染 + 存储」综合估算，实际以供应商账单为准。</div>
         </div>
 
@@ -3996,6 +4179,8 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
+    ${characterCard(p)}
+
     <div class="card" style="margin-bottom:18px;border-color:var(--violet-2)">
       <div class="card-h"><div><div class="card-t">用提示词生成短片</div>
           <div class="card-s">让 AI 读这本书写好提示词，你随便改，改完直接生成真影片</div></div>
@@ -4036,7 +4221,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="right"><span class="tag a">参考用，不是本系统产出</span></div></div>
       <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
         <div class="ex-r"><span class="ex-k">先讲清楚</span><span>这几支是<b>事先做好的参考片</b>，里面有两个人对谈。
-          现在正式生成可选<b>单人口播</b>或<b>双人访谈</b>；双人访谈会送 Model Router 的 conversation_video 任务，完成后回最终 MP4。</span></div>
+          现在正式生成可选<b>单人口播</b>或<b>访谈式对谈</b>；对谈会送 Model Router 的 conversation_video 任务，可以是「你 × AI 提问者」「你 × 作者」或「你 × 书中主角」，完成后回最终 MP4。</span></div>
         <div class="ex-r"><span class="ex-k">那看它做什么</span><span>看<b>场地与画面风格</b>：街头、访谈室、车内这些背景感，是你挑场景时的参考。</span></div>
       </div>
       <div class="sample-grid">
@@ -4055,6 +4240,86 @@ window.VIEWS = window.VIEWS || {};
     </div>
 `;
   };
+
+  /* =======================================================
+   * 书中角色 —— 让书里的主角走进影片
+   *
+   * 现在所有影片都是同一个形式：一个人对着镜头讲。这一段做的是另一件事：
+   * 从书里把人物读出来，生成这个角色长什么样，再让他真的出现在画面里，
+   * 把「讲这本书」变成「演这本书」。
+   *
+   * 三步走，每一步都可以停下来改：
+   *   1. AI 读这本书，抽出主要角色（名字 / 身份 / 外貌 / 代表场景）
+   *   2. 生成定妆照，先看长相对不对，不对就改外貌描述重生成
+   *   3. 一键把角色写成影片提示词，落到下面那张卡直接生成短片
+   * 定妆照走 image 任务（一张约 US$0.03-0.07），影片沿用既有的提示词生成流程，
+   * 不另外开一条会花钱的新路径。
+   * ===================================================== */
+  function characterCard(p) {
+    const list = Array.isArray(p.characters) ? p.characters : [];
+
+    return `
+    <div class="card" style="margin-bottom:18px;border-color:var(--violet)">
+      <div class="card-h"><div><div class="card-t">书中角色 · 让主角走进影片</div>
+          <div class="card-s">从《${esc(p.title)}》里把人物读出来，生成他的样子，再让他出现在画面里</div></div>
+        <div class="right"><span class="tag v">新功能</span></div></div>
+
+      <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">这是在做什么</span><span>其他影片都是<b>一个人对着镜头讲</b>；
+          这里是把书里的<b>角色</b>做出来，让他自己出现在画面里，从「讲这本书」变成「演这本书」。</span></div>
+        <div class="ex-r"><span class="ex-k">为什么值得做</span><span>三十支影片如果都是同一张脸对镜头讲，平台会判定为批量生产的低质内容；
+          有了角色与场景，每支影片天然长得不一样。小说、传记、历史、儿童书这些品类也才做得动。</span></div>
+        <div class="ex-r"><span class="ex-k">怎么用</span><span>①让 AI 读出角色 → ②生成定妆照，长相不对就改描述重生成 → ③写成影片提示词，
+          落到下面那张卡按「生成这支短片」。</span></div>
+      </div>
+
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-primary btn-sm" data-act="ai-read-characters">✨ 让 AI 从书里读出角色</button>
+        <button class="btn btn-sm" data-act="add-blank-char">＋ 自己加一个角色</button>
+        ${list.length ? `<button class="btn btn-sm" data-act="clear-chars">清空全部角色</button>` : ''}
+      </div>
+      <div id="ai-char-status"></div>
+
+      ${list.length ? `<div class="grid g3">${list.map((c, i) => characterItem(c, i)).join('')}</div>`
+      : `<div class="hint" style="padding:16px;text-align:center;background:var(--panel-2);border-radius:12px">
+           还没有角色。按上面「让 AI 从书里读出角色」最快；非虚构的书也可以，AI 会抽出书里出现的真实人物、案例主角或典型读者。
+         </div>`}
+    </div>
+`;
+  }
+
+  function characterItem(c, i) {
+    return `
+    <div class="card" style="background:var(--panel-2);margin:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span class="tag v">${String(i + 1).padStart(2, '0')}</span>
+        <b style="font-size:15px;flex:1">${esc(c.name || '未命名角色')}</b>
+        <b data-act="del-char" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px">✕</b>
+      </div>
+
+      <div class="char-portrait" data-for="${i}">${c.portraitUrl
+        ? `<img src="${esc(c.portraitUrl)}" style="width:100%;border-radius:10px;margin-bottom:10px">`
+        : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
+             padding:22px 10px;text-align:center;margin-bottom:10px">还没有定妆照</div>`}</div>
+
+      <div class="field" style="margin-bottom:8px"><div class="label">名字</div>
+        <input class="input" data-act="edit-char" data-i="${i}" data-k="name" value="${esc(c.name || '')}" placeholder="角色的名字"></div>
+      <div class="field" style="margin-bottom:8px"><div class="label">身份 / 在书里是谁</div>
+        <input class="input" data-act="edit-char" data-i="${i}" data-k="role" value="${esc(c.role || '')}" placeholder="例如：书中的年轻工程师、作者本人、故事的叙述者"></div>
+      <div class="field" style="margin-bottom:8px"><div class="label">长什么样<span class="hint" style="margin-left:8px;font-weight:400">长相不对就改这里再生成一次</span></div>
+        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="look" rows="3"
+          placeholder="年龄、性别、脸型、发型、穿着、神情、时代感…越具体越像">${esc(c.look || '')}</textarea></div>
+      <div class="field" style="margin-bottom:10px"><div class="label">代表场景</div>
+        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="scene" rows="2"
+          placeholder="他在做什么、在哪里、气氛如何">${esc(c.scene || '')}</textarea></div>
+
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-sm" data-act="gen-char-portrait" data-i="${i}">${c.portraitUrl ? '重生成定妆照' : '✨ 生成定妆照'}</button>
+        <button class="btn btn-sm btn-primary" data-act="char-to-prompt" data-i="${i}">让他走进影片 →</button>
+      </div>
+      <div class="hint" style="margin-top:8px">定妆照约 US$0.03-0.07 一张；「让他走进影片」只是写成提示词，还不会扣影片额度。</div>
+    </div>`;
+  }
 
   function creativeSamples() {
     return [
@@ -4648,10 +4913,40 @@ window.TOUR = (function () {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
+      /* ---- 书中角色：让书里的主角走进影片 ---- */
+      case 'ai-read-characters': return aiReadCharacters();
+      case 'add-blank-char': {
+        const p = STORE.current; if (!p) return;
+        p.characters = (p.characters || []).concat([{ name: '', role: '', look: '', scene: '' }]);
+        STORE.update(); render(); return;
+      }
+      case 'clear-chars': {
+        const p = STORE.current; if (!p) return;
+        p.characters = []; STORE.update(); render(); return;
+      }
+      case 'del-char': {
+        const p = STORE.current; if (!p) return;
+        (p.characters || []).splice(+el.dataset.i, 1);
+        STORE.update(); render(); return;
+      }
+      case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
+      case 'char-to-prompt': return charToPrompt(+el.dataset.i);
+
       case 'gen-prompt-video': return promptVideoConfirm(+el.dataset.i);
       case 'hg-upload-photo-btn':
         if (!hgCanWrite()) return hgDemoNotice();
         return $('#hg-photo-input').click();
+      case 'batch-gen': return batchGenModal();
+      case 'hg-lib-use': return hgLibUse(el.dataset.id);
+      case 'hg-lib-del': {
+        e.stopPropagation();
+        const it = hgLib().find(x => x.id === el.dataset.id);
+        if (it && confirm('要从形象库移除「' + it.name + '」吗？只是从清单拿掉，不影响已经生成好的影片。')) hgLibDel(el.dataset.id);
+        return;
+      }
+      case 'hg-gen-avatar-btn':
+        if (!hgCanWrite()) return hgDemoNotice();
+        return hgGenAvatarModal();
       case 'hg-upload-audio-btn':
         if (!hgCanWrite()) return hgDemoNotice();
         return $('#hg-audio-input').click();
@@ -4682,6 +4977,8 @@ window.TOUR = (function () {
         return;
       }
 
+      case 'pick-model': return MODELPICK.change(el.dataset.k);
+
       case 'switch-proj': return;
       case 'toggle': {
         const k = el.dataset.k;
@@ -4704,6 +5001,15 @@ window.TOUR = (function () {
       }
       case 'del-habit': {
         STORE.s.persona.habits.splice(+el.dataset.i, 1); STORE.update(); render();
+        return;
+      }
+      /* 访谈形式那三张卡是点选的，不是下拉；下拉走 change 事件那条路，
+         所以这里只处理带 data-v 的卡片点击。 */
+      case 'persona-set': {
+        if (el.dataset.v === undefined) return;
+        STORE.s.persona[el.dataset.k] = el.dataset.v;
+        STORE.update(); render();
+        if (el.dataset.k === 'interviewFormat') toast('已改成「' + DATA.interviewFormat(el.dataset.v).name + '」', 'ok');
         return;
       }
       case 'persona-save': { STORE.update(); toast('人格参数已保存，后续生成将立即生效', 'ok'); return; }
@@ -4768,6 +5074,12 @@ window.TOUR = (function () {
     if (el.dataset.act === 'video-format') {
       setVideoFormat(el.dataset.id, el.value, true);
     }
+    if (el.dataset.act === 'set-quota-total' || el.dataset.act === 'set-quota-used') {
+      const k = el.dataset.act === 'set-quota-total' ? 'quotaTotal' : 'quotaUsed';
+      STORE.s.settings[k] = Math.max(0, Math.floor(+el.value || 0));
+      STORE.update(); render(); toast('已保存', 'ok');
+      return;
+    }
     if (el.dataset.act === 'set-number') {
       STORE.s.settings[el.dataset.k] = clampDuration(el.value);
       STORE.update(); render(); toast('已保存', 'ok');
@@ -4775,6 +5087,14 @@ window.TOUR = (function () {
   });
   $('#view').addEventListener('input', e => {
     // 提示词是使用者随时会改的，边打边存，不用另外按储存
+    // 角色的名字/身份/外貌也是边打边存，跟提示词一样不重画，免得打断打字
+    const ce = e.target.closest('[data-act="edit-char"]');
+    if (ce) {
+      const p = STORE.current;
+      const c = p && (p.characters || [])[+ce.dataset.i];
+      if (c) { c[ce.dataset.k] = ce.value; STORE.update(); }
+      return;
+    }
     const pe = e.target.closest('[data-act="edit-prompt"]');
     if (pe) {
       const p = STORE.current;
@@ -4817,6 +5137,12 @@ window.TOUR = (function () {
       STORE.log('ok', '批量发布完成'); closeModal(); render(); toast('全部内容已发布', 'ok');
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
+    if (a === 'ga-preset') { const box = $('#ga-prompt'); if (box) { box.value = el.dataset.text || ''; box.focus(); } return; }
+    if (a === 'bg-run') return batchGenRun();
+    if (a === 'ga-run') return hgGenAvatarRun();
+    if (a === 'ga-use') return hgGenAvatarUse();
+    if (a === 'mp-ok') return mpFinish(el.dataset.step, true);
+    if (a === 'mp-cancel') return mpFinish(null, false);
     if (a === 'confirm-hg-gen') { closeModal(); return hgDoGenerate(); }
     if (a === 'confirm-gen-video') return doGenVideo(el.dataset.id);
     if (a === 'confirm-conversation-video') return doGenConversationVideo(el.dataset.id);
@@ -5182,24 +5508,39 @@ window.TOUR = (function () {
   function hgRenderAvatars() {
     const panel = $('#hg-avatar-panel');
     if (!panel) return;
-    const mine = HG.mode === 'image' && HG.assetPreview;
     /* 「上传自己的照片」放第一格而且做大：这是唯一不依赖外部清单、永远能用的路，
      * 也是多数人真正想要的东西（专属自己的数字人）。清单读不到时它照样能点。 */
     panel.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:11px;margin-bottom:12px">
-        <div class="hg-avatar ${mine ? 'on' : ''}" data-act="hg-upload-photo-btn"
-            style="border:2px dashed ${mine ? 'var(--violet-2)' : 'var(--violet)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center;
+        <div class="hg-avatar" data-act="hg-upload-photo-btn"
+            style="border:2px dashed var(--violet);border-radius:14px;padding:8px;cursor:pointer;text-align:center;
                    display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;
-                   background:${mine ? 'transparent' : 'rgba(124,108,255,.07)'}">
-          ${mine
-            ? `<img src="${esc(HG.assetPreview)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">
-               <div style="font-size:14px;font-weight:700;color:var(--violet-2)">✓ 你的专属数字人</div>
-               <div style="font-size:12.5px;color:var(--txt-3);margin-top:2px">点这里可换一张</div>`
-            : `<div style="font-size:26px;color:var(--violet-2)">＋</div>
-               <div style="font-size:14.5px;font-weight:700;margin-top:6px">上传我的照片</div>
-               <div style="font-size:12.5px;color:var(--txt-3);margin-top:3px;line-height:1.5">做一个<br>专属自己的数字人</div>`}
+                   background:rgba(124,108,255,.07)">
+          <div style="font-size:26px;color:var(--violet-2)">＋</div>
+          <div style="font-size:14.5px;font-weight:700;margin-top:6px">上传我的照片</div>
+          <div style="font-size:12.5px;color:var(--txt-3);margin-top:3px;line-height:1.5">做一个<br>专属自己的数字人</div>
         </div>
-        ${HG.avatars.slice(0, 11).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
+        <div class="hg-avatar" data-act="hg-gen-avatar-btn"
+            style="border:2px dashed var(--cyan);border-radius:14px;padding:8px;cursor:pointer;text-align:center;
+                   display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;
+                   background:rgba(34,211,238,.07)">
+          <div style="font-size:26px;color:var(--cyan)">✨</div>
+          <div style="font-size:14.5px;font-weight:700;margin-top:6px">用提示词生成</div>
+          <div style="font-size:12.5px;color:var(--txt-3);margin-top:3px;line-height:1.5">描述长相<br>直接造一个形象</div>
+        </div>
+        ${hgLib().map(it => {
+          const on = HG.mode === 'image' && HG.assetId === it.assetId;
+          return `<div class="hg-avatar ${on ? 'on' : ''}" data-act="hg-lib-use" data-id="${esc(it.id)}"
+            style="position:relative;border:2px solid ${on ? 'var(--violet-2)' : 'var(--line)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center">
+            <span data-act="hg-lib-del" data-id="${esc(it.id)}" title="从形象库移除"
+              style="position:absolute;top:4px;right:6px;z-index:2;width:22px;height:22px;line-height:20px;border-radius:50%;
+                     background:rgba(0,0,0,.55);color:#fff;font-size:15px;cursor:pointer">×</span>
+            ${it.url ? `<img src="${esc(it.url)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">` : ''}
+            <div style="font-size:14px;font-weight:600">${esc(it.name)}</div>
+            <div style="font-size:12.5px;color:var(--txt-3)">${it.source === 'prompt' ? '提示词生成' : '我上传的'}${on ? ' · 使用中' : ''}</div>
+          </div>`;
+        }).join('')}
+        ${HG.avatars.slice(0, 10).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
             style="border:2px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center">
           ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">` : ''}
           <div style="font-size:14px;font-weight:600">${esc(a.name || a.id)}</div>
@@ -5210,6 +5551,169 @@ window.TOUR = (function () {
         ? `<div class="hint" style="color:var(--amber);margin-bottom:8px">现成形象清单目前是空的（服务连不上，或帐号里没有建好的形象）。
              <b>上传自己的照片</b>不受影响，直接点上面那一格就行。</div>` : ''}
       <div class="hint">照片要<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」。上传免费，花钱的是之后「生成影片」那一步。</div>`;
+  }
+
+  /* ============================================================
+   * 用提示词生成形象
+   *
+   * 为什么要有这个：以前要有专属数字人，只能上传自己的照片。想要一个
+   * 「不是真人、但长这样」的主持人就没辙。这里把已经在跑的文生图接上，
+   * 让人用一句话描述就能造一个形象出来。
+   *
+   * 生成的图会先送去数字人服务当素材（走 ?url= 由服务端代取，避开跨域），
+   * 拿到 assetId 之后，跟上传照片走的是同一条路——所以后面的口播生成
+   * 完全不用改，嘴型一样会对上稿子。
+   * ========================================================== */
+  const GA = { url: null, busy: false };
+
+  /* ---- 形象库 ----
+   * 生成或上传过的形象存下来，之后可以直接点回去用，不用每次重做。
+   * 存的是素材编号（assetId）与预览网址——素材编号是数字人服务那边的
+   * 长期凭据，只要它还在，随时可以拿来生成新影片。
+   * 存在 persona 底下，跟「目前选了谁」是分开的两件事。 */
+  const LIB_MAX = 12;
+
+  function hgLib() {
+    const p = STORE.s.persona;
+    if (!Array.isArray(p.avatarLib)) p.avatarLib = [];
+    return p.avatarLib;
+  }
+
+  function hgLibAdd(item) {
+    if (!item || !item.assetId) return;
+    const lib = hgLib();
+    // 同一个素材只留一份，重复加就把它挪到最前面
+    const i = lib.findIndex(x => x.assetId === item.assetId);
+    if (i >= 0) lib.splice(i, 1);
+    lib.unshift({
+      id: 'av' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      assetId: item.assetId,
+      url: item.url || '',
+      name: item.name || (item.source === 'prompt' ? '生成的形象' : '我的照片'),
+      source: item.source || 'upload',
+      at: new Date().toISOString()
+    });
+    if (lib.length > LIB_MAX) lib.length = LIB_MAX;
+    STORE.update();
+  }
+
+  function hgLibUse(id) {
+    const it = hgLib().find(x => x.id === id);
+    if (!it) return;
+    HG.mode = 'image'; HG.assetId = it.assetId; HG.avatarId = null;
+    HG.assetPreview = it.url || HG.assetPreview;
+    hgSaveChoice();
+    toast('已切换成「' + it.name + '」', 'ok');
+    hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
+  }
+
+  function hgLibDel(id) {
+    const lib = hgLib();
+    const i = lib.findIndex(x => x.id === id);
+    if (i < 0) return;
+    const wasUsing = HG.mode === 'image' && HG.assetId === lib[i].assetId;
+    lib.splice(i, 1);
+    STORE.update();
+    // 删掉的正好是目前在用的，就退回「还没选」，不要留一个指向已删项目的状态
+    if (wasUsing) { HG.assetId = null; HG.assetPreview = null; HG.mode = 'avatar'; hgSaveChoice(); }
+    hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
+  }
+
+  /* 数字人服务会对素材做人脸侦测，侧脸、半身太远、脸被遮住都会被打回。
+   * 所以不管使用者怎么描述，都强制补上这几个硬条件。 */
+  function gaPrompt(desc) {
+    return `${desc.trim()}。`
+      + '正面半身人像摄影，脸部正对镜头、五官完整清晰不被遮挡，'
+      + '光线均匀柔和，背景干净简单，真实人像摄影风格，高解析度，'
+      + '不要侧脸、不要背影、不要墨镜口罩、不要多个人、不要文字浮水印。';
+  }
+
+  const GA_PRESETS = [
+    ['知性女主持', '三十多岁亚洲女性，气质知性沉稳，深色西装外套，短发'],
+    ['亲切男主持', '三十多岁亚洲男性，笑容亲切，浅色衬衫，短发干净'],
+    ['文艺书店店长', '四十岁亚洲女性，温柔文艺气质，针织衫，长发微卷'],
+    ['专业讲师', '四十多岁亚洲男性，稳重专业，衬衫加毛衣背心，戴细框眼镜']
+  ];
+
+  function hgGenAvatarModal() {
+    GA.url = null;
+    modal('用提示词生成形象', `
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">这是做什么的</span><span>
+          用一句话描述你想要的主持人长相，系统生成一张形象照。满意的话按「用这张」，
+          之后生成的口播影片就会用这个形象，<b>嘴型一样会跟着稿子动</b>。</span></div>
+        <div class="ex-r"><span class="ex-k">要花钱吗</span><span>
+          生成一张图约 <b>US$0.03–0.07</b>，很便宜，不满意可以一直重生成。
+          真正贵的是之后「生成影片」那一步。</span></div>
+      </div>
+
+      <div class="label">想要什么样的形象</div>
+      <div class="chip-list" style="margin-bottom:8px">
+        ${GA_PRESETS.map(x => `<span class="tag" style="cursor:pointer" data-modal-act="ga-preset" data-text="${esc(x[1])}">${esc(x[0])}</span>`).join('')}
+      </div>
+      <textarea id="ga-prompt" class="input" rows="3"
+        placeholder="例如：三十多岁亚洲女性，气质知性，深色西装外套，短发"></textarea>
+      <div class="hint" style="margin-top:6px">正脸、五官清楚这些条件系统会自动加上，你只要描述长相、年龄、穿着、气质就好。</div>
+
+      <div id="ga-result" style="margin-top:14px"></div>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-primary" data-modal-act="ga-run">✨ 生成形象</button>
+        <button class="btn" data-modal-act="ga-use" id="ga-use" disabled
+          style="opacity:.45;pointer-events:none">用这张</button>
+      </div>
+    `);
+  }
+
+  function gaRender(html) { const b = $('#ga-result'); if (b) b.innerHTML = html; }
+
+  async function hgGenAvatarRun() {
+    const desc = ($('#ga-prompt') && $('#ga-prompt').value || '').trim();
+    if (!desc) return toast('先描述一下想要什么样的形象', 'err');
+    if (GA.busy) return;
+    GA.busy = true; GA.url = null;
+    const useBtn = $('#ga-use');
+    if (useBtn) { useBtn.disabled = true; useBtn.style.opacity = '.45'; useBtn.style.pointerEvents = 'none'; }
+    gaRender('<div class="hint">正在生成，约需 10–30 秒…</div>');
+    try {
+      const j = await hgFetch('/api/ai/image', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: gaPrompt(desc), quality: 'balanced' })
+      });
+      if (!j.url) throw new Error('模型没有回传图片网址');
+      GA.url = j.url;
+      gaRender(`<img src="${esc(j.url)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
+        <div class="hint" style="margin-top:6px">不满意就改描述再按一次「生成形象」。</div>`);
+      if (useBtn) { useBtn.disabled = false; useBtn.style.opacity = '1'; useBtn.style.pointerEvents = 'auto'; }
+    } catch (e) {
+      gaRender(`<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`);
+    } finally { GA.busy = false; }
+  }
+
+  async function hgGenAvatarUse() {
+    if (!GA.url || GA.busy) return;
+    GA.busy = true;
+    gaRender('<div class="hint">正在把这个形象送进数字人服务…</div>');
+    try {
+      const j = await hgFetch(
+        `/api/heygen/upload?url=${encodeURIComponent(GA.url)}&name=${encodeURIComponent('ai-avatar.png')}`,
+        { method: 'POST' });
+      HG.assetId = j.assetId; HG.avatarId = null; HG.mode = 'image';
+      HG.assetPreview = j.url || GA.url;
+      const desc = ($('#ga-prompt') && $('#ga-prompt').value || '').trim();
+      hgLibAdd({ assetId: j.assetId, url: HG.assetPreview, source: 'prompt',
+                 name: desc.slice(0, 12) || '生成的形象' });
+      hgSaveChoice();
+      closeModal();
+      toast('形象已建立，之后生成影片会用这一个', 'ok');
+      hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
+    } catch (e) {
+      // 人脸侦测没过是最常见的失败，直接讲清楚怎么改，不要只丢一句英文错误
+      const hint = /face|detect/i.test(e.message || '')
+        ? '这张图没通过人脸侦测。请在描述里强调「正面半身、脸部完整清楚」，或换一个presets再试。'
+        : e.message;
+      gaRender(`<div class="hint" style="color:var(--red)">套用失败：${esc(hint)}</div>`);
+    } finally { GA.busy = false; }
   }
 
   async function hgUploadPhoto(file) {
@@ -5227,6 +5731,8 @@ window.TOUR = (function () {
       // 上传成功才存——服务端回传的网址才是长期有效的，本机预览网址
       // （blob:）一关页面就失效，存了下次读回来是破图
       HG.assetPreview = j.url || HG.assetPreview;
+      hgLibAdd({ assetId: j.assetId, url: HG.assetPreview, source: 'upload',
+                 name: (file.name || '我的照片').replace(/\.[^.]+$/, '').slice(0, 12) });
       hgSaveChoice();
       toast('照片已上传，之后生成影片会用这张', 'ok'); hgRenderGenerate(); hgRenderChoiceSummary();
     } catch (e) {
@@ -5380,47 +5886,73 @@ window.TOUR = (function () {
     return s.dialogue.map(l => l.text).join('  ');
   }
 
+  /* ---------- 访谈式对谈影片 ----------
+   * 三种形式（AI 提问者 / 作者 / 书中主角）差别只有「谁问谁答」。
+   * 稿子一律用固定 5 段：提问方开场 → 回答方回答 → 提问方追问 →
+   * 回答方补充 → 提问方收尾 CTA；再按形式把这 5 段分配给主理人与对方。 */
+
+  function currentFormat() {
+    return DATA.interviewFormat(STORE.s.persona.interviewFormat);
+  }
+
+  /* 对面坐的那个人叫什么。书中主角要读这本书自己的角色表。 */
+  function guestNameOf(p) {
+    const pa = STORE.s.persona;
+    const fmt = currentFormat();
+    if (fmt.id === 'character') {
+      const list = (p && p.characters) || [];
+      const bound = list.find(c => c.name && c.name === pa.guestCharacterName);
+      return (bound && bound.name) || (list[0] && list[0].name) || fmt.guestName;
+    }
+    if (fmt.id === 'author') return pa.guestName || p.author || fmt.guestName;
+    return pa.guestName || fmt.guestName;
+  }
+
+  /* 书中主角形式：把角色的定妆照与外貌描述带给 Model Router，
+   * 不然生出来的脸跟「书中角色」那一段做好的角色对不上。 */
+  function guestCharacterOf(p) {
+    if (currentFormat().id !== 'character') return null;
+    const list = (p && p.characters) || [];
+    const pa = STORE.s.persona;
+    return list.find(c => c.name && c.name === pa.guestCharacterName) || list[0] || null;
+  }
+
+  /* 提问方 / 回答方各是谁（host = 主理人自己的形象与声音） */
+  function interviewRoles(p) {
+    const fmt = currentFormat();
+    const hostName = STORE.s.account.name || '主理人';
+    const guestName = guestNameOf(p);
+    return fmt.hostAsks
+      ? { fmt, asker: 'host', answerer: 'guest', askerName: hostName, answererName: guestName, hostName, guestName }
+      : { fmt, asker: 'guest', answerer: 'host', askerName: guestName, answererName: hostName, hostName, guestName };
+  }
+
   function scriptToConversation(v, p) {
     const s = (p.scripts || []).find(x => x.id === v.scriptId);
-    const pa = STORE.s.persona;
-    const host = STORE.s.account.name || '主持人';
-    const guest = pa.guestName || '来宾';
+    const R = interviewRoles(p);
     const lines = (s && Array.isArray(s.dialogue) ? s.dialogue : []).filter(x => x && x.text);
     const seed = lines.length ? lines : [{ text: v.title || p.title || '这本书值得聊一聊', cue: '开场' }];
     const take = i => (seed[i] || seed[seed.length - 1] || {}).text || '';
     const out = [
       {
-        speaker: 'host',
-        speakerName: host,
-        cue: '主持人开场，5-8 秒，直接抛出主题',
+        role: 'ask',
+        cue: '提问方开场，5-8 秒，直接抛出主题',
         text: `我们今天聊《${p.title}》。这本书最值得先讲的，是它怎么回应「${(p.pains || [])[0] || '很多人很努力却没有结果'}」这个问题。`
       },
-      {
-        speaker: 'guest',
-        speakerName: guest,
-        cue: '来宾回答，10-15 秒，讲核心观点',
-        text: take(0)
-      },
-      {
-        speaker: 'host',
-        speakerName: host,
-        cue: '主持人追问或插嘴，5-8 秒，像真人交流',
-        text: '等一下，这里我想插一句。这个观点听起来很对，但普通人最容易误会的地方是什么？'
-      },
-      {
-        speaker: 'guest',
-        speakerName: guest,
-        cue: '来宾补充，10-15 秒，给一个具体动作或书中金句',
-        text: take(1) || take(0)
-      },
-      {
-        speaker: 'host',
-        speakerName: host,
-        cue: '主持人总结 CTA，5-8 秒，自然收尾',
-        text: `所以这本书不是叫你更忙，而是让你做对更少的事。想看《${p.title}》更完整的拆解，留言「书摘」。`
-      }
-    ];
+      { role: 'answer', cue: '回答方回答，10-15 秒，讲核心观点', text: take(0) },
+      { role: 'ask', cue: '提问方追问或插嘴，5-8 秒，像真人交流', text: '等一下，这里我想插一句。这个观点听起来很对，但普通人最容易误会的地方是什么？' },
+      { role: 'answer', cue: '回答方补充，10-15 秒，给一个具体动作或书中金句', text: take(1) || take(0) },
+      { role: 'ask', cue: '提问方总结 CTA，5-8 秒，自然收尾', text: `所以这本书不是叫你更忙，而是让你做对更少的事。想看《${p.title}》更完整的拆解，留言「书摘」。` }
+    ].map(x => assignSpeaker(x, R));
     return scaleConversation(out, Number(v.duration) || defaultVideoDuration());
+  }
+
+  function assignSpeaker(line, R) {
+    const speaker = line.role === 'ask' ? R.asker : R.answerer;
+    return Object.assign({}, line, {
+      speaker,
+      speakerName: speaker === 'host' ? R.hostName : R.guestName
+    });
   }
 
   function scaleConversation(lines, duration) {
@@ -5433,47 +5965,83 @@ window.TOUR = (function () {
     });
   }
 
-  function conversationToText(lines) {
-    return (lines || []).map(l => `${l.speaker === 'guest' ? '来宾' : '主持人'}：${l.text}`).join('\n');
+  /* 文字框里用真实名字当前缀，使用者才知道哪一句是谁讲的 */
+  function conversationToText(lines, R) {
+    return (lines || []).map(l => {
+      const name = l.speaker === 'host' ? R.hostName : R.guestName;
+      return `${name}：${l.text}`;
+    }).join('\n');
   }
 
-  function parseConversationText(text) {
+  function parseConversationText(text, R) {
+    /* 介面切到繁体时，文字框里的名字也会被转成繁体（林致远 → 林致遠），
+     * 但资料里存的是简体。两边都先转成繁体再比，否则整段会被误判成同一个人讲的。 */
+    const norm = x => {
+      const t = String(x || '').trim().toLowerCase();
+      return (window.I18N && I18N.toTrad) ? I18N.toTrad(t) : t;
+    };
+    const hostAlias = [R.hostName, '主持人', '主理人', 'host'].filter(Boolean).map(norm);
+    const guestAlias = [R.guestName, '来宾', '嘉宾', 'guest', '作者', '主角'].filter(Boolean).map(norm);
     return String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean).map(line => {
-      const m = line.match(/^(主持人|主理人|host|來賓|来宾|guest|作者|嘉宾|嘉賓)\s*[：:]\s*(.+)$/i);
-      if (!m) return { speaker: 'guest', text: line };
-      const raw = m[1].toLowerCase();
-      return { speaker: /host|主持|主理/.test(raw) ? 'host' : 'guest', text: m[2].trim() };
+      const m = line.match(/^([^：:]{1,12})\s*[：:]\s*(.+)$/);
+      if (!m) return { speaker: R.answerer, text: line };
+      const who = norm(m[1]);
+      if (hostAlias.indexOf(who) >= 0) return { speaker: 'host', text: m[2].trim() };
+      if (guestAlias.indexOf(who) >= 0) return { speaker: 'guest', text: m[2].trim() };
+      return { speaker: R.answerer, text: line };   // 认不出前缀就整句当台词，不吃掉内容
     }).filter(x => x.text);
   }
 
+  /* 不管使用者怎么改，最后一定补回固定 5 段，缺的用预设句顶上 */
   function fixedConversation(lines, p) {
-    const hostFallback = STORE.s.account.name || '主持人';
-    const guestFallback = STORE.s.persona.guestName || '来宾';
+    const R = interviewRoles(p);
     const list = (Array.isArray(lines) ? lines : []).filter(x => x && x.text);
-    const byRole = role => list.filter(x => x.speaker === role);
-    const hosts = byRole('host');
-    const guests = byRole('guest');
+    const asks = list.filter(x => x.speaker === R.asker);
+    const answers = list.filter(x => x.speaker === R.answerer);
     const pick = (arr, i, fallback) => (arr[i] && arr[i].text) || fallback;
     return [
-      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 0, `我们今天聊《${p.title}》，先讲它最值得注意的一点。`) },
-      { speaker: 'guest', speakerName: guestFallback, text: pick(guests, 0, `这本书真正有价值的地方，是它把一个复杂问题讲得很具体。`) },
-      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 1, '我插一句，普通读者听到这里，最容易误会的地方是什么？') },
-      { speaker: 'guest', speakerName: guestFallback, text: pick(guests, 1, `不要只把它当成道理，要回到自己今天能改变的一个动作。`) },
-      { speaker: 'host', speakerName: hostFallback, text: pick(hosts, 2, `想看《${p.title}》更完整的拆解，留言「书摘」。`) }
-    ];
+      { role: 'ask', text: pick(asks, 0, `我们今天聊《${p.title}》，先讲它最值得注意的一点。`) },
+      { role: 'answer', text: pick(answers, 0, '这本书真正有价值的地方，是它把一个复杂问题讲得很具体。') },
+      { role: 'ask', text: pick(asks, 1, '我插一句，普通读者听到这里，最容易误会的地方是什么？') },
+      { role: 'answer', text: pick(answers, 1, '不要只把它当成道理，要回到自己今天能改变的一个动作。') },
+      { role: 'ask', text: pick(asks, 2, `想看《${p.title}》更完整的拆解，留言「书摘」。`) }
+    ].map(x => assignSpeaker(x, R));
   }
 
+  /* 送给 Model Router 的模板变数。
+   * line_1..line_5 按固定结构顺序，speaker 明写是谁，避免形式一（主理人回答）
+   * 被后端按「host 一定先讲」的旧假设念反。host_line_* / guest_line_* 保留给
+   * 既有的固定访谈模板，只有在主理人负责提问时才对得上，因此按形式给。 */
   function conversationVariables(lines, p) {
     const fixed = fixedConversation(lines, p);
-    return {
+    const R = interviewRoles(p);
+    const vars = {
       book_title: p.title || '',
       book_author: p.author || '',
-      host_line_1: fixed[0].text,
-      guest_line_1: fixed[1].text,
-      host_line_2: fixed[2].text,
-      guest_line_2: fixed[3].text,
-      host_line_3: fixed[4].text
+      interview_format: R.fmt.id,
+      asker: R.asker,
+      asker_name: R.askerName,
+      answerer: R.answerer,
+      answerer_name: R.answererName
     };
+    fixed.forEach((l, i) => {
+      vars[`line_${i + 1}`] = l.text;
+      vars[`line_${i + 1}_speaker`] = l.speaker;
+    });
+    const asks = fixed.filter(l => l.role === 'ask').map(l => l.text);
+    const answers = fixed.filter(l => l.role === 'answer').map(l => l.text);
+    if (R.fmt.hostAsks) {
+      Object.assign(vars, {
+        host_line_1: asks[0], guest_line_1: answers[0],
+        host_line_2: asks[1], guest_line_2: answers[1], host_line_3: asks[2]
+      });
+    } else {
+      Object.assign(vars, {
+        guest_line_1: asks[0], host_line_1: answers[0],
+        guest_line_2: asks[1], host_line_2: answers[1], guest_line_3: asks[2]
+      });
+    }
+    return vars;
   }
 
   function genVideoModal(id) {
@@ -5497,16 +6065,23 @@ window.TOUR = (function () {
 
     const format = v.format || defaultVideoMode();
     if (format === 'conversation') {
+      const R = interviewRoles(p);
+      const fmt = R.fmt;
       const lines = scriptToConversation(v, p);
       const guestAuto = !pa.guestAvatarId || !pa.guestVoiceId;
-      return modal('要真的生成双人访谈影片吗？', `
+      const chr = guestCharacterOf(p);
+      const charMissing = fmt.id === 'character' && !chr;
+      return modal('要真的生成这支访谈对谈影片吗？', `
         <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px">${esc(v.title)}</div>
         <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
+          <div class="ex-r"><span class="ex-k">这支是什么形式</span><span><b>${esc(fmt.name)}</b>　
+            ${esc(R.askerName)} 负责问，${esc(R.answererName)} 负责答，机位在两人之间来回切。</span></div>
           <div class="ex-r"><span class="ex-k">会送到哪里</span><span>Model Router <b>/v1/tasks</b>，任务类型 <b>conversation_video</b>。BookReel 不直接接第三方金钥。</span></div>
-          <div class="ex-r"><span class="ex-k">主持人</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b></span></div>
-          <div class="ex-r"><span class="ex-k">来宾</span><span>${esc(pa.guestName || '来宾')}　Avatar <b>${esc(pa.guestAvatarId || 'Model Router 自动配')}</b>　Voice <b>${esc(pa.guestVoiceId || 'Model Router 自动配')}</b></span></div>
-          <div class="ex-r"><span class="ex-k">要等多久</span><span>双人访谈需要分段生成与剪辑，通常比单人口播久。完成后要回传不失效的 MP4 URL。</span></div>
-          ${guestAuto ? '<div class="ex-r"><span class="ex-k">提醒</span><span>来宾 Avatar / Voice 目前空白，会交给 Model Router 自动配；要固定角色，请回「数字人 / 声音」填写 ID。</span></div>' : ''}
+          <div class="ex-r"><span class="ex-k">你自己（主理人）</span><span>形象 <b>${esc(avLabel)}</b>　声音 <b>${esc(voLabel)}</b>　这支里负责<b>${fmt.hostAsks ? '提问' : '回答'}</b></span></div>
+          <div class="ex-r"><span class="ex-k">对面那位</span><span>${esc(R.guestName)}　Avatar <b>${esc((chr && chr.portraitUrl) ? '书中角色定妆照' : (pa.guestAvatarId || 'Model Router 自动配'))}</b>　Voice <b>${esc(pa.guestVoiceId || 'Model Router 自动配')}</b></span></div>
+          <div class="ex-r"><span class="ex-k">要等多久</span><span>对谈要分段生成再剪辑，通常比单人口播久。完成后要回传不失效的 MP4 URL。</span></div>
+          ${charMissing ? '<div class="ex-r"><span class="ex-k" style="color:var(--amber)">缺角色</span><span>这本书还没有任何书中角色，对面会变成一个没有依据的陌生人。建议先去「创意分镜 · 书中角色」读出角色并生成定妆照。</span></div>' : ''}
+          ${guestAuto && !chr ? '<div class="ex-r"><span class="ex-k">提醒</span><span>对方的 Avatar / Voice 目前空白，会交给 Model Router 自动配；要固定同一个人，请回「数字人 / 声音」填 ID。</span></div>' : ''}
         </div>
         <div class="row2">
           <div class="field"><div class="label">访谈场景</div>
@@ -5522,11 +6097,12 @@ window.TOUR = (function () {
           <div class="field"><div class="label">片长</div>
             <input class="input" id="gv-duration" type="number" min="15" max="180" step="5" value="${Number(v.duration) || defaultVideoDuration()}"></div>
         </div>
-        <div class="field"><div class="label">固定 5 段双人对谈台词（可以改）</div>
-          <textarea class="input" id="gv-dialogue" style="min-height:190px;line-height:1.75">${esc(conversationToText(lines))}</textarea></div>
-        <div class="hint">第一版固定结构：主持人开场 → 来宾回答 → 主持人追问 → 来宾补充 → 主持人 CTA。送出时会转成 host_line_1 / guest_line_1 / host_line_2 / guest_line_2 / host_line_3。</div>`,
+        <div class="field"><div class="label">固定 5 段一问一答（可以改，前面的名字决定这句谁讲）</div>
+          <textarea class="input" id="gv-dialogue" style="min-height:190px;line-height:1.75">${esc(conversationToText(lines, R))}</textarea></div>
+        <div class="hint">固定结构：${esc(R.askerName)}开场 → ${esc(R.answererName)}回答 → ${esc(R.askerName)}追问 → ${esc(R.answererName)}补充 → ${esc(R.askerName)} CTA。
+          送出时会转成 line_1…line_5 并标明每一句是谁讲的，模板 <b>${esc(pa.conversationTemplateId || fmt.templateId)}</b>。</div>`,
         `<button class="btn" onclick="UI.closeModal()">取消</button>
-         <button class="btn btn-primary" data-modal-act="confirm-conversation-video" data-id="${esc(id)}">确认生成双人访谈（会扣钱）</button>`, true);
+         <button class="btn btn-primary" data-modal-act="confirm-conversation-video" data-id="${esc(id)}">确认生成对谈影片（会扣钱）</button>`, true);
     }
 
     const text = scriptToSpeech(v, p);
@@ -5556,14 +6132,35 @@ window.TOUR = (function () {
     closeModal();
     if (!text) return toast('台词是空的，没东西可念', 'warn');
 
+    toast('已送出，生成中，通常 1-3 分钟', 'ok');
+    try { await submitVideo(id, text); }
+    catch (e) { toast('送出失败：' + e.message, 'err'); }
+  }
+
+  /* 目前选中的形象叫什么——形象库里的就用库里的名字，
+   * 不要一律写「你上传的照片」，那对提示词生成出来的形象是错的。 */
+  function currentAvatarLabel() {
+    const pa = STORE.s.persona;
+    if (pa.realAvatarMode !== 'image') return pa.realAvatarName || '';
+    const hit = (pa.avatarLib || []).find(x => x.assetId === pa.realPhotoAssetId);
+    return hit ? hit.name : '你上传的照片';
+  }
+
+  /* 送出一支影片并开始轮询。逐支生成与批量生成共用这一段——
+   * 只有一条送出路径，之后要改重试或计费才不会漏改其中一边。
+   * 失败时把状态写成「生成失败」并往外抛，让呼叫端决定要不要继续。 */
+  async function submitVideo(id, text) {
+    const hit = findVideo(id);
+    if (!hit) throw new Error('找不到这一支影片');
+    const { v } = hit;
+    // 额度是花钱的闸门。以前只是显示，用满了照样能一直生成，账单会失控。
+    if (quotaLeft() <= 0) throw new Error('本月额度已用完（可到「系统设置 → 用量与额度」调高上限）');
     const pa = STORE.s.persona;
     videoJobs[id] = true;
     v.status = '生成中'; v.error = null;
-    v.avatarName = pa.realAvatarMode === 'image' ? '你上传的照片' : (pa.realAvatarName || '');
+    v.avatarName = currentAvatarLabel();
     v.voiceName = pa.realVoiceName || '';
     STORE.update(); render();
-    toast('已送出，生成中，通常 1-3 分钟', 'ok');
-
     try {
       const r = await hgFetch('/api/heygen/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -5581,8 +6178,102 @@ window.TOUR = (function () {
       delete videoJobs[id];
       v.status = '生成失败'; v.error = e.message;
       STORE.update(); render();
-      toast('送出失败：' + e.message, 'err');
+      throw e;
     }
+  }
+
+
+  /* ============================================================
+   * 批量生成
+   *
+   * 一本书通常有十几支待生成，一支一支点太累。但也不能按一下就
+   * 全部送出去——这是真的花钱，而且一次送太多会撞到服务端限流。
+   * 所以：预设只跑前 5 支、同时最多 2 支在跑、每一支都看得到结果，
+   * 中途可以停。
+   * ========================================================== */
+  function quotaLeft() {
+    const st = STORE.s.settings;
+    return Math.max(0, (st.quotaTotal || 0) - (st.quotaUsed || 0));
+  }
+
+  const BATCH = { running: false, stop: false };
+  const BATCH_CONCURRENCY = 2;
+
+  function batchPending() {
+    const p = STORE.current;
+    return (p.videos || []).filter(v => (v.status === '待生成' || v.status === '生成失败') && !videoJobs[v.id]);
+  }
+
+  function batchGenModal() {
+    if (BATCH.running) return toast('已经有一批在跑了', 'warn');
+    if (!hgCanWrite()) return hgDemoNotice();
+    const pa = STORE.s.persona;
+    if (!pa.realVoiceId) return toast('还没选声音，先去「数字人 · 声音」选一个', 'err');
+    if (pa.realAvatarMode === 'image' ? !pa.realPhotoAssetId : !pa.realAvatarId) {
+      return toast('还没选形象，先去「数字人 · 声音」选一个', 'err');
+    }
+    const list = batchPending();
+    if (!list.length) return toast('没有待生成的影片', 'warn');
+
+    const left = quotaLeft();
+    if (left <= 0) return toast('本月额度已用完，可到「系统设置 → 用量与额度」调高上限', 'err');
+
+    const failed = list.filter(v => v.status === '生成失败').length;
+    const fresh = list.length - failed;
+    // 能跑几支同时受「待处理数量」与「剩余额度」两个上限夹制
+    const cap = Math.min(list.length, left);
+    const def = Math.min(5, cap);
+    modal('批量生成影片', `
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">会用谁</span><span>形象 <b>${esc(currentAvatarLabel())}</b>　声音 <b>${esc(pa.realVoiceName || '')}</b></span></div>
+        <div class="ex-r"><span class="ex-k">会花多少</span><span><b style="color:var(--amber)">真的会扣钱</b>，一支约 US$1-3。跑 <b id="bg-n-echo">${def}</b> 支大约 <b id="bg-cost">US$${def}-${def * 3}</b>。</span></div>
+        <div class="ex-r"><span class="ex-k">怎么跑</span><span>一次最多 ${BATCH_CONCURRENCY} 支同时进行，跑完一支接一支。中途可以按「停止」，已经送出去的那几支不会取消。</span></div>
+      </div>
+      <div class="field">
+        <div class="label">这一批要跑几支<span class="hint" style="margin-left:8px;font-weight:400">待处理 ${list.length} 支${failed ? `（其中 ${failed} 支是上次失败要重试的）` : ''}　剩余额度 ${left} 支</span></div>
+        <input class="input" type="number" id="bg-n" min="1" max="${cap}" value="${def}"
+          oninput="(function(el){var n=Math.max(1,Math.min(${cap},+el.value||1));
+            document.getElementById('bg-n-echo').textContent=n;
+            document.getElementById('bg-cost').textContent='US$'+n+'-'+(n*3);})(this)">
+      </div>
+      <div class="hint">建议先跑 3-5 支看效果，满意再跑剩下的。稿子有问题的话，跑完整批才发现会很浪费。</div>
+      <div id="bg-log" style="margin-top:14px"></div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="bg-run">开始生成（会扣钱）</button>`);
+  }
+
+  async function batchGenRun() {
+    const input = $('#bg-n');
+    const list = batchPending();
+    const n = Math.max(1, Math.min(list.length, quotaLeft(), +(input && input.value) || 1));
+    const targets = list.slice(0, n);
+    closeModal();
+
+    BATCH.running = true; BATCH.stop = false;
+    toast(`开始批量生成 ${targets.length} 支`, 'ok');
+    STORE.log('run', `批量生成开始：${targets.length} 支`);
+
+    let ok = 0, fail = 0, queue = targets.slice();
+    const worker = async () => {
+      while (queue.length && !BATCH.stop) {
+        const v = queue.shift();
+        const text = scriptToSpeech(v, STORE.current);
+        if (!text || !text.trim()) { fail++; STORE.log('warn', `跳过（没有台词）：${v.title}`); continue; }
+        try { await submitVideo(v.id, text); ok++; }
+        catch (e) {
+          fail++; STORE.log('err', `送出失败：${v.title} — ${e.message}`);
+          // 额度用完就整批停住，继续送只会一支一支全部失败
+          if (/额度/.test(e.message || '')) { BATCH.stop = true; }
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, targets.length) }, worker));
+
+    BATCH.running = false;
+    const stopped = BATCH.stop ? '（中途停止）' : '';
+    STORE.log(fail ? 'warn' : 'ok', `批量生成送出完毕${stopped}：成功 ${ok} 支、失败 ${fail} 支`);
+    toast(`送出完毕${stopped}：成功 ${ok}、失败 ${fail}。影片还在生成，好了会自己更新`, fail ? 'warn' : 'ok');
+    render();
   }
 
   async function aipTask(payload) {
@@ -5636,20 +6327,29 @@ window.TOUR = (function () {
     const { v, p } = hit;
     if (videoJobs[id]) return toast('这一支已经在生成中了', 'warn');
 
-    const dialogue = fixedConversation(parseConversationText(($('#gv-dialogue') || {}).value || ''), p);
+    const R = interviewRoles(p);
+    const fmt = R.fmt;
+    const dialogue = fixedConversation(parseConversationText(($('#gv-dialogue') || {}).value || '', R), p);
     const variables = conversationVariables(dialogue, p);
     const scene = (($('#gv-scene') || {}).value || STORE.s.persona.conversationScene || 'professional_interview_room');
     const duration = clampDuration((($('#gv-duration') || {}).value) || v.duration || defaultVideoDuration());
     closeModal();
-    if (!variables.host_line_1 || !variables.guest_line_1) return toast('双人访谈模板至少要有主持人与来宾台词', 'warn');
+    if (!variables.line_1 || !variables.line_2) return toast('对谈至少要有一问一答', 'warn');
 
     const pa = STORE.s.persona;
     const hostAvatar = pa.realAvatarMode === 'image'
       ? { mode: 'image', asset_id: pa.realPhotoAssetId, name: '你上传的照片' }
       : { mode: 'avatar', avatar_id: pa.realAvatarId, name: pa.realAvatarName || STORE.s.account.name };
+    /* 书中主角形式：把定妆照和外貌描述一起送过去，成片里的脸才会跟
+     * 「书中角色」那一段已经确认过的角色一致，而不是另外长一张。 */
+    const chr = guestCharacterOf(p);
+    const guestAvatar = chr && chr.portraitUrl
+      ? { mode: 'image', image_url: chr.portraitUrl, name: chr.name || R.guestName, look: chr.look || '' }
+      : { mode: 'avatar', avatar_id: pa.guestAvatarId || 'auto', name: R.guestName };
     const payload = {
       task: 'conversation_video',
-      template_id: pa.conversationTemplateId || 'bookreel_fixed_interview_v1',
+      template_id: pa.conversationTemplateId || fmt.templateId,
+      interview_format: fmt.id,
       quality: 'balanced',
       ratio: v.ratio || '9:16',
       duration_seconds: duration,
@@ -5664,8 +6364,11 @@ window.TOUR = (function () {
       },
       variables,
       speakers: [
-        { id: 'host', role: 'host', name: STORE.s.account.name || '主持人', avatar: hostAvatar, voice_id: pa.realVoiceId, voice_name: pa.realVoiceName },
-        { id: 'guest', role: 'guest', name: pa.guestName || '来宾', avatar_id: pa.guestAvatarId || 'auto', voice_id: pa.guestVoiceId || 'auto' }
+        { id: 'host', role: 'host', turn: fmt.hostAsks ? 'asker' : 'answerer',
+          name: STORE.s.account.name || '主理人', avatar: hostAvatar, voice_id: pa.realVoiceId, voice_name: pa.realVoiceName },
+        { id: 'guest', role: fmt.id === 'author' ? 'author' : (fmt.id === 'character' ? 'book_character' : 'ai_interviewer'),
+          turn: fmt.hostAsks ? 'answerer' : 'asker',
+          name: R.guestName, avatar: guestAvatar, avatar_id: (chr && chr.portraitUrl) ? undefined : (pa.guestAvatarId || 'auto'), voice_id: pa.guestVoiceId || 'auto' }
       ],
       dialogue,
       output: {
@@ -5677,10 +6380,11 @@ window.TOUR = (function () {
 
     videoJobs[id] = true;
     v.status = '生成中'; v.error = null; v.format = 'conversation'; v.duration = duration;
-    v.avatarName = `${STORE.s.account.name || '主持人'} + ${pa.guestName || '来宾'}`;
-    v.voiceName = `${pa.realVoiceName || '主持人声音'} + ${pa.guestVoiceId ? '来宾声音' : 'Model Router 自动配音'}`;
+    v.interviewFormat = fmt.id;
+    v.avatarName = `${STORE.s.account.name || '主理人'} + ${R.guestName}`;
+    v.voiceName = `${pa.realVoiceName || '主理人声音'} + ${pa.guestVoiceId ? '对方声音' : 'Model Router 自动配音'}`;
     STORE.update(); render();
-    toast('双人访谈已送出，等待 Model Router 生成', 'ok');
+    toast(`${fmt.name} 对谈影片已送出，等待 Model Router 生成`, 'ok');
 
     try {
       const created = await aipTask(payload);
@@ -5689,20 +6393,20 @@ window.TOUR = (function () {
         delete videoJobs[id];
         v.status = '已生成'; v.videoUrl = url; v.aiPlatformTaskId = taskIdOf(created) || '';
         STORE.update(); render();
-        toast('双人访谈影片已生成', 'ok');
+        toast('对谈影片已生成', 'ok');
         return;
       }
       const taskId = taskIdOf(created);
       if (!taskId) throw new Error('Model Router 没有回传 result.id / task_id，无法轮询');
       v.aiPlatformTaskId = taskId;
       STORE.update();
-      STORE.log('ok', `送出双人访谈：${v.title}`);
+      STORE.log('ok', `送出对谈影片（${fmt.name}）：${v.title}`);
       pollAiPlatformVideo(id);
     } catch (e) {
       delete videoJobs[id];
       v.status = '生成失败'; v.error = e.message;
       STORE.update(); render();
-      toast('双人访谈送出失败：' + e.message, 'err');
+      toast('对谈影片送出失败：' + e.message, 'err');
     }
   }
 
@@ -5722,15 +6426,15 @@ window.TOUR = (function () {
           const st = STORE.s.settings;
           st.quotaUsed = Math.min(st.quotaTotal, st.quotaUsed + 1);
           STORE.update(); render();
-          STORE.log('ok', `双人访谈已生成：${v.title}`);
-          toast(`《${v.title}》双人访谈已生成好了`, 'ok');
+          STORE.log('ok', `对谈影片已生成：${v.title}`);
+          toast(`《${v.title}》对谈影片已生成好了`, 'ok');
           return;
         }
         if (isTaskFailed(status)) {
           delete videoJobs[id];
           v.status = '生成失败'; v.error = taskErrorOf(s) || 'Model Router 回报失败';
           STORE.update(); render();
-          toast('双人访谈生成失败：' + v.error, 'err');
+          toast('对谈影片生成失败：' + v.error, 'err');
           return;
         }
         setTimeout(tick, 6000);
@@ -6252,6 +6956,12 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
 只输出这个 JSON 结构：
 {"title":"一句吸引人的标题","hook":"前3秒开场白","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}`;
 
+    /* 先问要用哪个模型。这一步是真的花钱，选贵选便宜差很多，
+     * 不该由程式码替使用者决定。取消就什么都不做，原稿保持不变。 */
+    const pick = await askModel('rewrite');
+    if (!pick) return toast('已取消，这一篇没有被改动', 'warn');
+    scriptModal(id);           // 选模型的窗口盖掉了稿子详情，选完把它开回来
+
     const body = $('#modal-body');
     if (body) body.insertAdjacentHTML('afterbegin',
       '<div id="ai-rw" class="hint" style="margin-bottom:12px;color:var(--violet-2)">✨ 真实 AI 重写中，约 10-30 秒…</div>');
@@ -6260,7 +6970,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     try {
       const r = await hgFetch('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, system, quality: 'auto', maxTokens: 2000, wantJson: true })
+        body: JSON.stringify(Object.assign({ prompt, system, maxTokens: 2000, wantJson: true }, pick))
       });
       let out;
       try { out = JSON.parse(r.content); }
@@ -6281,6 +6991,8 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
       s.aiModel = r.model || null;
       STORE.update();
       toast('已用真实 AI 重写（模型：' + (r.model || '未知') + '）', 'ok');
+      const note = mpServedNote(pick, r.model);
+      if (note) toast(note, 'warn');
       render(); scriptModal(id);
     } catch (e) {
       setMsg('AI 重写失败：' + e.message + '（原本的稿子没有被改动）', 'var(--red)');
@@ -6295,6 +7007,9 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     if (!t || !slot) return;
     if (!hgCanWrite()) return hgDemoNotice();
 
+    const pick = await askModel('image');
+    if (!pick) return toast('已取消，没有生成图片', 'warn');
+
     const p = STORE.current;
     slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">✨ 生成中，约 10-20 秒…</div>';
     const prompt = `短视频场景示意图，直式 9:16 构图。场景：${t.name}——${t.setting}。`
@@ -6305,7 +7020,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     try {
       const r = await hgFetch('/api/ai/image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, quality: 'fast' })
+        body: JSON.stringify(Object.assign({ prompt }, pick))
       });
       if (!r.url) throw new Error('平台没有回传图片网址');
       slot.innerHTML = `<img src="${esc(r.url)}" style="width:100%;border-radius:10px;margin-top:10px">
@@ -6341,6 +7056,246 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     }
   }
 
+  /* ============================================================
+   * 每一步开跑前先选模型
+   *
+   * Model Router 后面挂着几十个模型，价钱差到上百倍（最便宜的每百万
+   * token 不到 $0.04，最贵的 $216）。以前程式码里写死 quality:'auto'，
+   * 等于每一步都让平台自己挑，使用者完全没得选、也不知道花了多少钱。
+   *
+   * 现在每个会花钱的 AI 步骤按下去，先弹一个窗：列出目前真的可用的
+   * 模型（清单是即时跟服务要的，不是写死的）、各自价钱、还有这一步
+   * 大概会花多少。选完才真的送出去。
+   *
+   * 选择会记住（settings.modelPicks），也可以勾「以后不用再问」变成
+   * 静默模式（settings.askModel = false），之后直接用记住的那个。
+   * 系统设置页可以随时改回来。
+   * ========================================================== */
+
+  /* 每个步骤：给什么用、预设挑什么、大概吃多少 token（用来估这一步的花费）。
+   * est 的数字是从各步骤真正送出去的 prompt 长度与 maxTokens 抓的概数，
+   * 不是精确值——目的是让人在选贵模型前有个量级概念。 */
+  const AI_STEPS = {
+    read:    { t: 'AI 读完整本书', kind: 'text', def: 'auto', est: { in: 13000, out: 2500 },
+               note: '把上传的内文整本送进模型读一遍，产出摘要、核心论点、金句与读者画像。内文很长，便宜的模型通常也够用。' },
+    script:  { t: 'AI 批量写稿', kind: 'text', def: 'auto', est: { in: 3000, out: 6000 },
+               note: '写标题、Hook 与完整口播稿。这一步最影响影片好不好看，值得用好一点的模型。' },
+    rewrite: { t: '重写这一篇口播稿', kind: 'text', def: 'auto', est: { in: 1500, out: 2000 },
+               note: '只重写你现在打开的这一篇，其他稿子不受影响。' },
+    prompts: { t: 'AI 写影片提示词', kind: 'text', def: 'auto', est: { in: 1200, out: 1200 },
+               note: '读这本书写几组「文字转影片」提示词，输出很短，很便宜。' },
+    image:   { t: '生成场景示意图', kind: 'image', def: 'fast', est: null,
+               note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' },
+    chars:   { t: 'AI 读出书里的角色', kind: 'text', def: 'auto', est: { in: 1500, out: 1500 },
+               note: '读这本书抽出几个可以「演出来」的角色，输出很短，很便宜。' },
+    portrait: { t: '生成角色定妆照', kind: 'image', def: 'fast', est: null,
+               note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' }
+  };
+
+  /* 「策略」不是模型，是「让平台自己挑」。文字与图像两边的可选档位不一样：
+   * 文字走 /v1/chat/completions 的 auto/cheap/smart/fast；
+   * 图像走 /v1/tasks 的 fast/balanced/premium 品质档。 */
+  const MP_TEXT_STRATEGY = ['auto', 'cheap', 'smart', 'fast'];
+  const MP_IMAGE_STRATEGY = [
+    { id: 'fast', name: '快速档（平台自己挑）', desc: '最省，约 $0.03 一张' },
+    { id: 'balanced', name: '平衡档（平台自己挑）', desc: '约 $0.05 一张' },
+    { id: 'premium', name: '高品质档（平台自己挑）', desc: '约 $0.07 一张' }
+  ];
+
+  let mpCache = null;          // 模型清单只抓一次，之后重复用
+  let mpPending = null;        // 目前有人在等这个窗口的结果
+
+  async function mpModels() {
+    if (mpCache) return mpCache;
+    const r = await hgFetch('/api/ai/models', {}, 12000);
+    mpCache = (r.models || []).filter(m => m.kind === 'model');
+    return mpCache;
+  }
+
+  const mpMoney = n => n == null ? '—'
+    : (n >= 1 ? '$' + n.toFixed(2) : '$' + n.toFixed(n >= 0.1 ? 3 : 4).replace(/0+$/, '').replace(/\.$/, ''));
+
+  function mpPriceText(m) {
+    if (m.unit === 'image') return `约 ${mpMoney(m.inPrice)} / 张`;
+    if (m.unit === 'character') return `约 ${mpMoney(m.inPrice)} / 百万字符`;
+    if (m.unit === 'audio-minute') return `约 ${mpMoney(m.inPrice)} / 分钟`;
+    if (m.inPrice == null) return '价钱未公布';
+    return `每百万 token：输入 ${mpMoney(m.inPrice)} · 输出 ${mpMoney(m.outPrice)}`;
+  }
+
+  /* 这一步用这个模型大概花多少。估得出来才显示——估不出来宁可不写，
+   * 也不要编一个数字给人当真。 */
+  function mpStepCost(step, m) {
+    const est = AI_STEPS[step] && AI_STEPS[step].est;
+    if (!est || !m || m.unit !== 'tokens' || m.inPrice == null) return '';
+    const c = m.inPrice * est.in / 1e6 + (m.outPrice || 0) * est.out / 1e6;
+    return `这一步约 ${c < 0.001 ? '<$0.001' : mpMoney(c)}`;
+  }
+
+  function mpCandidates(step, models) {
+    const kind = AI_STEPS[step].kind;
+    const want = kind === 'image' ? ['image-gen'] : ['text-chat', 'reasoning', 'multimodal'];
+    const list = (models || []).filter(m => want.indexOf(m.modality) >= 0);
+    // 便宜的排前面：绝大多数步骤便宜的就够用，把贵的摆后面比较不会误按
+    const w = m => (m.inPrice == null ? 1e9 : m.inPrice * 3 + (m.outPrice || 0));
+    return list.sort((a, b) => w(a) - w(b));
+  }
+
+  /* 把选到的 id 换成真正要送给后端的欄位。
+   * 策略字串走 quality，具体模型走 model——后端两个都收。 */
+  function mpPayload(step, id) {
+    const kind = AI_STEPS[step].kind;
+    if (kind === 'image') {
+      return MP_IMAGE_STRATEGY.some(x => x.id === id) ? { quality: id } : { model: id, quality: 'fast' };
+    }
+    return MP_TEXT_STRATEGY.indexOf(id) >= 0 ? { quality: id } : { model: id };
+  }
+
+  function mpLabel(step, id) {
+    const cfg = AI_STEPS[step];
+    if (!cfg) return id;
+    if (cfg.kind === 'image') {
+      const s = MP_IMAGE_STRATEGY.find(x => x.id === id);
+      if (s) return s.name;
+    } else if (MP_TEXT_STRATEGY.indexOf(id) >= 0) {
+      return { auto: '智能路由（平台自己挑）', cheap: '最省钱', smart: '最聪明', fast: '最快' }[id] || id;
+    }
+    const m = (mpCache || []).find(x => x.id === id);
+    return m ? m.name : id;
+  }
+
+  /* 平台说话不算话时，要当场讲出来。
+   *
+   * 2026-08-14 实测：Model Router 的 /v1/chat/completions 只认
+   * auto/cheap/smart/fast 这四个策略词，送任何一个具体模型 id（包括
+   * 瞎编的名字）它都照收不误，然后一律退回最便宜的 mistral-nemo。
+   * 也就是说「指定模型」这件事服务方还没实作。
+   *
+   * 我们不能因此假装没事——使用者挑了 Claude Opus 5，实际跑的却是
+   * 别的模型，这必须让他知道。回应里的 model 欄位是平台自己报的
+   * 「真的用了谁」，拿它跟使用者挑的比对，不一样就明讲。
+   * 等服务方补上指定模型的支援，这个提示自然就不会再出现。 */
+  function mpServedNote(pick, served) {
+    if (!pick || !pick.model || !served) return '';
+    if (served === pick.model) return '';
+    return `注意：你挑的是「${mpLabel('script', pick.model)}」，但平台实际用的是「${served}」`
+      + '——这个路由服务目前还不支援指定模型，只认「让平台自己挑」那四个档位。';
+  }
+
+  function mpSaved(step) {
+    const picks = STORE.s.settings.modelPicks || {};
+    return picks[step] || AI_STEPS[step].def;
+  }
+
+  function mpRow(id, name, desc, price, checked) {
+    return `<label style="display:flex;gap:12px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);
+        border-radius:10px;margin-bottom:8px;cursor:pointer">
+      <input type="radio" name="mp-choice" value="${esc(id)}" ${checked ? 'checked' : ''} style="margin-top:3px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:600">${esc(name)}</div>
+        ${desc ? `<div class="hint" style="margin-top:2px">${esc(desc)}</div>` : ''}
+        ${price ? `<div class="hint" style="margin-top:2px">${esc(price)}</div>` : ''}
+      </div>
+    </label>`;
+  }
+
+  function mpRender(step, models, err) {
+    const cfg = AI_STEPS[step];
+    const sel = mpSaved(step);
+    const strat = cfg.kind === 'image'
+      ? MP_IMAGE_STRATEGY.map(x => mpRow(x.id, x.name, x.desc, '', sel === x.id)).join('')
+      : [['auto', '智能路由（平台自己挑）', '按这段内容的难度自动挑一个划算的模型。不确定时选这个。'],
+         ['cheap', '最省钱', '永远挑最便宜的可用模型。'],
+         ['smart', '最聪明', '永远挑当下最强的旗舰模型，最贵。'],
+         ['fast', '最快', '永远挑反应最快的那一档。']]
+        .map(x => mpRow(x[0], x[1], x[2], '', sel === x[0])).join('');
+
+    const list = mpCandidates(step, models);
+    const modelRows = list.map(m => mpRow(m.id, m.name,
+      [m.vendor, m.context ? '上下文 ' + Math.round(m.context / 1000) + 'K' : '', m.openWeight ? '开源权重' : '']
+        .filter(Boolean).join(' · '),
+      [mpPriceText(m), mpStepCost(step, m)].filter(Boolean).join(' · '),
+      sel === m.id)).join('');
+
+    modal(`选择这一步用的模型 · ${esc(cfg.t)}`, `
+      <div class="explain" style="margin:0 0 16px;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">这一步在做什么</span><span>${esc(cfg.note)}</span></div>
+        <div class="ex-r"><span class="ex-k">怎么选</span><span>不确定就用第一个「智能路由」。清单里的价钱是服务方即时回报的，不是写死的。</span></div>
+      </div>
+      ${err ? `<div class="hint" style="color:var(--amber);margin-bottom:12px">拿不到完整模型清单（${esc(err)}），
+        只能先用下面这几个档位；网络恢复后重开这个窗口就会有完整清单。</div>` : ''}
+      <div class="label" style="margin-bottom:8px">让平台自己挑</div>
+      ${strat}
+      ${modelRows ? `<div class="label" style="margin:16px 0 8px">指定一个模型（共 ${list.length} 个）</div>
+        <div class="hint" style="color:var(--amber);margin:-2px 0 10px">
+          先说清楚：这个路由服务目前<b>还不支援指定模型</b>（2026-08-14 实测，连不存在的模型名它都照收，
+          然后一律退回最便宜的那个）。所以下面这些现在挑了不一定算数——真的跑完之后，
+          我们会把平台实际用了哪个模型如实告诉你。想稳的话请用上面那四个档位。
+        </div>${modelRows}` : ''}
+      <label style="display:flex;gap:10px;align-items:center;margin-top:14px;cursor:pointer">
+        <input type="checkbox" id="mp-remember">
+        <span style="font-size:14px">以后每一步都直接用记住的模型，不用再问我
+          <span class="hint">（系统设置里可以随时改回来）</span></span>
+      </label>`,
+      `<button class="btn" data-modal-act="mp-cancel">取消，这一步不跑</button>
+       <button class="btn btn-primary" data-modal-act="mp-ok" data-step="${esc(step)}">用这个模型开始</button>`, true);
+  }
+
+  /* 开窗口问，回传要送给后端的欄位；使用者取消就回传 null。
+   * 静默模式（askModel === false）直接用记住的那个，不打断。 */
+  async function askModel(step) {
+    if (!AI_STEPS[step]) return {};
+    if (STORE.s.settings.askModel === false) return mpPayload(step, mpSaved(step));
+    let models = null, err = '';
+    try { models = await mpModels(); } catch (e) { err = e.message; }
+    return new Promise(resolve => {
+      /* 顺序不能反：modal() 一开始就会跑一遍「关闭钩子」，而下面那个钩子
+       * 会把 mpPending 当成使用者取消收掉。先画窗口、再挂上等待中的
+       * Promise，才不会自己把自己取消掉（一开窗就直接回 null）。 */
+      mpRender(step, models, err);
+      mpPending = { step, resolve };
+    });
+  }
+
+  function mpFinish(step, ok) {
+    const pend = mpPending;
+    mpPending = null;
+    if (!pend) return;
+    if (!ok) { closeModal(); return pend.resolve(null); }
+    const r = document.querySelector('input[name="mp-choice"]:checked');
+    const id = (r && r.value) || mpSaved(step);
+    const picks = STORE.s.settings.modelPicks || (STORE.s.settings.modelPicks = {});
+    picks[step] = id;
+    if (($('#mp-remember') || {}).checked) STORE.s.settings.askModel = false;
+    STORE.update();
+    closeModal();
+    pend.resolve(mpPayload(step, id));
+  }
+
+  /* 使用者按右上角叉叉或 Esc 关掉窗口，等于取消这一步——一定要把那个
+   * Promise 收掉，否则呼叫端会永远卡在 await，画面停在「生成中」不动。 */
+  UI.onClose(() => {
+    if (!mpPending) return;
+    const pend = mpPending; mpPending = null;
+    pend.resolve(null);
+  });
+
+  /* 系统设置页要显示「这一步现在预设用哪个模型」，也要能直接改。 */
+  window.MODELPICK = {
+    steps: () => AI_STEPS,
+    savedId: mpSaved,
+    label: step => mpLabel(step, mpSaved(step)),
+    async change(step) {
+      const was = STORE.s.settings.askModel;
+      STORE.s.settings.askModel = true;      // 设置页点「更改」当然要弹窗
+      const r = await askModel(step);
+      if (!r) STORE.s.settings.askModel = was;   // 取消就什么都别动
+      STORE.update();
+      if (window.render) render();
+      if (r) toast('已设为：' + mpLabel(step, mpSaved(step)), 'ok');
+    }
+  };
+
   window.AIREAL = {
     /* 公开展示版没有写入凭证，一律走模板；使用者也可以在系统设置关掉 */
     canUse: () => hgCanWrite() && STORE.s.settings.realAI !== false,
@@ -6349,11 +7304,14 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     async readBook(p) {
       const text = (p.parsed && p.parsed.raw) || '';
       if (!text.trim()) return null;          // 没有原始内文就没得读，交回模板逻辑
+      const pick = await askModel('read');
+      // 取消选模型＝这一步不要真的花钱跑。丢出去让 engine 退回本地规则抽取。
+      if (!pick) throw new Error('已取消选择模型');
       const r = await hgFetch('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           system: '你是出版社的内容编辑，只输出 JSON，不要任何解释文字。',
-          quality: 'auto', maxTokens: 2500, wantJson: true,
+          maxTokens: 2500, wantJson: true,
           prompt: `读完下面这本书的内文，做一份分析。
 
 【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
@@ -6367,11 +7325,11 @@ ${text.slice(0, 12000)}
  "audiences":[{"name":"读者画像名称","size":30,"note":"特征"}],
  "pains":["这些读者的痛点，4 条"],
  "hots":["可搭配的热点话题标签，5 个，带 # 号"]}`
-        })
+        }, pick))
       });
       const j = aiJson(r.content);
       if (!j.summary) throw new Error('模型没有回传摘要');
-      return { data: j, model: r.model };
+      return { data: j, model: r.model, note: mpServedNote(pick, r.model) };
     },
 
     /* STEP 4：真的写标题、Hook、开场白与几篇完整对谈稿。
@@ -6379,6 +7337,9 @@ ${text.slice(0, 12000)}
      * 容易撞到闸道器的执行时间上限（实测过一次 502）。分开跑各自都很快，
      * 而且其中一段失败还能保住另一段。 */
     async writeScripts(p) {
+      // 标题与口播稿是同一步的两次呼叫，只问一次模型，两次都用它
+      const pick = await askModel('script');
+      if (!pick) throw new Error('已取消选择模型');
       const ctx = `【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
 【摘要】${(p.summary || '（未提供）').slice(0, 600)}
 【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
@@ -6387,10 +7348,10 @@ ${text.slice(0, 12000)}
 
       const call = (prompt, maxTokens) => hgFetch('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           system: '你是短视频编剧，只输出 JSON，不要任何解释文字。',
-          quality: 'auto', maxTokens, wantJson: true, prompt
-        })
+          maxTokens, wantJson: true, prompt
+        }, pick))
       });
 
       // 第一段：标题 / Hook / 开场白（输出短，很快）
@@ -6437,14 +7398,146 @@ ${ctx}
         scripts = [];
       }
 
-      return { data: Object.assign({}, d1, { scripts }), model: r1.model };
+      return { data: Object.assign({}, d1, { scripts }), model: r1.model, note: mpServedNote(pick, r1.model) };
     }
   };
+
+  /* ============================================================
+   * 书中角色 —— 让书里的主角走进影片
+   *
+   * 其他影片都是「一个人对着镜头讲」，这一条路径不一样：先把书里的人物
+   * 读出来，生成这个角色长什么样，再让他自己出现在画面里。
+   *
+   *   aiReadCharacters()  文字模型读书 → 抽出角色（几乎不花钱，约 US$0.01-0.05）
+   *   aiCharPortrait(i)   image 任务 → 定妆照（一张约 US$0.03-0.07）
+   *   charToPrompt(i)     角色写成影片提示词 → 落到既有的提示词生成流程
+   *
+   * 刻意不另外开一条生成影片的新路径：影片一律走下面那张卡的
+   * 「生成这支短片」，扣额度的地方只有一个，使用者才不会不小心花钱。
+   * ========================================================== */
+  async function aiReadCharacters() {
+    const p = STORE.current;
+    if (!p) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+
+    const box = $('#ai-char-status');
+    const setMsg = (t, color) => {
+      if (box) box.innerHTML = `<div class="hint" style="color:${color || 'var(--violet-2)'};margin-bottom:12px">${esc(t)}</div>`;
+    };
+    const pick = await askModel('chars');
+    if (!pick) return toast('已取消，没有去读角色', 'warn');
+    setMsg('✨ AI 正在读这本书找角色，约 10-30 秒…');
+
+    const prompt = `读这本书，抽出 3-4 个可以「演出来」的角色，让他们出现在推荐这本书的短视频画面里。
+
+【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【摘要】${p.summary || '（未提供）'}
+【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
+【金句】${(p.quotes || []).slice(0, 5).join('；') || '（未提供）'}
+【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
+
+要求：
+- 小说、传记、历史这类书，就抽书里真正的人物，名字用书里的名字
+- 非虚构、商管、知识类的书如果没有故事人物，就抽书里出现的真实人物、案例主角，
+  或是一个能代表读者的具体化身（要给他一个具体的名字与身份，不要写成「读者A」）
+- look 要具体到画得出来：年龄、性别、脸型、发型、穿着、神情、时代与地域感，60-100 字
+- scene 是这个角色在书里最有代表性的一幕：他在哪里、在做什么、气氛如何，40-80 字
+- 只写书里真的有依据的角色，不要凭空发明与全书无关的人
+
+只输出这个 JSON：
+{"characters":[{"name":"角色名字","role":"他在书里是谁","look":"外貌描述","scene":"代表场景"}]}`;
+
+    try {
+      const r = await hgFetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({
+          prompt, system: '你是选角导演，只输出 JSON，不要任何解释文字。',
+          maxTokens: 2000, wantJson: true
+        }, pick))
+      }, 60000);
+      const out = aiJson(r.content);
+      const list = (out.characters || [])
+        .filter(x => x && (x.name || x.look))
+        .map(x => ({
+          name: x.name || '', role: x.role || '',
+          look: x.look || '', scene: x.scene || ''
+        }));
+      if (!list.length) throw new Error('模型没有读出角色');
+      p.characters = (p.characters || []).concat(list);
+      STORE.update(); render();
+      toast(`AI 从书里读出 ${list.length} 个角色，可以直接改`, 'ok');
+      const note = mpServedNote(pick, r.model);
+      if (note) toast(note, 'warn');
+    } catch (e) {
+      setMsg('AI 读角色失败：' + e.message, 'var(--red)');
+    }
+  }
+
+  /* 角色定妆照：一次只生一张、按一次生一次，跟场景示意图同样的成本考量 */
+  async function aiCharPortrait(i) {
+    const p = STORE.current;
+    const c = p && (p.characters || [])[i];
+    const slot = $(`.char-portrait[data-for="${i}"]`);
+    if (!c || !slot) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+    if (!(c.look || '').trim() && !(c.name || '').trim()) return toast('先写下这个角色的名字或长相', 'warn');
+
+    const pick = await askModel('portrait');
+    if (!pick) return toast('已取消，没有生成定妆照', 'warn');
+
+    slot.innerHTML = '<div class="hint" style="color:var(--violet-2);margin-bottom:10px">✨ 生成中，约 10-20 秒…</div>';
+    const prompt = `人物定妆照，直式 9:16 半身构图，单一人物。`
+      + (c.name ? `角色：${c.name}。` : '')
+      + (c.role ? `身份：${c.role}。` : '')
+      + (c.look ? `外貌：${c.look}。` : '')
+      + (c.scene ? `所处情境：${c.scene}。` : '')
+      + `内容与《${p.title}》这本书有关。电影感打光、真实摄影风格、脸部清晰、不要出现文字或字幕。`;
+
+    try {
+      const r = await hgFetch('/api/ai/image', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ prompt }, pick))
+      }, 60000);
+      if (!r.url) throw new Error('平台没有回传图片网址');
+      c.portraitUrl = r.url;
+      STORE.update();
+      slot.innerHTML = `<img src="${esc(r.url)}" style="width:100%;border-radius:10px;margin-bottom:10px">`;
+      toast('定妆照好了，长相不对就改「长什么样」再生成一次', 'ok');
+    } catch (e) {
+      slot.innerHTML = `<div class="hint" style="color:var(--amber);margin-bottom:10px">生成失败：${esc(e.message)}</div>`;
+    }
+  }
+
+  /* 角色 → 影片提示词。写完落到下面那张卡，使用者可以再改，
+   * 真正扣额度的「生成这支短片」还是要自己按。 */
+  function charToPrompt(i) {
+    const p = STORE.current;
+    const c = p && (p.characters || [])[i];
+    if (!c) return;
+    const name = (c.name || '').trim() || '书中人物';
+    if (!(c.look || '').trim() && !(c.scene || '').trim()) return toast('先写下这个角色的长相或代表场景', 'warn');
+
+    p.videoPrompts = (p.videoPrompts || []).concat([{
+      label: `${name}走进影片`,
+      text: `${name}${c.role ? `（${c.role}）` : ''}出现在画面里。`
+        + (c.look ? `人物外貌：${c.look}。` : '')
+        + (c.scene ? `场景：${c.scene}。` : '')
+        + `人物有明确的动作与情绪，镜头缓慢推进，电影感打光，真实摄影风格，直式 9:16 构图，`
+        + `不要出现文字或字幕。内容与《${p.title}》这本书有关。`
+    }]);
+    STORE.update(); render();
+    toast(`已把「${name}」写成影片提示词，在下面可以再改`, 'ok');
+    const box = $('#ai-prompt-status');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   async function aiWritePrompts() {
     const p = STORE.current;
     if (!p) return;
     if (!hgCanWrite()) return hgDemoNotice();
+
+    const pick = await askModel('prompts');
+    if (!pick) return toast('已取消，没有写提示词', 'warn');
 
     const box = $('#ai-prompt-status');
     if (box) box.innerHTML = '<div class="hint" style="color:var(--violet-2);margin-bottom:12px">✨ AI 正在读这本书写提示词，约 10-30 秒…</div>';
@@ -6470,7 +7563,7 @@ ${ctx}
     try {
       const r = await hgFetch('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, system: '你是短视频导演，只输出 JSON，不要任何解释文字。', quality: 'auto', maxTokens: 2000, wantJson: true })
+        body: JSON.stringify(Object.assign({ prompt, system: '你是短视频导演，只输出 JSON，不要任何解释文字。', maxTokens: 2000, wantJson: true }, pick))
       });
       let out;
       try { out = JSON.parse(r.content); }
@@ -6484,6 +7577,8 @@ ${ctx}
       p.videoPrompts = (p.videoPrompts || []).concat(list);
       STORE.update(); render();
       toast(`AI 写了 ${list.length} 组提示词，可以直接改`, 'ok');
+      const note = mpServedNote(pick, r.model);
+      if (note) toast(note, 'warn');
     } catch (e) {
       if (box) box.innerHTML = `<div class="hint" style="color:var(--red);margin-bottom:12px">AI 写提示词失败：${esc(e.message)}</div>`;
     }
@@ -7155,16 +8250,6 @@ ${ctx}
   else setTimeout(() => toast('欢迎回来 · 需要重看用法请点顶栏「导览」', 'ok'), 700);
 })();
 
-function defaultVideoDuration() {
-  const raw = window.STORE && STORE.s && STORE.s.settings ? STORE.s.settings.videoDuration : 60;
-  return clampDuration(raw);
-}
-
-function clampDuration(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.min(180, Math.max(15, Math.round(n))) : 60;
-}
-
 function setVideoDuration(videoId, value, notify) {
   const duration = clampDuration(value);
   let hit = null;
@@ -7198,7 +8283,7 @@ function setVideoFormat(videoId, value, notify) {
   STORE.update();
   if (notify) {
     render();
-    UI.toast(format === 'conversation' ? '已改为双人访谈' : '已改为单人口播', 'ok');
+    UI.toast(format === 'conversation' ? '已改为访谈式对谈' : '已改为单人口播', 'ok');
   }
 }
 
