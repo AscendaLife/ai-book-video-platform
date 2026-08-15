@@ -3031,27 +3031,62 @@ window.VIEWS = window.VIEWS || {};
       const pa = STORE.s.persona;
       const pool = DATA.sceneTemplateLibrary ? DATA.sceneTemplateLibrary() : [];
       const sceneNames = (p.sceneIds || []).map(id => (pool.find(x => x.id === id) || {}).name).filter(Boolean);
-      const avatarLabel = pa.realAvatarMode === 'image'
-        ? '你上传的照片' : (pa.realAvatarName || '（尚未选择）');
+      /* 形象与声音是不是「真的」设好了——看有没有实际的凭据，不要看模式。
+       * 以前这里只看 realAvatarMode 是不是 'image' 就写「你上传的照片」，
+       * 结果没传过照片的人也看到这句，以为已经设好，直接按确认，闸门等于没拦到。 */
+      const avatarSet = pa.realAvatarMode === 'image' ? !!pa.realPhotoAssetId : !!pa.realAvatarId;
+      const voiceSet = !!pa.realVoiceId;
+      const libHit = (pa.avatarLib || []).find(x => x.assetId === pa.realPhotoAssetId);
+      const avatarLabel = !avatarSet ? '尚未设定'
+        : pa.realAvatarMode === 'image' ? (libHit ? libHit.name : '你上传的照片')
+          : (pa.realAvatarName || '已选择');
+      const ready = avatarSet && voiceSet;
+      const stat = (ok, txt) => `<div style="font-size:16px;font-weight:700;margin:4px 0 0;color:${ok ? 'var(--txt)' : 'var(--red)'}">${esc(txt)}</div>`;
+
       return `
-      <div class="card" style="margin-bottom:16px;border-color:var(--violet-2)">
+      <div class="card" style="margin-bottom:16px;border-color:${ready ? 'var(--violet-2)' : 'var(--red)'}">
         <div class="card-h"><div><div class="card-t">⏸ 已暂停 —— 请确认这批影片要怎么生成</div>
-            <div class="card-s">下一步就会产出成片，形象、声音、场景到时候改就得整批重跑，先在这里确认</div></div></div>
+            <div class="card-s">${ready
+              ? '下一步就会产出成片，形象、声音到时候改就得整批重跑，先在这里确认'
+              : '还差设定才能往下走。下面直接选就好，不用离开这一页。'}</div></div></div>
+
         <div class="grid g3" style="margin-bottom:14px">
-          ${[['数字人形象', avatarLabel, 'persona'],
-             ['声音', pa.realVoiceName || '（尚未选择）', 'persona'],
-             ['拍摄场景', sceneNames.length ? sceneNames.join('、') : '（未选，系统自动配）', 'creative']]
-            .map(x => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px">
-              <div style="font-size:13.5px;color:var(--txt-3)">${x[0]}</div>
-              <div style="font-size:16px;font-weight:700;margin:4px 0 8px">${esc(x[1])}</div>
-              <button class="btn btn-sm" data-act="goto" data-route="${x[2]}">去修改</button>
-            </div>`).join('')}
+          <div style="background:var(--panel-2);border:1px solid ${avatarSet ? 'var(--line)' : 'var(--red)'};border-radius:12px;padding:13px">
+            <div style="font-size:13.5px;color:var(--txt-3)">数字人形象</div>${stat(avatarSet, avatarLabel)}
+          </div>
+          <div style="background:var(--panel-2);border:1px solid ${voiceSet ? 'var(--line)' : 'var(--red)'};border-radius:12px;padding:13px">
+            <div style="font-size:13.5px;color:var(--txt-3)">声音</div>${stat(voiceSet, pa.realVoiceName || '尚未设定')}
+          </div>
+          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px">
+            <div style="font-size:13.5px;color:var(--txt-3)">拍摄场景</div>
+            <div style="font-size:16px;font-weight:700;margin:4px 0 8px">${esc(sceneNames.length ? sceneNames.join('、') : '（未选，系统自动配）')}</div>
+            <button class="btn btn-sm" data-act="goto" data-route="creative">去修改</button>
+          </div>
         </div>
-        <div style="display:flex;gap:9px">
-          <button class="btn btn-primary" data-act="resume-run">✓ 确认，继续生成</button>
+
+        ${/* 就地设定：需要什么设定，就在需要的那一刻当场问，不要要求使用者
+             预先记得，也不要把人赶去另一页再自己走回来。
+             这两个挂载点的 id 跟「数字人 · 声音」页一样，所以 hgRenderAvatars()
+             与 hgRenderVoices() 会自动把内容填进来，不必再写一套。 */''}
+        <details class="adv" ${ready ? '' : 'open'} style="margin-bottom:14px">
+          <summary>${ready ? '要换形象或声音的话，点这里' : '① 选形象　② 选声音（都在这里选，选完下面按钮就会亮）'}</summary>
+          <div class="adv-b">
+            <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
+            <input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
+            <div class="label">① 数字人形象</div>
+            <div id="hg-status" style="margin-bottom:8px"><div class="hint">连线中…</div></div>
+            <div id="hg-avatar-panel" style="margin-bottom:18px"><div class="hint">读取中…</div></div>
+            <div class="label">② 声音</div>
+            <div id="hg-voice-panel"><div class="hint">读取中…</div></div>
+          </div>
+        </details>
+
+        <div style="display:flex;gap:9px;align-items:center">
+          <button class="btn btn-primary" data-act="resume-run" ${ready ? '' : 'disabled style="opacity:.45;pointer-events:none"'}>✓ 确认，继续生成</button>
           <button class="btn" data-act="stop-run">■ 中止</button>
+          ${ready ? '' : '<span class="hint" style="color:var(--red)">形象和声音都设好才能继续</span>'}
         </div>
-        <div class="hint" style="margin-top:10px">去修改设定后回到这一页，这里会一直等你，不会自己跑掉。</div>
+        <div class="hint" style="margin-top:10px">这一页会一直等你，不会自己跑掉。</div>
       </div>`;
     })() : ''}
 
@@ -5383,6 +5418,10 @@ window.TOUR = (function () {
     p.realVoiceId = HG.voiceId;
     p.realVoiceName = (HG.voices.find(v => v.id === HG.voiceId) || {}).name || '';
     STORE.update();
+    /* 在流水线的暂停闸门里就地选形象或声音时，要让闸门上的状态与
+     * 「确认，继续生成」按钮立刻跟着变——否则选完了按钮还是灰的，
+     * 使用者会以为没选到。 */
+    if (route === 'pipeline' && window.ENGINE && ENGINE.isPaused) render();
   }
 
   /* 反向：进页面时把存过的选择放回记忆体，让介面显示上次选的 */
@@ -5416,6 +5455,12 @@ window.TOUR = (function () {
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRepaintStatus(); hgRenderChoiceSummary();
       return;
     }
+    /* 挂载点还没画出来时不要算「试过了」。
+     * hgCheck() 开头找不到 #hg-status 会直接 return，什么都没做；
+     * 但如果这里已经把 hgTried 设成 true，之后就永远不会再试，
+     * 画面会一直停在「读取中…」。流水线页就是这样——一开始没有闸门、
+     * 没有挂载点，等暂停闸门出现时早就被标记成试过了。 */
+    if (!$('#hg-status')) return;
     if (hgTried) return;
     hgTried = true;
     hgCheck();
