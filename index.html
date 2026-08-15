@@ -1683,8 +1683,11 @@ window.DATA = (function () {
     { key: 'persona', n: 'STEP 4', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
       why: 'AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式把稿子重写一遍：语速快慢、口气软硬、先讲结论还是先讲故事、习惯用哪些口头禅。',
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
-      out: '全部脚本被重写一遍，自然植入口头禅（每支最多 2 处），并打一个「像不像本人」的分数，低于 90 分退回重写。',
-      tasks: ['载入人格模型 v3.2', '语气与节奏改写', '口头禅自然植入', '价值观一致性校验'] },
+      out: '每一篇稿子真的送进模型按本人口吻重写一遍：句数与时间轴原样保留、只改讲法不改观点、口头禅最多植入 1-2 处。改回来的句数对不上就整篇不套用，宁可维持原样。',
+      real: true,
+      /* 这几个小任务名以前写得像真的在做「一致性校验」「打分」，其实都没有。
+       * 真正做事的是 applyStageResult 里那次模型呼叫，它自己会打日志。 */
+      tasks: ['读取人格参数与口头禅', '整理待改写的稿子', '逐批改写台词'] },
     { key: 'avatar', n: 'STEP 5', t: '建立影片待办清单', d: '一篇稿子 = 一支待生成的影片',
       why: '把上一步写好的每一篇稿子，对应成一支「还没做出来」的影片。这一步<b>不会真的生成影片</b>——真的生成要送去外部数字人服务，一支要花约 US$1-3、等几分钟，所以做哪几支由你自己决定。',
       you: '等清单出来后，到「内容资产库」挑你想做的那几支，逐支点「生成这一支」。',
@@ -2984,7 +2987,9 @@ window.ENGINE = (function () {
       upload: ['已读取', '已抽出内文', '已合并成整本原文', '字数与章节已统计', '已存进这个专案'],
       read: ['', '', '', '', '', ''],
       script: ['', '', '', '', '', '', ''],
-      persona: ['人格参数已载入', '台词已改写', '语气与节奏已调整', '口头禅已植入', ''],
+      /* 这几句以前不管有没有真的做，都照报「台词已改写」。真正的改写是在
+       * applyStageResult 里做的，会自己打日志——这里只写中性的准备动作。 */
+      persona: ['', '', ''],
       // avatar 这一步是真的在做事（建清单），但绝不能写得像已经渲染出影片了
       avatar: ['读到已写好的稿子', '平台与尺寸已对应', '清单已建立，全部标为「待生成」'],
       // package / export 目前没有实作，日志必须说实话，不能再报「字幕 1,860 行」这种假数字
@@ -3074,7 +3079,27 @@ window.ENGINE = (function () {
       }
       applyScriptFallback(p);
     }
-    if (key === 'persona' && STORE.s.settings.autoPersona) p.scripts = p.scripts.map(DATA.applyPersona);
+    if (key === 'persona' && STORE.s.settings.autoPersona) {
+      /* 真的让模型按本人口吻重写。接不上或使用者关掉真实 AI 时，退回原本
+       * 那套参数化替换——但日志一定要讲明白那只是规则替换，不是模型改写，
+       * 不能再让人以为「台词已改写」。 */
+      if (window.AIREAL && AIREAL.canUse() && (p.scripts || []).length) {
+        addLog('l-run', '  └ 正在用真实 AI 按本人口吻改写…');
+        return AIREAL.rewritePersona(p, m => addLog('l-info', '  └ ' + m)).then(r => {
+          addLog('l-ok', `  └ ✨ 真实 AI 改写完成（模型：${r.model || '未知'}）：${r.applied}/${r.total} 篇已换成本人口吻`);
+          if (r.applied < r.total) {
+            addLog('l-warn', `  └ 其余 ${r.total - r.applied} 篇维持原样（改写失败或句数对不上，没有硬套）`);
+          }
+          if (r.note) addLog('l-warn', '  └ ' + r.note);
+          STORE.update();
+        }).catch(e => {
+          addLog('l-warn', `  └ 真实 AI 改写失败（${e.message}），改用本地规则替换（只是加口头禅，不是真的改写）`);
+          p.scripts = p.scripts.map(DATA.applyPersona);
+        });
+      }
+      addLog('l-warn', '  └ 未启用真实 AI，本步只做本地规则替换（加口头禅，不是真的改写）');
+      p.scripts = p.scripts.map(DATA.applyPersona);
+    }
     /* 一篇稿子对应一支影片，状态一律是「待生成」。
      * 这里绝对不能凭空造影片：影片要真的送去数字人服务、真的花钱、真的等几分钟
      * 才会有，一支约 US$1-3。所以流水线只负责把稿子准备好，做不做成影片、做哪几支，
@@ -4082,7 +4107,8 @@ window.VIEWS = window.VIEWS || {};
         <div class="copy-item">
           <div class="ci-h"><span class="ci-n">#${String(s.n).padStart(2, '0')}</span>
             <span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${s.angleName}</span>
-            <span class="tag">${s.platformName}</span>${s.persona ? '<span class="tag g">${esc(STORE.s.account.name)}人格</span>' : ''}
+            <span class="tag">${s.platformName}</span>${s.personaByAI ? `<span class="tag g">${esc(STORE.s.account.name)}口吻</span>`
+              : s.persona ? '<span class="tag a">仅规则替换</span>' : ''}
             <span class="ci-a"><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">详情</button></span></div>
           <div style="font-weight:650;font-size:15.5px;margin-bottom:6px">${esc(s.title)}</div>
           <div style="font-size:14.5px;color:var(--txt-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(s.hook)}</div>
@@ -7033,6 +7059,36 @@ window.TOUR = (function () {
     };
   }
 
+  /* 数位人影片按秒计费，参考单价约 US$0.05/秒（依供应商方案而异）。
+   * 这是估算不是帐单——真正的数字以供应商后台为准，所以显示时要讲明白。 */
+  const USD_PER_SEC = 0.05;
+
+  function videoCost(v) {
+    const sec = Number(v && v.realDuration);
+    if (!sec) return null;
+    return { sec, usd: sec * USD_PER_SEC };
+  }
+
+  function videoCostHtml(v) {
+    const c = videoCost(v);
+    if (!c) {
+      return v && v.videoUrl
+        ? '<span class="hint">时长未记录，无法估算费用</span>'
+        : '';
+    }
+    return `<span class="hint">实际时长 <b>${c.sec.toFixed(1)} 秒</b>　估算费用 <b>约 US$${c.usd.toFixed(2)}</b>
+      <span style="opacity:.7">（按 US$${USD_PER_SEC}/秒 估，实际以供应商帐单为准）</span></span>`;
+  }
+
+  /* 旧影片没存过时长，开详情时补查一次。这支查询是唯读、免费的。 */
+  async function backfillDuration(v) {
+    if (!v || v.realDuration || !v.heygenId || !v.videoUrl) return;
+    try {
+      const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(v.heygenId));
+      if (s && s.duration) { v.realDuration = Number(s.duration); STORE.update(); render(); }
+    } catch (e) { /* 补查失败就算了，不要因为这个打断看影片 */ }
+  }
+
   function quotaLeft() {
     const st = STORE.s.settings;
     return Math.max(0, (st.quotaTotal || 0) - (st.quotaUsed || 0));
@@ -7298,6 +7354,9 @@ window.TOUR = (function () {
         if (s.status === 'completed' && s.videoUrl) {
           delete videoJobs[id];
           v.status = '已生成'; v.videoUrl = s.videoUrl;
+          /* 时长要存。它是算钱的唯一依据，而状态查询本来就有回传，
+           * 以前直接丢掉，事后就再也答不出「这支花了多少钱」。 */
+          if (s.duration) v.realDuration = Number(s.duration);
           // 额度只在这里扣：影片真的做出来了才算用掉一支
           const st = STORE.s.settings;
           st.quotaUsed = Math.min(st.quotaTotal, st.quotaUsed + 1);
@@ -7739,7 +7798,9 @@ window.TOUR = (function () {
       <div class="chip-list" style="margin-bottom:14px">
         <span class="tag v">${s.platformName}</span><span class="tag">${s.duration} 秒</span>
         <span class="tag">${s.words} 字</span><span class="tag c">${esc(s.rhythm || '口播节奏')}</span><span class="tag c">预估评分 ${s.score}</span>
-        ${s.persona ? '<span class="tag g">已套用'+STORE.s.account.name+'人格</span>' : '<span class="tag a">未套用人格</span>'}
+        ${s.personaByAI ? '<span class="tag g">已用 AI 改成'+STORE.s.account.name+'口吻</span>'
+          : s.persona ? '<span class="tag a">只做了规则替换（加口头禅，非真改写）</span>'
+          : '<span class="tag a">未套用人格</span>'}
       </div>
       <div class="field"><div class="label">标题</div>
         <div style="font-size:17px;font-weight:680">${esc(s.title)}</div></div>
@@ -7946,6 +8007,8 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
                note: '读这本书写几组「文字转影片」提示词，输出很短，很便宜。' },
     image:   { t: '生成场景示意图', kind: 'image', def: 'fast', est: null,
                note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' },
+    persona: { t: '改写成本人口吻', kind: 'text', def: 'auto', est: { in: 2500, out: 3000 },
+               note: '把已经写好的口播稿，按本人的语速、口气、正式度与口头禅重写一遍。改的是讲法，不改观点。' },
     chars:   { t: 'AI 读出书里的角色', kind: 'text', def: 'auto', est: { in: 1500, out: 1500 },
                note: '读这本书抽出几个可以「演出来」的角色，输出很短，很便宜。' },
     portrait: { t: '生成角色定妆照', kind: 'image', def: 'fast', est: null,
@@ -8271,6 +8334,117 @@ ${merged.summaries.slice(0, 9000)}
         note: mpServedNote(pick, r2.model),
         read: { chunks: chunks.n, ok: got.length, chars: text.length, clipped: chunks.clipped }
       };
+    },
+
+    /* ============================================================
+     * 改写成本人口吻
+     *
+     * 以前这一步是 DATA.applyPersona()：在 hook 前面黏一句随机口头禅、
+     * 再把分数随机加个 5-10 分，如此而已。日志却报「台词已改写」
+     * 「语气与节奏已调整」——讲的跟做的完全是两回事。
+     *
+     * 现在真的把稿子连同人格参数送进模型重写。要守住三件事：
+     *   1. 只改讲法，不改观点——改完还是这本书的意思，不能借机瞎编
+     *   2. 时间轴与句数原样保留——后面要按 t 去切镜头、对口型，
+     *      句数一变，镜头表和影片时长就全乱了
+     *   3. 口头禅最多植入 1-2 处，多了就变口癖，比不改还难听
+     * 分批送：一次两篇，输出量跟写稿那步差不多，再多会撞到闸道器上限。
+     * ========================================================== */
+    async rewritePersona(p, onProgress) {
+      const say = onProgress || function () {};
+      const list = (p.scripts || []).filter(s => s && (s.dialogue || []).length);
+      if (!list.length) throw new Error('还没有稿子可以改');
+
+      const pa = STORE.s.persona;
+      const speaker = (STORE.s.account && STORE.s.account.name) || '主讲人';
+      const batch = 2;
+      const rounds = Math.ceil(list.length / batch);
+
+      const pick = await askModel('persona', {
+        est: { in: 1400 * rounds, out: 1800 * rounds },
+        note: `要把 ${list.length} 篇稿子按「${speaker}」的口吻重写一遍，分 ${rounds} 批送。`
+      });
+      if (!pick) throw new Error('已取消选择模型');
+
+      const rule = `【要改成谁的口吻】${speaker}
+【语速】${pa.speed}/100（越高越快、句子越短）
+【亲和】${pa.warmth}/100（越高越像跟朋友聊天，越低越冷静）
+【正式度】${pa.formal}/100（越高越书面，越低越口语）
+【停顿密度】${pa.pause}/100　【强调力度】${pa.emphasis}/100
+${(pa.habits || []).length ? '【口头禅】' + pa.habits.join('、') + '——全篇最多自然植入 1-2 句，不要每句都用' : ''}
+${(pa.values || []).length ? '【说话原则】' + pa.values.join('；') : ''}
+${(pa.forbid || []).length ? '【绝对不能出现】' + pa.forbid.join('；') : ''}`;
+
+      let done = 0, model = null;
+      say(`共 ${list.length} 篇，分 ${rounds} 批改写…`);
+
+      const packs = await pool(Array.from({ length: rounds }, (_, i) => i), 2, async (ri) => {
+        const from = ri * batch;
+        const part = list.slice(from, from + batch);
+        const payload = part.map((s, i) => ({
+          i: from + i,
+          hook: s.hook || '',
+          cta: s.cta || '',
+          dialogue: (s.dialogue || []).map(x => ({ t: x.t, cue: x.cue, text: x.text }))
+        }));
+        try {
+          const r = await hgFetchSlow('/api/ai/chat', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.assign({
+              system: '你是资深口播编剧，专门把稿子改写成特定人物的说话方式。只输出 JSON，不要任何解释文字。',
+              maxTokens: 3000, wantJson: true,
+              prompt: `把下面这几篇口播稿改写成这个人自己讲出来的样子。
+
+${rule}
+
+【要改的稿子】
+${JSON.stringify(payload)}
+
+铁规矩（违反就等于白改）：
+- **只改讲法，不改观点**：书里的论点、引用的原句、举的例子都要保留，不要自己新增书里没有的说法
+- **每篇的句数与每句的 t 时间区间原样照抄**，一句都不能多、不能少、不能改时间——后面要按这个切镜头
+- 口头禅全篇最多 1-2 处，放在自然的地方；不要每句开头都黏一句
+- 改完要像人在讲话：短句、有停顿、有语气，不要书面语和排比句
+- cue 那一栏也跟着改，写清楚这一句该用什么语气、哪里停
+
+只输出：{"scripts":[{"i":原本的编号,"hook":"改写后的开场","cta":"改写后的结尾引导","dialogue":[{"t":"照抄","cue":"语气与节奏提示","text":"改写后的台词"}]}]}`
+            }, pick))
+          });
+          const out = (aiJson(r.content).scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
+          model = model || r.model;
+          done += out.length;
+          say(`已改写 ${done}/${list.length} 篇`);
+          return out;
+        } catch (e) {
+          say(`第 ${from + 1}-${from + part.length} 篇改写失败（${e.message}），这几篇维持原样`);
+          return [];
+        }
+      });
+
+      const got = packs.reduce((a, x) => a.concat(x), []);
+      if (!got.length) throw new Error('每一批都没改成功');
+
+      /* 只覆盖真的改回来的那几篇，其余保持原样——绝不能因为某一批失败，
+       * 就把没改到的稿子也标成「已套用人格」。 */
+      got.forEach(o => {
+        const s = list[o.i];
+        if (!s) return;
+        // 句数对不上就不要用：时间轴与镜头表会跟着错乱，宁可这一篇不改
+        if ((o.dialogue || []).length !== (s.dialogue || []).length) return;
+        s.hook = o.hook || s.hook;
+        s.cta = o.cta || s.cta;
+        s.dialogue = s.dialogue.map((line, i) => Object.assign({}, line, {
+          cue: (o.dialogue[i] && o.dialogue[i].cue) || line.cue,
+          text: (o.dialogue[i] && o.dialogue[i].text) || line.text
+        }));
+        s.persona = true;
+        s.personaByAI = true;
+        s.personaModel = model || null;
+      });
+
+      const applied = list.filter(s => s.personaByAI).length;
+      STORE.update();
+      return { applied, total: list.length, model, note: mpServedNote(pick, model) };
     },
 
     /* ============================================================
@@ -8979,13 +9153,18 @@ ${ctx}
     const shots = script ? DATA.genShots(script, p) : [];
 
     const done = v.status === '已生成' && v.videoUrl;
+    /* 旧影片当初没存时长，开详情时补查一次，之后就有费用可看了。
+     * 这支查询是唯读、免费的，查完会自动重画。 */
+    if (done) backfillDuration(v);
     modal(done ? '影片（真的做出来了）' : v.demo ? '分镜预览（演示数据）' : '分镜预览（影片还没生成）', `
       <div style="display:flex;gap:22px;flex-wrap:wrap">
         <div style="flex:0 0 232px">
           ${done
             ? `<video src="${esc(v.videoUrl)}" controls playsinline style="width:100%;border-radius:16px;background:#000"></video>
                <div class="hint" style="margin-top:10px;line-height:1.7">这是<b style="color:var(--green)">真的影片</b>，用${esc(v.avatarName || '你选的形象')}＋${esc(v.voiceName || '你选的声音')}生成。<br>
-                 影片网址约 <b>7 天后失效</b>，要留请尽快下载。</div>`
+                 影片网址约 <b>7 天后失效</b>，要留请尽快下载。</div>
+               <div style="margin-top:8px;padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;line-height:1.7">
+                 ${videoCostHtml(v)}</div>`
             : `${phoneFrame(v, shots, v.caption, p)}
                <div class="hint" style="margin-top:10px;line-height:1.7">
                  <b style="color:var(--amber)">这不是影片</b>，是拿脚本文字做的分镜示意动画。<br>
