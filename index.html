@@ -706,7 +706,14 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
   </div>
 </div>
 
+<!-- 三个选档用的 input 都放在这里，不要搬进页面模板里。
+     原因：页面模板每次 render() 都会整段重画，元素被销毁重建。
+     但选档视窗是非同步的——按下去到使用者选完档案中间隔了好几秒，
+     这期间只要画面重画一次，选完档案的事件就发在一个已经被丢掉的
+     元素上，等于什么都没发生。放在这里当常驻元素就不会有这个问题。 -->
 <input type="file" id="file-input" multiple accept=".json,.txt,.md,.pdf,.docx,.epub,.pptx,.jpg,.jpeg,.png,.svg" style="display:none">
+<input type="file" id="hg-photo-input" accept="image/*" style="display:none">
+<input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
 
 <div class="toasts" id="toasts"></div>
 <script>
@@ -3071,8 +3078,6 @@ window.VIEWS = window.VIEWS || {};
         <details class="adv" ${ready ? '' : 'open'} style="margin-bottom:14px">
           <summary>${ready ? '要换形象或声音的话，点这里' : '① 选形象　② 选声音（都在这里选，选完下面按钮就会亮）'}</summary>
           <div class="adv-b">
-            <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
-            <input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
             <div class="label">① 数字人形象</div>
             <div id="hg-status" style="margin-bottom:8px"><div class="hint">连线中…</div></div>
             <div id="hg-avatar-panel" style="margin-bottom:18px"><div class="hint">读取中…</div></div>
@@ -3638,8 +3643,6 @@ window.VIEWS = window.VIEWS || {};
       <div class="ex-r"><span class="ex-k">设定一次就好</span><span>这是<b>帐号级</b>设定，每本书都会沿用，不用每本重设。</span></div>
     </div>
 
-    <input type="file" id="hg-photo-input" accept="image/*" style="display:none">
-    <input type="file" id="hg-audio-input" accept="audio/*" style="display:none">
 
     <div class="card" style="margin-bottom:16px">
       <div class="card-h"><div><div class="card-t">① 数字人形象</div>
@@ -4782,11 +4785,20 @@ window.TOUR = (function () {
   });
 
   /* ---------------- 全局事件委托 ---------------- */
-  /* 上传照片 / 上传录音：檔案 input 的 change 事件，挂在 #view 上做委派，
-   * 这样即使这一页重新渲染，监听器也不会失效（跟下面 click 委派同一招）。 */
-  $('#view').addEventListener('change', e => {
-    if (e.target.id === 'hg-photo-input') return hgUploadPhoto(e.target.files[0]);
-    if (e.target.id === 'hg-audio-input') return hgUploadAudio(e.target.files[0]);
+  /* 上传照片 / 上传录音。
+   * 这两个 input 现在放在 index.html 里当常驻元素（不在 #view 内），
+   * 所以直接绑在元素本身，不再走 #view 的委派——委派的前提是元素在
+   * #view 里面，搬出去之后事件根本传不到。
+   * 为什么要搬出去：选档视窗是非同步的，从按下去到使用者选完档案中间
+   * 隔了好几秒，这期间只要画面重画一次，原本那个 input 就被销毁了，
+   * 选完档案的 change 会发在一个已经脱离文件的元素上，等于毫无反应。 */
+  $('#hg-photo-input').addEventListener('change', e => {
+    hgUploadPhoto(e.target.files[0]);
+    e.target.value = '';        // 清空才能连续选同一个档案
+  });
+  $('#hg-audio-input').addEventListener('change', e => {
+    hgUploadAudio(e.target.files[0]);
+    e.target.value = '';
   });
 
   $('#view').addEventListener('click', e => {
