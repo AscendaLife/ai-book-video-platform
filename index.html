@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>书影 BookReel · AI 新书短视频营销平台</title>
+<title>书影 BookReel · AI 新书短视频内容生产平台</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 <style>
 /* ============================================================
@@ -989,6 +989,633 @@ window.I18N = (function () {
 })();
 
 
+/* ===== parse.js ===== */
+/* ============================================================
+ * parse.js — 真的把 PDF / Word / EPUB / PPTX 的内文抽出来
+ *
+ * 为什么写在浏览器里、而且不装任何第三方库：
+ *   这套系统的前提是「双击 index.html 就能跑」，没有建置步骤、没有
+ *   node_modules、也不连 CDN。所以解析全部用浏览器原生能力做：
+ *     - 解压缩 → DecompressionStream（Chrome/Edge 原生，无须 zlib.js）
+ *     - DOCX / EPUB / PPTX → 本质是 ZIP + XML，自己实作 ZIP 目录解析
+ *     - PDF   → 自己走物件表、解 FlateDecode、读 ToUnicode 造字表
+ *
+ * 抽出来的是「文字」，不是版面。目的只有一个：让 STEP 2 的模型真的有
+ * 整本书可读。图、表、页眉页脚这些一律不管。
+ *
+ * 做不到的情况会明说，不会假装成功：
+ *   - 扫描版 PDF（整页是图片）没有文字层，抽不出东西 → 回报「像是扫描档」
+ *   - 加密 PDF 不解密 → 回报「有加密」
+ *   - 少数用 Identity-H 又不附 ToUnicode 的字型，那几段会被跳过
+ * ========================================================== */
+window.PARSE = (function () {
+
+  /* =======================================================
+   * 基础工具
+   * ===================================================== */
+  const dec = (bytes, enc) => new TextDecoder(enc || 'utf-8').decode(bytes);
+
+  /* 把 bytes 当 latin1 读成字串：这样 charCodeAt(i) 就是第 i 个 byte，
+   * 可以直接用字串工具（indexOf / 正则）扫二进位内容，不用手写扫描器。 */
+  function latin1(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return s;
+  }
+
+  const supportsInflate = typeof DecompressionStream === 'function';
+
+  async function inflate(bytes, format) {
+    if (!supportsInflate) throw new Error('这个浏览器不支援原生解压缩，请改用 Chrome 或 Edge');
+    const ds = new DecompressionStream(format);
+    const stream = new Blob([bytes]).stream().pipeThrough(ds);
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  /* ZIP 里是 raw deflate（没有 zlib 标头）；PDF 的 FlateDecode 是 zlib。
+   * 两种都试一次：真实档案里两种标头都遇过，与其猜不如都试。 */
+  async function inflateAny(bytes) {
+    try { return await inflate(bytes, 'deflate'); }
+    catch (e) { return await inflate(bytes, 'deflate-raw'); }
+  }
+
+  /* =======================================================
+   * ZIP —— DOCX / EPUB / PPTX 的共同外壳
+   * 只读中央目录，够用而且不必处理串流式 ZIP 的各种变体。
+   * ===================================================== */
+  async function unzip(buf) {
+    const b = new Uint8Array(buf);
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    const u16 = o => dv.getUint16(o, true);
+    const u32 = o => dv.getUint32(o, true);
+
+    // 从档尾往回找中央目录结束标记（后面可能挂着最多 64KB 的注解）
+    let eocd = -1;
+    for (let i = b.length - 22; i >= Math.max(0, b.length - 65558); i--) {
+      if (u32(i) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('不是有效的压缩档（找不到 ZIP 目录）');
+
+    const count = u16(eocd + 10);
+    let ptr = u32(eocd + 16);
+    const files = {};
+
+    for (let n = 0; n < count && ptr + 46 <= b.length; n++) {
+      if (u32(ptr) !== 0x02014b50) break;
+      const method = u16(ptr + 10);
+      const compSize = u32(ptr + 20);
+      const nameLen = u16(ptr + 28), extraLen = u16(ptr + 30), cmtLen = u16(ptr + 32);
+      const localOff = u32(ptr + 42);
+      const name = dec(b.subarray(ptr + 46, ptr + 46 + nameLen));
+      ptr += 46 + nameLen + extraLen + cmtLen;
+
+      // 真正的资料位置要看本地标头（它的 extra 长度跟中央目录的可能不同）
+      if (u32(localOff) !== 0x04034b50) continue;
+      const dataOff = localOff + 30 + u16(localOff + 26) + u16(localOff + 28);
+      const raw = b.subarray(dataOff, dataOff + compSize);
+      files[name] = { method, raw };
+    }
+    if (!Object.keys(files).length) throw new Error('压缩档里没有任何档案');
+
+    return {
+      names: Object.keys(files),
+      async text(name) {
+        const f = files[name];
+        if (!f) return '';
+        if (f.method === 0) return dec(f.raw);
+        if (f.method !== 8) throw new Error(`不支援的压缩方式（method ${f.method}）`);
+        return dec(await inflate(f.raw, 'deflate-raw'));
+      }
+    };
+  }
+
+  /* =======================================================
+   * XML → 纯文字
+   * ===================================================== */
+  const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ldquo: '“', rdquo: '”', mdash: '—', hellip: '…' };
+
+  function unescapeXml(s) {
+    return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (m, g) => {
+      if (g[0] === '#') {
+        const code = g[1] === 'x' || g[1] === 'X' ? parseInt(g.slice(2), 16) : parseInt(g.slice(1), 10);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+      }
+      return ENTITIES[g] != null ? ENTITIES[g] : m;
+    });
+  }
+
+  /* 段落标签要留成换行，否则整本书会黏成一行，模型读起来也少了段落线索 */
+  function xmlToText(xml, blockTags) {
+    let s = xml
+      .replace(/<\?[\s\S]*?\?>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '');
+    (blockTags || []).forEach(t => {
+      s = s.replace(new RegExp(`</${t}\\s*>`, 'gi'), '\n');
+      s = s.replace(new RegExp(`<${t}(\\s[^>]*)?/>`, 'gi'), '\n');
+    });
+    s = s.replace(/<[^>]+>/g, '');
+    return tidy(unescapeXml(s));
+  }
+
+  function tidy(s) {
+    return s
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t ]+/g, ' ')
+      .split('\n').map(l => l.trim()).join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /* =======================================================
+   * DOCX
+   * ===================================================== */
+  async function docx(buf) {
+    const zip = await unzip(buf);
+    const parts = ['word/document.xml'].concat(
+      zip.names.filter(n => /^word\/(header|footer)?\d*\.xml$/.test(n) && n !== 'word/document.xml')
+    ).filter(n => zip.names.indexOf(n) >= 0);
+    if (!parts.length) throw new Error('这个档案里没有 Word 内文（word/document.xml）');
+
+    let out = '';
+    for (const name of parts) {
+      out += xmlToText(await zip.text(name), ['w:p', 'w:br', 'w:tab']) + '\n\n';
+    }
+    return tidy(out);
+  }
+
+  /* =======================================================
+   * PPTX —— 依投影片编号排序，一页一段
+   * ===================================================== */
+  async function pptx(buf) {
+    const zip = await unzip(buf);
+    const slides = zip.names
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+    if (!slides.length) throw new Error('这个档案里没有投影片');
+
+    let out = '';
+    for (let i = 0; i < slides.length; i++) {
+      out += `\n\n【第 ${i + 1} 页】\n` + xmlToText(await zip.text(slides[i]), ['a:p', 'a:br']);
+    }
+    return tidy(out);
+  }
+
+  /* =======================================================
+   * EPUB —— 照 spine 的顺序读，才会是书的正确章节顺序
+   * ===================================================== */
+  async function epub(buf) {
+    const zip = await unzip(buf);
+
+    let opfPath = '';
+    if (zip.names.indexOf('META-INF/container.xml') >= 0) {
+      const m = (await zip.text('META-INF/container.xml')).match(/full-path\s*=\s*"([^"]+)"/i);
+      if (m) opfPath = m[1];
+    }
+    if (!opfPath) opfPath = zip.names.find(n => /\.opf$/i.test(n)) || '';
+
+    let order = [];
+    if (opfPath) {
+      const opf = await zip.text(opfPath);
+      const base = opfPath.indexOf('/') >= 0 ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
+      const items = {};
+      (opf.match(/<item\b[^>]*>/gi) || []).forEach(tag => {
+        const id = (tag.match(/\bid\s*=\s*"([^"]+)"/i) || [])[1];
+        const href = (tag.match(/\bhref\s*=\s*"([^"]+)"/i) || [])[1];
+        if (id && href) items[id] = resolvePath(base + decodeURIComponent(href));
+      });
+      order = (opf.match(/<itemref\b[^>]*>/gi) || [])
+        .map(t => (t.match(/idref\s*=\s*"([^"]+)"/i) || [])[1])
+        .map(id => items[id])
+        .filter(n => n && zip.names.indexOf(n) >= 0);
+    }
+    if (!order.length) {
+      order = zip.names.filter(n => /\.(xhtml|html|htm)$/i.test(n)).sort();
+    }
+    if (!order.length) throw new Error('这本电子书里没有找到可读的内文档案');
+
+    let out = '';
+    for (const name of order) {
+      out += xmlToText(await zip.text(name), ['p', 'div', 'br', 'h1', 'h2', 'h3', 'h4', 'li', 'tr']) + '\n\n';
+    }
+    return tidy(out);
+  }
+
+  /* EPUB 的 href 常写成 ../Text/ch1.xhtml，要还原成 ZIP 里的真实路径 */
+  function resolvePath(p) {
+    const parts = [];
+    p.split('/').forEach(seg => {
+      if (!seg || seg === '.') return;
+      if (seg === '..') parts.pop();
+      else parts.push(seg);
+    });
+    return parts.join('/');
+  }
+
+  /* =======================================================
+   * PDF
+   *
+   * 不做完整的 PDF 实作，只走「抽文字」需要的那条路：
+   *   1. 扫出所有 "N 0 obj"，连同物件流（ObjStm）里被压起来的物件
+   *   2. 找出所有 /Type /Page，顺着 /Contents 取内容流
+   *   3. 顺着 /Resources /Font 取每个字型的 /ToUnicode，造出「字码 → 文字」表
+   *   4. 解内容流里的 Tj / TJ / ' / "，用当前字型的表把字码翻回文字
+   *
+   * 刻意不解 xref 表：直接全档扫描物件，对增量更新、坏掉的 xref 反而更耐命。
+   * ===================================================== */
+  async function pdf(buf) {
+    const bytes = new Uint8Array(buf);
+    const s = latin1(bytes);
+
+    if (s.indexOf('%PDF') !== 0 && s.indexOf('%PDF') > 1024) throw new Error('这不是 PDF 档');
+    if (/\/Encrypt\b/.test(s)) throw new Error('这个 PDF 有加密保护，无法读取内文');
+
+    const objs = {};      // objNum → { dict, stream(Uint8Array|null) }
+
+    // ---- 1. 全档扫描 "N G obj" ----
+    const re = /(\d+)\s+(\d+)\s+obj\b/g;
+    let m;
+    while ((m = re.exec(s))) {
+      const num = +m[1];
+      const start = m.index + m[0].length;
+      const end = s.indexOf('endobj', start);
+      if (end < 0) continue;
+      const body = s.slice(start, end);
+      const sIdx = body.indexOf('stream');
+      let dict = body, stream = null;
+      if (sIdx >= 0) {
+        dict = body.slice(0, sIdx);
+        let ds = start + sIdx + 6;
+        if (s[ds] === '\r') ds++;
+        if (s[ds] === '\n') ds++;
+        let de = s.indexOf('endstream', ds);
+        if (de < 0) de = end;
+        /* 结尾一定要切乾净：stream 与 endstream 之间除了资料还有换行，
+         * 多带那一两个 byte，DecompressionStream 会以「压缩流后面有杂讯」
+         * 直接报错，整份 PDF 就一个字都抽不出来。/Length 写得出数字就以它
+         * 为准，写成参照的就自己把结尾的空白切掉。 */
+        const lenM = /\/Length\s+(\d+)(?!\s+\d+\s+R)/.exec(dict);
+        if (lenM && ds + (+lenM[1]) <= de) de = ds + (+lenM[1]);
+        else while (de > ds && (s[de - 1] === '\n' || s[de - 1] === '\r' || s[de - 1] === ' ')) de--;
+        stream = bytes.subarray(ds, de);
+      }
+      objs[num] = { dict, stream };
+    }
+    if (!Object.keys(objs).length) throw new Error('这个 PDF 里没有可读的物件，可能已损坏');
+
+    // ---- 2. 展开物件流（PDF 1.5 以后，页面物件常被压在里面）----
+    for (const num of Object.keys(objs)) {
+      const o = objs[num];
+      if (!o.stream || !/\/Type\s*\/ObjStm/.test(o.dict)) continue;
+      let data;
+      try { data = latin1(await decodeStream(o, objs)); } catch (e) { continue; }
+      const n = +((o.dict.match(/\/N\s+(\d+)/) || [])[1] || 0);
+      const first = +((o.dict.match(/\/First\s+(\d+)/) || [])[1] || 0);
+      const head = data.slice(0, first).trim().split(/\s+/).map(Number);
+      for (let i = 0; i < n; i++) {
+        const on = head[i * 2], off = head[i * 2 + 1];
+        if (!Number.isFinite(on) || !Number.isFinite(off)) continue;
+        const nextOff = (i + 1 < n && Number.isFinite(head[i * 2 + 3])) ? first + head[i * 2 + 3] : data.length;
+        if (!objs[on]) objs[on] = { dict: data.slice(first + off, nextOff), stream: null };
+      }
+    }
+
+    // ---- 3. 逐页抽文字 ----
+    const pages = Object.keys(objs)
+      .map(Number)
+      .filter(n => /\/Type\s*\/Page[^s]/.test(objs[n].dict + ' '))
+      .sort((a, b) => a - b);
+
+    const fontCache = {};
+    const out = [];
+    const targets = pages.length ? pages : null;
+
+    if (targets) {
+      for (const pn of targets) {
+        try { out.push(await pageText(objs[pn], objs, fontCache)); }
+        catch (e) { /* 单页失败不该拖垮整本，跳过就好 */ }
+      }
+    } else {
+      /* 找不到 /Type /Page（少见，通常是页面树被塞在物件流的奇怪写法里）：
+       * 退而求其次，把所有看起来像内容流的物件都抽一遍。顺序可能不完美，
+       * 但有内容总比没有好。 */
+      for (const num of Object.keys(objs)) {
+        const o = objs[num];
+        if (!o.stream || /\/Type\s*\/(ObjStm|XObject|Metadata|XRef)/.test(o.dict)) continue;
+        try {
+          const content = latin1(await decodeStream(o, objs));
+          if (!/\bBT\b/.test(content)) continue;
+          out.push(runContent(content, {}));
+        } catch (e) { /* 跳过 */ }
+      }
+    }
+
+    /* 图示字型（那种用私有造字排版的小图标）没有字码对照表，抽出来会变成
+     * 「ÍÍÍ」这种一整行的杂讯。整行都不含中文、英文字母、数字的，一律丢掉。 */
+    const text = tidy(out.join('\n\n'))
+      .split('\n')
+      .filter(l => !l.trim() || /[一-鿿぀-ゟ゠-ヿA-Za-z0-9]/.test(l))
+      .join('\n');
+    const cjk = (text.match(/[一-鿿]/g) || []).length;
+    if (text.replace(/\s/g, '').length < 40) {
+      throw new Error('这个 PDF 里几乎没有文字层，看起来是扫描档（整页是图片），需要 OCR 才读得出来');
+    }
+    if (cjk === 0 && /[�]/.test(text)) {
+      throw new Error('这个 PDF 的字型没有附字码对照表，抽出来的会是乱码');
+    }
+    return text;
+  }
+
+  /* 解一个 stream：目前只处理 FlateDecode（PDF 内文流几乎都是它）。
+   * 没有 filter 的就是明码，直接回传。 */
+  async function decodeStream(o, objs) {
+    if (!o.stream) return new Uint8Array(0);
+    const filter = (o.dict.match(/\/Filter\s*(\/\w+|\[[^\]]*\])/) || [])[1] || '';
+    if (!filter) return o.stream;
+    if (/FlateDecode/.test(filter)) {
+      const raw = await inflateAny(o.stream);
+      // /Predictor 12 这类 PNG 前置过滤只出现在 xref 流，内文流不会用，不处理
+      return raw;
+    }
+    throw new Error('不支援的 stream 编码：' + filter);
+  }
+
+  const refNum = v => { const m = /^(\d+)\s+\d+\s+R$/.exec((v || '').trim()); return m ? +m[1] : null; };
+
+  /* 取字典里某个 key 的值（只要够用：数字、名字、参照、阵列、内嵌字典） */
+  function dictGet(dict, key) {
+    const i = dict.indexOf('/' + key);
+    if (i < 0) return '';
+    let j = i + key.length + 1;
+    while (j < dict.length && /\s/.test(dict[j])) j++;
+    if (dict[j] === '[') { const e = dict.indexOf(']', j); return dict.slice(j, e + 1); }
+    if (dict[j] === '<' && dict[j + 1] === '<') {
+      let depth = 0;
+      for (let k = j; k < dict.length - 1; k++) {
+        if (dict[k] === '<' && dict[k + 1] === '<') { depth++; k++; }
+        else if (dict[k] === '>' && dict[k + 1] === '>') { depth--; k++; if (!depth) return dict.slice(j, k + 1); }
+      }
+      return dict.slice(j);
+    }
+    const rest = dict.slice(j);
+    const mRef = /^(\d+\s+\d+\s+R)/.exec(rest);
+    if (mRef) return mRef[1];
+    const mVal = /^(\/[^\s/\[\]<>()]+|[-\d.]+)/.exec(rest);
+    return mVal ? mVal[1] : '';
+  }
+
+  async function pageText(page, objs, fontCache) {
+    // 内容可能是一个参照，也可能是一串参照
+    const contents = dictGet(page.dict, 'Contents');
+    const nums = contents.indexOf('[') === 0
+      ? (contents.match(/(\d+)\s+\d+\s+R/g) || []).map(x => +x.match(/^\d+/)[0])
+      : [refNum(contents)].filter(x => x != null);
+
+    let content = '';
+    for (const n of nums) {
+      if (!objs[n]) continue;
+      try { content += latin1(await decodeStream(objs[n], objs)) + '\n'; } catch (e) { /* 跳过这一段 */ }
+    }
+    if (!content) return '';
+
+    const fonts = await pageFonts(page, objs, fontCache);
+    return runContent(content, fonts);
+  }
+
+  /* 这一页用到哪些字型、各自的字码对照表 */
+  async function pageFonts(page, objs, cache) {
+    let res = dictGet(page.dict, 'Resources');
+    const rn = refNum(res);
+    if (rn != null && objs[rn]) res = objs[rn].dict;
+    if (!res) return {};
+
+    let fdict = dictGet(res, 'Font');
+    const fn = refNum(fdict);
+    if (fn != null && objs[fn]) fdict = objs[fn].dict;
+    if (!fdict) return {};
+
+    const out = {};
+    const re = /\/([^\s/\[\]<>()]+)\s+(\d+)\s+\d+\s+R/g;
+    let m;
+    while ((m = re.exec(fdict))) {
+      const name = m[1], num = +m[2];
+      if (cache[num] === undefined) cache[num] = await fontMap(num, objs);
+      out[name] = cache[num];
+    }
+    return out;
+  }
+
+  async function fontMap(num, objs) {
+    const f = objs[num];
+    if (!f) return null;
+    const tu = refNum(dictGet(f.dict, 'ToUnicode'));
+    // 没有 ToUnicode 又是 Identity-H：字码就是字型内部编号，翻不回文字
+    if (tu == null || !objs[tu]) {
+      const enc = dictGet(f.dict, 'Encoding');
+      if (/Identity/.test(enc)) return { bytes: 2, map: null, unreadable: true };
+      return null;          // 单字节简单字型：直接照 latin1 读，够用
+    }
+    try {
+      return parseCMap(latin1(await decodeStream(objs[tu], objs)));
+    } catch (e) { return null; }
+  }
+
+  const hexToStr = h => {
+    let out = '';
+    for (let i = 0; i + 3 < h.length + 1; i += 4) out += String.fromCharCode(parseInt(h.substr(i, 4), 16));
+    return out;
+  };
+
+  function parseCMap(src) {
+    const map = Object.create(null);
+    let bytes = 2;
+
+    const cs = /begincodespacerange([\s\S]*?)endcodespacerange/.exec(src);
+    if (cs) {
+      const first = /<([0-9a-fA-F]+)>/.exec(cs[1]);
+      if (first) bytes = Math.max(1, Math.round(first[1].length / 2));
+    }
+
+    let m;
+    const bc = /beginbfchar([\s\S]*?)endbfchar/g;
+    while ((m = bc.exec(src))) {
+      const pairs = m[1].match(/<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>/g) || [];
+      pairs.forEach(pair => {
+        const g = /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>/.exec(pair);
+        map[parseInt(g[1], 16)] = hexToStr(g[2]);
+      });
+    }
+
+    const br = /beginbfrange([\s\S]*?)endbfrange/g;
+    while ((m = br.exec(src))) {
+      const body = m[1];
+      // 形式一：<lo> <hi> <dst>
+      const simple = /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>/g;
+      let g;
+      while ((g = simple.exec(body))) {
+        const lo = parseInt(g[1], 16), hi = parseInt(g[2], 16), dst = g[3];
+        if (hi - lo > 65535) continue;
+        const base = parseInt(dst.slice(-4), 16);
+        const prefix = dst.length > 4 ? hexToStr(dst.slice(0, dst.length - 4)) : '';
+        for (let c = lo; c <= hi; c++) map[c] = prefix + String.fromCharCode(base + (c - lo));
+      }
+      // 形式二：<lo> <hi> [ <d1> <d2> ... ]
+      const arr = /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*\[([\s\S]*?)\]/g;
+      while ((g = arr.exec(body))) {
+        const lo = parseInt(g[1], 16);
+        const list = g[3].match(/<([0-9a-fA-F]*)>/g) || [];
+        list.forEach((h, i) => { map[lo + i] = hexToStr(h.replace(/[<>]/g, '')); });
+      }
+    }
+    return { bytes, map };
+  }
+
+  /* 走一遍内容流，只认跟文字有关的运算子。
+   *
+   * 换行不能看到 Td/Tm 就换：很多 PDF（尤其是网页转档来的）是一个字一个
+   * 定位指令，那样每个字都会自成一行，整本书变成一竖排。所以这里追踪文字
+   * 游标的 y 座标，只有真的换到另一行（y 明显变了）才断行。 */
+  function runContent(content, fonts) {
+    const out = [];
+    let line = '';
+    let font = null;
+    let i = 0;
+    let y = 0, lineY = null, leading = 0, depth = 0;
+    let nums = [];        // 目前累积的运算元
+    let lastName = '';
+
+    const flush = () => { if (line.trim()) out.push(line.trim()); line = ''; };
+    const moveTo = ny => {
+      if (lineY != null && Math.abs(ny - lineY) > 1.2) flush();
+      y = ny; lineY = ny;
+    };
+
+    while (i < content.length) {
+      const ch = content[i];
+
+      if (ch === '(') {                       // 字串
+        const r = readLiteral(content, i);
+        line += decodeStr(r.value, font);
+        i = r.end; continue;
+      }
+      if (ch === '<' && content[i + 1] !== '<') {   // 十六进位字串
+        const e = content.indexOf('>', i);
+        if (e < 0) break;
+        const hex = content.slice(i + 1, e).replace(/[^0-9a-fA-F]/g, '');
+        let raw = '';
+        for (let k = 0; k + 1 < hex.length; k += 2) raw += String.fromCharCode(parseInt(hex.substr(k, 2), 16));
+        line += decodeStr(raw, font);
+        i = e + 1; continue;
+      }
+      if (ch === '[') { depth++; i++; continue; }
+      if (ch === ']') { depth--; i++; continue; }
+      if (ch === '/') {                        // 名字（只在意 Tf 前面那个字型名）
+        const r = /^\/([^\s/\[\]<>()]*)/.exec(content.slice(i));
+        lastName = r ? r[1] : '';
+        i += (r ? r[0].length : 1); continue;
+      }
+
+      const num = /^[-+]?[\d.]+/.exec(content.slice(i));
+      if (num && /[\d.]/.test(ch)) {
+        const v = parseFloat(num[0]);
+        /* TJ 阵列里的数字是字距微调；很大的负值代表这里其实是一个空格
+         * （英文 PDF 常这样排版），不补的话整段英文会黏成一坨。 */
+        if (depth > 0 && v < -180) line += ' ';
+        else if (depth === 0) nums.push(v);
+        i += num[0].length; continue;
+      }
+
+      const op = /^(T\*|TD|Td|Tm|TL|Tf|ET|BT|TJ|Tj|'|")/.exec(content.slice(i));
+      if (op) {
+        const o = op[1];
+        if (o === 'Tf') font = fonts[lastName] || null;
+        else if (o === 'TL') leading = nums[0] || leading;
+        else if (o === 'Td') moveTo(y + (nums[1] || 0));
+        else if (o === 'TD') { leading = -(nums[1] || 0) || leading; moveTo(y + (nums[1] || 0)); }
+        else if (o === 'Tm') moveTo(nums.length >= 6 ? nums[5] : y);
+        else if (o === 'T*' || o === "'" || o === '"') moveTo(y - (leading || 12));
+        else if (o === 'BT') { flush(); y = 0; lineY = null; }
+        else if (o === 'ET') flush();
+        nums = [];
+        i += o.length; continue;
+      }
+      if (/[A-Za-z*'"]/.test(ch)) {            // 其他运算子：跳过，但要清掉运算元
+        const w = /^[A-Za-z*'"0-9]+/.exec(content.slice(i));
+        nums = [];
+        i += w ? w[0].length : 1; continue;
+      }
+      i++;
+    }
+    flush();
+    return out.join('\n');
+  }
+
+  /* PDF 的 (字串) 有跳脱与巢状括号，要照规矩读完 */
+  function readLiteral(s, start) {
+    let i = start + 1, depth = 1, out = '';
+    while (i < s.length) {
+      const c = s[i];
+      if (c === '\\') {
+        const n = s[i + 1];
+        const oct = /^[0-7]{1,3}/.exec(s.slice(i + 1));
+        if (oct) { out += String.fromCharCode(parseInt(oct[0], 8)); i += 1 + oct[0].length; continue; }
+        const map = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f' };
+        if (n === '\n') { i += 2; continue; }          // 行尾续行
+        out += map[n] != null ? map[n] : n;
+        i += 2; continue;
+      }
+      if (c === '(') { depth++; out += c; i++; continue; }
+      if (c === ')') { depth--; if (!depth) { i++; break; } out += c; i++; continue; }
+      out += c; i++;
+    }
+    return { value: out, end: i };
+  }
+
+  /* 字码 → 文字。有对照表就查表，没有就当单字节文字读。 */
+  function decodeStr(raw, font) {
+    if (!font || !font.map) {
+      if (font && font.unreadable) return '';     // 翻不回来的字型，宁可空白也不要乱码
+      return raw.replace(/[ --]/g, '');
+    }
+    let out = '';
+    if (font.bytes === 2) {
+      for (let i = 0; i + 1 < raw.length; i += 2) {
+        const code = (raw.charCodeAt(i) << 8) | raw.charCodeAt(i + 1);
+        out += font.map[code] != null ? font.map[code] : '';
+      }
+    } else {
+      for (let i = 0; i < raw.length; i++) {
+        const code = raw.charCodeAt(i);
+        out += font.map[code] != null ? font.map[code] : String.fromCharCode(code);
+      }
+    }
+    return out;
+  }
+
+  /* =======================================================
+   * 对外：给一个档案，回传纯文字
+   * ===================================================== */
+  const EXT_LABEL = { pdf: 'PDF', docx: 'Word 文件', epub: '电子书', pptx: '简报' };
+
+  async function file(f) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (!EXT_LABEL[ext]) throw new Error('不支援的格式：' + ext);
+    if (!supportsInflate) throw new Error('这个浏览器不支援原生解压缩，请改用 Chrome 或 Edge');
+    const buf = await f.arrayBuffer();
+    const text = ext === 'pdf' ? await pdf(buf)
+      : ext === 'docx' ? await docx(buf)
+        : ext === 'epub' ? await epub(buf)
+          : await pptx(buf);
+    if (!text || text.replace(/\s/g, '').length < 20) throw new Error('读得到档案，但里面几乎没有文字');
+    return { kind: EXT_LABEL[ext], text };
+  }
+
+  return { file, pdf, docx, epub, pptx, unzip, supported: () => supportsInflate, EXT_LABEL };
+})();
+
+
 /* ===== data.js ===== */
 /* ============================================================
  * data.js — 数据层 / 内容生成引擎（模拟）
@@ -1048,34 +1675,29 @@ window.DATA = (function () {
       you: '看一眼摘要和金句对不对。觉得哪句不准，可以点开看原文出处。',
       out: '全书摘要、核心论点、30 条以上金句（都标了页码）、读者画像、痛点清单。',
       tasks: ['全书通读与摘要', '提炼核心论点', '抽取高传播金句', '识别目标读者画像', '匹配当下热门话题', '筛选可传播内容单元'] },
-    { key: 'strategy', n: 'STEP 3', t: '定营销策略', d: '平台选择 / 节奏 / 开场 / CTA',
-      why: '同一本书，在抖音和小红书要用完全不同的讲法。这一步决定每个平台发几支、讲什么调性、结尾怎么引导。',
-      you: '看适配度评分，觉得某个平台不想做，后面可以不发。',
-      out: '八个平台各自的建议支数、时长、语气和引导语。',
-      tasks: ['平台适配度评分', '内容矩阵规划', '发布节奏排布', 'CTA 与转化路径设计'] },
-    { key: 'script', n: 'STEP 4', t: 'AI 批量写稿', d: '单人口播 / 访谈式对谈 / 画面场地 / 镜头表',
+    { key: 'script', n: 'STEP 3', t: 'AI 批量写稿', d: '单人口播 / 访谈式对谈 / 画面场地 / 镜头表',
       why: '默认先写稳定的单人口播稿；如果影片形式改成访谈式对谈，生成时会按你选的形式（AI 提问者 / 作者 / 书中主角）把稿子转成一问一答的对谈任务送到 Model Router。',
       you: '看看稿子讲得对不对，不喜欢的可以单篇点「用真实 AI 重写」。',
       out: '20 标题 + 20 Hook + 10 开场白 + 14 篇短视频稿，每篇都带画面场地、镜头表与停顿提示。',
       tasks: ['生成 20 个开场', '生成 20 个 Hook', '生成 20 个标题', '生成短视频稿', '安排停顿与语速节奏', '生成镜头表', '可读性与合规校验'] },
-    { key: 'persona', n: 'STEP 5', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
+    { key: 'persona', n: 'STEP 4', t: '改写成本人口吻', d: '让稿子听起来像本人讲的，而不是 AI 念的',
       why: 'AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式把稿子重写一遍：语速快慢、口气软硬、先讲结论还是先讲故事、习惯用哪些口头禅。',
       you: '在「数字人 · 声音 · 人格」页面调五个参数和口头禅词库，这里就会照着改。',
       out: '全部脚本被重写一遍，自然植入口头禅（每支最多 2 处），并打一个「像不像本人」的分数，低于 90 分退回重写。',
       tasks: ['载入人格模型 v3.2', '语气与节奏改写', '口头禅自然植入', '价值观一致性校验'] },
-    { key: 'avatar', n: 'STEP 6', t: '建立影片待办清单', d: '一篇稿子 = 一支待生成的影片',
+    { key: 'avatar', n: 'STEP 5', t: '建立影片待办清单', d: '一篇稿子 = 一支待生成的影片',
       why: '把上一步写好的每一篇稿子，对应成一支「还没做出来」的影片。这一步<b>不会真的生成影片</b>——真的生成要送去外部数字人服务，一支要花约 US$1-3、等几分钟，所以做哪几支由你自己决定。',
       you: '等清单出来后，到「内容资产库」挑你想做的那几支，逐支点「生成这一支」。',
       out: '一份影片待办清单，每支都对应一篇稿子，状态是「待生成」。',
       real: true,
       tasks: ['读取已写好的稿子', '对应平台与尺寸', '建立影片待办清单'] },
-    { key: 'package', n: 'STEP 7', t: '自动剪辑包装', d: '字幕 / 书封 / BGM / 片头片尾',
+    { key: 'package', n: 'STEP 6', t: '自动剪辑包装', d: '字幕 / 书封 / BGM / 片头片尾',
       why: '规划中的功能：自动加字幕、插书封、配 BGM、套片头片尾，让影片不用再进剪辑软件。',
       you: '目前不用做什么——<b>这一步还没有实作</b>，点了只会走个过场，不会真的剪辑任何东西。',
       out: '（尚未实作）未来会产出可直接发布的成片。',
       todo: true,
       tasks: ['（示意）自动字幕与断句', '（示意）书封插入', '（示意）BGM 与音量平衡', '（示意）品牌片头片尾'] },
-    { key: 'export', n: 'STEP 8', t: '导出各平台版本', d: '多尺寸 / 多版本 / 一键分发',
+    { key: 'export', n: 'STEP 7', t: '导出各平台版本', d: '多尺寸 / 多版本 / 一键分发',
       why: '规划中的功能：同一支影片自动转成抖音竖屏、小红书 3:4、Facebook 方形等各平台尺寸，标题与标签各写一套。',
       you: '目前不用做什么——<b>这一步还没有实作</b>。影片要先真的生成出来，才谈得上转档与分发。',
       out: '（尚未实作）未来会产出各平台对应尺寸、封面与标签。',
@@ -1555,26 +2177,6 @@ window.DATA = (function () {
     });
   }
 
-  /* 平台策略评分 */
-  function genStrategy(b) {
-    /* 这些栏位不保证有值：新建的空专案还没跑过 AI 阅读，或者 AI 回传的
-     * JSON 里就是没有 audiences。以前直接取 b.audiences[...].name，
-     * 遇到空阵列会 i % 0 → NaN → 读 undefined.name 抛错，
-     * 而这个错会直接中断整条流水线（外面没有 try/catch），
-     * 使用者只看到进度卡在某一步不动、也没有任何提示。 */
-    const auds = (b.audiences && b.audiences.length) ? b.audiences : [{ name: '一般读者' }];
-    const anchor = (b.tags && b.tags[0]) || b.category || '这本书的主题';
-    return {
-      positioning: `以「${anchor}」为主锚点，用${OWNER()}的一线判断力做信任背书，把《${b.title}》从一本书拆成一套可持续讨论的话题矩阵。`,
-      kpi: [{ k: '单书视频产出', v: '30+ 支' }, { k: '目标总曝光', v: '500 万' }, { k: '目标完播率', v: '≥ 38%' }, { k: '书籍详情页点击', v: '≥ 2.5 万' }],
-      platforms: PLATFORMS.map((p, i) => ({
-        key: p.key, name: p.name, color: p.color, ratio: p.ratio, len: p.len, tone: p.tone, cta: p.cta,
-        fit: [92, 88, 85, 80, 74, 70, 83, 86][i], count: [8, 5, 6, 4, 3, 2, 4, 5][i],
-        audience: (auds[i % auds.length] || {}).name || '一般读者'
-      }))
-    };
-  }
-
   /* 数据分析（7 日 / 平台 / 漏斗）。统计范围只含已发布的影片 */
   function genAnalytics(all) {
     const videos = (all || []).filter(v => v.status === '已发布');
@@ -1608,7 +2210,6 @@ window.DATA = (function () {
         { name: '作者介绍与推荐序.docx', type: '文档', size: '286 KB', status: '已解析' },
         { name: '出版社宣传资料.pptx', type: '文档', size: '4.1 MB', status: '已解析' }
       ];
-      b.strategy = genStrategy(b);
       b.titles = genTitles(b, 20);
       b.hooks = genHooks(b, 20);
       b.opens = genOpens(b);
@@ -1808,7 +2409,7 @@ window.DATA = (function () {
     PLATFORMS, ANGLES, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
-    applyPersona, genShots, genVideos, genPendingVideos, genStrategy, genAnalytics, sceneTemplateLibrary, uid, rand
+    applyPersona, genShots, genVideos, genPendingVideos, genAnalytics, sceneTemplateLibrary, uid, rand
   };
 })();
 
@@ -1894,7 +2495,16 @@ window.STORE = (function () {
             ['已发布', '待审核', '排程中', '草稿'].indexOf(v.status) >= 0) v.demo = true;
         if (!v.format) v.format = state.persona.videoMode || d.persona.videoMode;
       });
-      if (!Array.isArray(p.stages)) p.stages = DATA.STAGES.map(s => ({ key: s.key, state: 'todo' }));
+      /* 步骤表会变（例如 STEP 3「定营销策略」被删掉），但浏览器里存着的
+       * 旧资料还留着那一格。流水线画面是按 DATA.STAGES 的顺序取 stages[i]，
+       * 多出来的那一格会让后面每一步的状态整个错位一格——写稿那一步会显示
+       * 成别人的状态。所以一律按 key 重新对齐，认得的保留原状态，
+       * 不认得的（已删掉的步骤）直接丢掉。 */
+      const stateByKey = {};
+      (Array.isArray(p.stages) ? p.stages : []).forEach(s => { if (s && s.key) stateByKey[s.key] = s.state; });
+      p.stages = DATA.STAGES.map(s => ({ key: s.key, state: stateByKey[s.key] || 'todo' }));
+      // 营销策略那一步的产出也一起清掉，留着只会占地方
+      if (p.strategy) delete p.strategy;
       /* 旧版稿子是「主持人＋作者」双人对谈，但数字人一次只能一个形象一个声音，
        * 那种稿子永远拍不出来。凡是还带双人台词的，一律重新产生成单人口播稿，
        * 否则使用者拿旧稿去生成，出来的东西还是跟稿子对不上。
@@ -1953,7 +2563,7 @@ window.STORE = (function () {
 
   if (!state.activity.length) {
     ['《认知杠杆》30 支短视频已全部渲染完成', '主理人人格模型 v3.2 校验通过（一致性 96.4%）',
-     '《慢决策》进入「套用主理人人格」阶段', '本周抖音总播放突破 120 万', '《第二曲线的起点》营销策略已生成'
+     '《慢决策》进入「套用主理人人格」阶段', '本周抖音总播放突破 120 万', '《第二曲线的起点》已写完 14 篇口播稿'
     ].forEach((t, i) => state.activity.push({ id: DATA.uid('a'), type: ['ok', 'ok', 'run', 'info', 'ok'][i], text: t, at: Date.now() - i * 3600e3 }));
   }
   ensureSchedule();
@@ -1967,11 +2577,34 @@ window.STORE = (function () {
     removeProject(id) {
       state.projects = state.projects.filter(p => p.id !== id);
       state.schedule = state.schedule.filter(s => s.projectId !== id);
+      try { localStorage.removeItem(KEY + '_text_' + id); } catch (e) {}   // 内文另存一个 key，删专案时一起清掉
       if (!state.projects.length) state.projects = DATA.seedAll();
       if (!state.projects.find(p => p.id === state.currentId)) state.currentId = state.projects[0].id;
       emit();
     },
     update() { emit(); },
+
+    /* ---- 整本书的内文 ----
+     * 不放进主状态：主状态每改一个栏位就整包重写一次 localStorage，
+     * 一本书十几万字塞在里面，每次储存都要搬一次，很快就会撞到容量上限。
+     * 所以一本书一个独立的 key，只有上传与阅读时才碰。 */
+    bookTextKey: id => KEY + '_text_' + id,
+    getBookText(id) {
+      try { return localStorage.getItem(KEY + '_text_' + id) || ''; } catch (e) { return ''; }
+    },
+    setBookText(id, text) {
+      try { localStorage.setItem(KEY + '_text_' + id, text); return true; }
+      catch (e) {
+        /* 容量满了要说实话：截短存一半，并让呼叫端知道只留住了多少，
+         * 不能默默存失败，否则「AI 读完整本书」会读到空的。 */
+        try {
+          const half = text.slice(0, 60000);
+          localStorage.setItem(KEY + '_text_' + id, half);
+          return half.length;
+        } catch (e2) { return false; }
+      }
+    },
+    dropBookText(id) { try { localStorage.removeItem(KEY + '_text_' + id); } catch (e) {} },
     log(t, x) { log(t, x); emit(); },
     reset() { state = def(); ensureSchedule(); emit(); },
     on(f) { subs.push(f); }
@@ -2348,7 +2981,6 @@ window.ENGINE = (function () {
        * 改成不带数字的中性描述——真正的数字由各阶段自己的真实日志输出。 */
       upload: ['文件已校验', '文本已抽取', '图片文字识别（未实作，略过）', '章节已切分', '索引已建立'],
       read: ['', '', '', '', '', ''],
-      strategy: ['平台评分完成', '内容矩阵已规划', '发布节奏已排布', 'CTA 方案已生成'],
       script: ['', '', '', '', '', '', ''],
       persona: ['人格参数已载入', '台词已改写', '语气与节奏已调整', '口头禅已植入', ''],
       // avatar 这一步是真的在做事（建清单），但绝不能写得像已经渲染出影片了
@@ -2368,7 +3000,9 @@ window.ENGINE = (function () {
       // 真的把上传的内文送进模型读一遍
       if (window.AIREAL && AIREAL.canUse() && p.parsed && p.parsed.raw) {
         addLog('l-run', '  └ 正在用真实 AI 阅读上传的内文…');
-        return AIREAL.readBook(p).then(r => {
+        /* 整本书是切成十几段逐段读的，会跑好几分钟。不把进度打出来的话，
+         * 画面就只有一行「正在阅读」不动，使用者分不出是在跑还是卡死了。 */
+        return AIREAL.readBook(p, msg => { addLog('l-run', '  └ ' + msg); emit('log'); }).then(r => {
           if (!r) throw new Error('没有可读的内文');
           const d = r.data;
           p.summary = d.summary || p.summary;
@@ -2381,7 +3015,13 @@ window.ENGINE = (function () {
           if (d.pains && d.pains.length) p.pains = d.pains;
           if (d.hots && d.hots.length) p.hots = d.hots;
           p.readByAI = true;
-          addLog('l-ok', `  └ ✨ 真实 AI 阅读完成（模型：${r.model || '未知'}）：论点 ${(d.themes || []).length} 条 / 金句 ${(d.quotes || []).length} 条`);
+          const rd = r.read || {};
+          addLog('l-ok', `  └ ✨ 真实 AI 阅读完成（模型：${r.model || '未知'}）：`
+            + `读了 ${(rd.chars || 0).toLocaleString()} 字 / ${rd.ok || 0} 段`
+            + `，论点 ${(d.themes || []).length} 条 / 金句 ${(d.quotes || []).length} 条`);
+          // 有段落读失败、或内文长到超过单轮上限，都要讲出来，不能只报好消息
+          if (rd.ok < rd.chunks) addLog('l-warn', `  └ 有 ${rd.chunks - rd.ok} 段没读成功，这几段的内容没有进到分析里`);
+          if (rd.clipped) addLog('l-warn', '  └ 这本书超过单轮阅读上限，后面的内容这一轮没读到');
           // 平台没照你挑的模型跑就要讲出来，不能让日志看起来一切正常
           if (r.note) addLog('l-warn', '  └ ' + r.note);
           STORE.update();
@@ -2392,18 +3032,19 @@ window.ENGINE = (function () {
       }
       applyReadFallback(p);
     }
-    if (key === 'strategy') p.strategy = DATA.genStrategy(p);
     if (key === 'script') {
       // 真的让模型写标题 / Hook / 开场白 与几篇完整口播稿
       if (window.AIREAL && AIREAL.canUse()) {
         addLog('l-run', '  └ 正在用真实 AI 写稿…');
-        return AIREAL.writeScripts(p).then(r => {
+        // 14 篇是分批写的，同样要把进度打出来，否则看起来像卡住
+        return AIREAL.writeScripts(p, msg => { addLog('l-run', '  └ ' + msg); emit('log'); }).then(r => {
           const d = r.data;
           p.titles = (d.titles && d.titles.length) ? d.titles : DATA.genTitles(p, 20);
           p.hooks = (d.hooks && d.hooks.length) ? d.hooks : DATA.genHooks(p, 20);
           p.opens = (d.opens && d.opens.length) ? d.opens : DATA.genOpens(p);
-          // 先用模板产生 14 篇骨架（场地、镜头表、声音配置都在里面），
-          // 再把 AI 真的写好的口播稿覆盖到前几篇上
+          /* 模板先产生 14 篇骨架（场地、镜头表、声音配置都在里面），
+           * 再把 AI 真的写好的口播稿盖上去。正常情况下 14 篇全部会被盖掉；
+           * 只有某一批失败时，那几篇才会留着模板骨架。 */
           p.scripts = DATA.genScripts(p, 14);
           const real = (d.scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
           real.forEach((rs, i) => {
@@ -2420,7 +3061,8 @@ window.ENGINE = (function () {
           addLog('l-ok', `  └ ✨ 真实 AI 写稿完成（模型：${r.model || '未知'}）：${p.titles.length} 标题 / ${p.hooks.length} Hook / ${real.length} 篇完整口播稿`);
           if (r.note) addLog('l-warn', '  └ ' + r.note);
           if (real.length < p.scripts.length) {
-            addLog('l-info', `  └ 其余 ${p.scripts.length - real.length} 篇仍为模板骨架，可在脚本详情里逐篇按「用真实 AI 重写」`);
+            addLog('l-warn', `  └ 有 ${p.scripts.length - real.length} 篇没写成，仍是模板骨架（排在最后面那几篇），`
+              + '可在脚本详情里逐篇按「用真实 AI 重写」补回来');
           }
           STORE.update();
         }).catch(e => {
@@ -2521,7 +3163,7 @@ window.DOCS = (function () {
 > 只传书封不传内文也能跑，但生成的内容会比较空。**内文越全，稿子越准。**
 
 ### 第三步：点「一键跑完整流程」
-右上角那个紫色按钮。点下去之后八个步骤会自动依次跑完，右边能看到实时进度。
+右上角那个紫色按钮。点下去之后七个步骤会自动依次跑完，右边能看到实时进度。
 **这期间你什么都不用做**，可以去干别的。
 
 ### 第四步：去内容资产库挑
@@ -2550,7 +3192,7 @@ window.DOCS = (function () {
 ## 三个新手最容易踩的坑
 
 **1. 传了资料却没点「一键跑完整流程」**
-上传只是第一步，不会自动往下走。八个步骤要点按钮才开始。
+上传只是第一步，不会自动往下走。七个步骤要点按钮才开始。
 
 **2. 以为生成完就自动发出去了**
 不会。所有内容默认都要人工确认才发布，这是有意设计的——发布是收不回来的动作。
@@ -2560,9 +3202,9 @@ window.DOCS = (function () {
 `;
 
   const GUIDE = `
-# 八个步骤，每一步在做什么
+# 七个步骤，每一步在做什么
 
-系统跑完一本书要经过八步。你不需要记住它们，但知道每步在干嘛，出问题时能更快找到是哪一环。
+系统跑完一本书要经过七步。你不需要记住它们，但知道每步在干嘛，出问题时能更快找到是哪一环。
 
 ---
 
@@ -2576,17 +3218,12 @@ window.DOCS = (function () {
 **产出**：全书摘要、核心论点、30 条以上金句（都带页码）、读者画像、痛点清单、可匹配的热门话题。
 **你要做的**：扫一眼摘要准不准。**觉得哪句金句可疑，点开能看到原文出处。**
 
-## STEP 3 · 定营销策略
-**在做什么**：同一本书，抖音和小红书要用完全不同的讲法。这一步决定每个平台发几支、什么调性、结尾怎么引导。
-**产出**：八个平台各自的适配度评分、建议支数、时长、语气、引导语。
-**你要做的**：看评分。某个平台你不打算做，后面不发就行。
-
-## STEP 4 · AI 批量写稿
+## STEP 3 · AI 批量写稿
 **在做什么**：不是写一篇，是一次写几十条备选。
 **七种角度**：故事版（讲一个场景）、痛点版（戳最焦虑的事）、金句版（一句话立住观点）、商业版（拆方法论）、知识版（讲透一个概念）、书摘版（原文＋点评）、作者故事版（讲作者其人）。
 **你要做的**：挑喜欢的，不喜欢的重生成单条。
 
-## STEP 5 · 改写成本人口吻
+## STEP 4 · 改写成本人口吻
 **在做什么**：AI 写的稿子谁用都一样，一股机器味。这一步按本人平时的说话方式重写一遍。
 
 具体改三样：
@@ -2600,15 +3237,15 @@ window.DOCS = (function () {
 
 **你要做的**：去「数字人 · 声音 · 人格」页面调五个参数、加自己常说的话。这里就会照着改。
 
-## STEP 6 · 数字人开口说话
+## STEP 5 · 数字人开口说话
 **在做什么**：用本人的声音把稿子念出来，再让数字人形象对上口型——包括表情、眼神、手势。
 **你要做的**：等着就行。
 
-## STEP 7 · 自动剪辑包装
+## STEP 6 · 自动剪辑包装
 **在做什么**：相当于一个剪辑师。加字幕、插书封、金句变大字、配背景音乐、片尾加购买引导。
 **你要做的**：想换风格就挑模板，不想要某个元素就去系统设置里关掉。
 
-## STEP 8 · 导出各平台版本
+## STEP 7 · 导出各平台版本
 **在做什么**：同一支视频，抖音要竖屏、小红书要 3:4、Facebook 要方的，标题和话题标签也各写一套。
 **你要做的**：导出文案包，或直接送进发布排程。
 
@@ -2786,7 +3423,7 @@ Hook 之后的第一句自我介绍或场景引入，比如「我是⋯⋯，今
     ],
     list: [
       { key: 'start', group: 'use', name: '快速上手', icon: '▶', desc: '五分钟做出第一批视频', md: START },
-      { key: 'guide', group: 'use', name: '八个步骤详解', icon: '⚙', desc: '每一步在做什么、你要做什么', md: GUIDE },
+      { key: 'guide', group: 'use', name: '七个步骤详解', icon: '⚙', desc: '每一步在做什么、你要做什么', md: GUIDE },
       { key: 'faq', group: 'use', name: '常见问题', icon: '？', desc: '使用、质量、发布、数据', md: FAQ },
       { key: 'glossary', group: 'use', name: '名词解释', icon: '▤', desc: 'Hook、CTA、完播率、B-roll…', md: GLOSSARY },
       
@@ -2949,7 +3586,7 @@ window.VIEWS = window.VIEWS || {};
   };
 
   /* 「接下来该做什么」。
-   * 使用者最常卡住的地方是：八个步骤平铺在上面，跑完了也不知道该看哪、该去哪。
+   * 使用者最常卡住的地方是：七个步骤平铺在上面，跑完了也不知道该看哪、该去哪。
    * 这里按专案的实际状态，只给一个明确的下一步和一颗按钮，不给选择题。 */
   function nextStepCard(p) {
     const vs = p.videos || [];
@@ -3141,12 +3778,12 @@ window.VIEWS = window.VIEWS || {};
     const body = {
       upload: () => {
         const ms = p.materials || [];
-        const ico = t => ({ '书籍档案': '🗂', '内文': '📃', 'PDF': '📕', '图片': '🖼', '简报': '📊', '电子书': '📘' }[t] || '📄');
-        const st = s => s === '已汇入' || s === '已解析' ? 'g' : s === '待服务端解析' ? 'a' : s === '格式错误' || s === '读取失败' ? 'r' : '';
+        const ico = t => ({ '书籍档案': '🗂', '内文': '📃', 'PDF': '📕', 'Word 文件': '📘', '图片': '🖼', '简报': '📊', '电子书': '📗' }[t] || '📄');
+        const st = s => s === '已汇入' || s === '已解析' ? 'g' : s === '已加入' ? 'a' : s === '格式错误' || s === '读取失败' ? 'r' : '';
         return `
         <div class="drop" data-act="pick-file"><div class="di">⬆</div>
           <div style="font-weight:650;margin-top:8px">点击选择档案，或直接把档案拖进来</div>
-          <div class="hint" style="margin-top:5px">JSON 书籍档案会被完整读取；TXT / MD 内文会在本机解析；PDF / 图片等记录后交由服务端处理</div></div>
+          <div class="hint" style="margin-top:5px">PDF / Word / EPUB / TXT / MD 都会在本机直接抽出内文全文，供「AI 读完整本书」使用；JSON 书籍档案会被完整汇入；图片只登记不抽文字</div></div>
 
         ${ms.length ? `<div style="margin-top:14px">${ms.map(m => `
           <div class="file-item"><div class="file-ico">${ico(m.type)}</div>
@@ -3204,23 +3841,6 @@ window.VIEWS = window.VIEWS || {};
           <div><div class="label">可匹配热点话题</div><div class="chip-list">${(p.hots || []).map(x => `<span class="tag c">${esc(x)}</span>`).join('')}</div></div>
         </div>`
         : emptyStage('尚未执行 AI 阅读', '执行本阶段后，系统会输出摘要、核心论点、金句、受众画像与可传播内容单元。'),
-
-      strategy: () => p.strategy ? `
-        <div class="field"><div class="label">内容定位</div>
-          <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15.5px;line-height:1.8">${esc(p.strategy.positioning)}</div></div>
-        <div class="grid g4" style="margin:14px 0">
-          ${p.strategy.kpi.map(k => `<div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px">
-            <div style="font-size:13px;color:var(--txt-3)">${k.k}</div><div style="font-size:19.5px;font-weight:700;margin-top:4px">${k.v}</div></div>`).join('')}
-        </div>
-        <div class="label">平台适配策略</div>
-        <table><thead><tr><th>平台</th><th>适配度</th><th>建议支数</th><th>尺寸/时长</th><th>脚本风格</th><th>CTA</th></tr></thead><tbody>
-          ${p.strategy.platforms.map(x => `<tr>
-            <td><span style="display:inline-flex;align-items:center;gap:7px"><i style="width:8px;height:8px;border-radius:2px;background:${x.color}"></i><b>${x.name}</b></span></td>
-            <td>${scoreBar(x.fit)}</td><td>${x.count} 支</td><td>${x.ratio} · ${x.len}</td>
-            <td style="font-size:14px;color:var(--txt-2)">${esc(x.tone)}</td>
-            <td style="font-size:14px;color:var(--txt-2)">${esc(x.cta)}</td></tr>`).join('')}
-        </tbody></table>`
-        : emptyStage('尚未生成营销策略', '执行本阶段后，系统会给出各平台适配度评分、建议产出量、节奏与 CTA 方案。'),
 
       script: () => (p.scripts || []).length ? `
         <div class="grid g3" style="margin-bottom:14px">
@@ -4507,14 +5127,14 @@ window.TOUR = (function () {
     {
       route: 'pipeline', sel: '.pipe',
       title: '生产流水线怎么看',
-      text: '这是系统的核心。从上传资料到多平台输出，一共八步。<br><br>' +
+      text: '这是系统的核心。从上传资料到多平台输出，一共七步。<br><br>' +
             '<b>点任意一步</b>，下面会用大白话说清楚：这一步在做什么、你需要做什么、会产出什么。<br><br>' +
             '绿点＝已完成，紫点＝执行中，灰点＝待执行。'
     },
     {
       route: 'pipeline', sel: '[data-act="run-all"], [data-act="stop-run"]',
       title: '第三步：一键生成短影音',
-      text: '点下去，系统自动依序跑完八步，大约 15 秒。<br><br>' +
+      text: '点下去，系统自动依序跑完七步，大约 15 秒。<br><br>' +
             '右侧会实时滚动执行日志，跑完产出 <b>30 支影片、14 篇脚本、20 个标题、20 个 Hook</b>。<br><br>' +
             '<b>导览结束后第一件事就试试它。</b>'
     },
@@ -6825,6 +7445,22 @@ window.TOUR = (function () {
     });
   }
 
+  /* 把抽出来的内文收进专案：摘要用的统计放主状态，整本原文另存一个 key。
+   * 同一本书传第二个档案（例如正文 + 附录）就接在后面，不是覆盖掉。 */
+  function takeBookText(p, text, item, kindLabel) {
+    const old = STORE.getBookText(p.id);
+    const full = old ? (old + '\n\n' + text) : text;
+    const saved = STORE.setBookText(p.id, full);
+    const r = DATA.parseText(full);
+    p.parsed = r;
+    if (!p.source) p.source = { kind: 'text', label: kindLabel + '本地解析' };
+
+    item.type = kindLabel; item.status = '已解析';
+    item.note = `${r.chars.toLocaleString()} 字 · ${r.chapters.length} 个章节标题 · 候选金句 ${r.quotes.length} 条`;
+    if (saved === false) item.note += ' · ⚠ 浏览器空间不足，整本原文没能留住，AI 只会读到开头那一段';
+    else if (typeof saved === 'number') item.note += ` · ⚠ 浏览器空间不足，只留住前 ${saved.toLocaleString()} 字`;
+  }
+
   async function handleFiles(files) {
     const p = STORE.current;
     if (!p) return;
@@ -6851,17 +7487,19 @@ window.TOUR = (function () {
             imported++;
           }
         } else if (ext === 'txt' || ext === 'md') {
-          const text = await readAsText(f);
-          const r = DATA.parseText(text);
-          p.parsed = r;
-          item.type = '内文'; item.status = '已解析';
-          item.note = `${r.chars.toLocaleString()} 字 · ${r.chapters.length} 个章节标题 · 候选金句 ${r.quotes.length} 条`;
-          if (!p.source) p.source = { kind: 'text', label: '内文本地解析' };
+          takeBookText(p, await readAsText(f), item, '内文');
+          parsed++;
+        } else if (PARSE.EXT_LABEL[ext]) {
+          /* PDF / Word / EPUB / 简报：真的在浏览器里拆开抽文字。
+           * 出版社手上就是 PDF，这一格以前写「待服务端解析」，
+           * 等于整条流水线的入口是空的。 */
+          const r = await PARSE.file(f);
+          takeBookText(p, r.text, item, r.kind);
           parsed++;
         } else {
-          item.type = { pdf: 'PDF', docx: '文档', epub: '电子书', pptx: '简报', jpg: '图片', jpeg: '图片', png: '图片', svg: '图片' }[ext] || '其他';
-          item.status = '待服务端解析';
-          item.note = '演示版不含 PDF / OCR 解析，接入后端后由解析服务处理';
+          item.type = { jpg: '图片', jpeg: '图片', png: '图片', svg: '图片' }[ext] || '其他';
+          item.status = '已加入';
+          item.note = '图片与其他素材只登记，不抽文字';
         }
       } catch (e) {
         item.type = ext.toUpperCase(); item.status = '读取失败'; item.note = e.message;
@@ -7227,6 +7865,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     { id: 'premium', name: '高品质档（平台自己挑）', desc: '约 $0.07 一张' }
   ];
 
+  let mpScaleNote = '';        // 这一次要跑几段、写几篇——份量不同价钱差很多，要写在窗口上
   let mpCache = null;          // 模型清单只抓一次，之后重复用
   let mpPending = null;        // 目前有人在等这个窗口的结果
 
@@ -7250,8 +7889,13 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
 
   /* 这一步用这个模型大概花多少。估得出来才显示——估不出来宁可不写，
    * 也不要编一个数字给人当真。 */
+  /* 这一步的用量不一定是固定的：读一本 15 万字的书要切成十几段送，
+   * 花费是「一段的钱 × 段数」。所以估算值允许呼叫端当场覆盖，
+   * 不然窗口上写的价钱会跟实际差一个数量级。 */
+  let mpEstOverride = null;
+
   function mpStepCost(step, m) {
-    const est = AI_STEPS[step] && AI_STEPS[step].est;
+    const est = mpEstOverride || (AI_STEPS[step] && AI_STEPS[step].est);
     if (!est || !m || m.unit !== 'tokens' || m.inPrice == null) return '';
     const c = m.inPrice * est.in / 1e6 + (m.outPrice || 0) * est.out / 1e6;
     return `这一步约 ${c < 0.001 ? '<$0.001' : mpMoney(c)}`;
@@ -7345,6 +7989,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     modal(`选择这一步用的模型 · ${esc(cfg.t)}`, `
       <div class="explain" style="margin:0 0 16px;border-left-color:var(--violet)">
         <div class="ex-r"><span class="ex-k">这一步在做什么</span><span>${esc(cfg.note)}</span></div>
+        ${mpScaleNote ? `<div class="ex-r"><span class="ex-k">这次的份量</span><span>${esc(mpScaleNote)}</span></div>` : ''}
         <div class="ex-r"><span class="ex-k">怎么选</span><span>不确定就用第一个「智能路由」。清单里的价钱是服务方即时回报的，不是写死的。</span></div>
       </div>
       ${err ? `<div class="hint" style="color:var(--amber);margin-bottom:12px">拿不到完整模型清单（${esc(err)}），
@@ -7368,8 +8013,10 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
 
   /* 开窗口问，回传要送给后端的欄位；使用者取消就回传 null。
    * 静默模式（askModel === false）直接用记住的那个，不打断。 */
-  async function askModel(step) {
+  async function askModel(step, scale) {
     if (!AI_STEPS[step]) return {};
+    mpEstOverride = (scale && scale.est) || null;
+    mpScaleNote = (scale && scale.note) || '';
     if (STORE.s.settings.askModel === false) return mpPayload(step, mpSaved(step));
     let models = null, err = '';
     try { models = await mpModels(); } catch (e) { err = e.message; }
@@ -7425,46 +8072,130 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     /* 公开展示版没有写入凭证，一律走模板；使用者也可以在系统设置关掉 */
     canUse: () => hgCanWrite() && STORE.s.settings.realAI !== false,
 
-    /* STEP 2：真的把上传的内文送进模型读一遍 */
-    async readBook(p) {
-      const text = (p.parsed && p.parsed.raw) || '';
+    /* ============================================================
+     * STEP 2：真的读完整本书
+     *
+     * 以前只送前 12,000 字——一本书 8-15 万字，等于只读了开头 10%，
+     * 介面上却写「AI 读完整本书」。现在改成整本切段送、逐段读，
+     * 最后再把各段的结果收敛成一份全书分析。
+     *
+     * 为什么要切段：模型的上下文放得下十几万字，但一次送这么多，单一请求
+     * 会跑很久，很容易撞到闸道器的执行时间上限（这条路上实测过 502）。
+     * 切成段各自都很快，其中一段失败也不会让整本书作废。
+     * ========================================================== */
+    async readBook(p, onProgress) {
+      const text = STORE.getBookText(p.id) || (p.parsed && p.parsed.raw) || '';
       if (!text.trim()) return null;          // 没有原始内文就没得读，交回模板逻辑
-      const pick = await askModel('read');
+
+      const chunks = splitBook(text, 12000, 24);
+      const say = onProgress || function () {};
+
+      /* 花费跟段数成正比，选模型的窗口一定要按这次的实际份量报价，
+       * 不然使用者看到的是「一段」的钱，实际付的是「十几段」的钱。 */
+      const pick = await askModel('read', {
+        est: { in: 12500 * chunks.n + 1500, out: 900 * chunks.n + 2500 },
+        note: `这本书约 ${text.length.toLocaleString()} 字，会切成 ${chunks.n} 段逐段读，`
+          + `最后再收敛成一份全书分析——总共 ${chunks.n + 1} 次呼叫。`
+          + (chunks.clipped ? `（内文超过单次上限，这一轮只读前 ${chunks.n} 段）` : '')
+      });
       // 取消选模型＝这一步不要真的花钱跑。丢出去让 engine 退回本地规则抽取。
       if (!pick) throw new Error('已取消选择模型');
-      const r = await hgFetch('/api/ai/chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({
-          system: '你是出版社的内容编辑，只输出 JSON，不要任何解释文字。',
-          maxTokens: 2500, wantJson: true,
-          prompt: `读完下面这本书的内文，做一份分析。
 
-【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
-【内文】
-${text.slice(0, 12000)}
+      const call = (prompt, system, maxTokens) => hgFetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ prompt, system, maxTokens, wantJson: true }, pick))
+      }, 90000);
+
+      // ---- 逐段读 ----
+      let done = 0, model = null;
+      say(`共 ${chunks.n} 段，开始逐段阅读…`);
+      const parts = await pool(chunks.list, 3, async (chunk, i) => {
+        try {
+          const r = await call(`这是《${p.title}》的第 ${i + 1} 段（共 ${chunks.n} 段），读完做重点摘要。
+
+【本段内文】
+${chunk}
+
+只输出这个 JSON：
+{"summary":"这一段讲了什么，150-250 字",
+ "themes":["这一段的论点，最多 3 条"],
+ "quotes":["这一段里值得引用的原句，最多 4 条，必须原文照抄，不要改写"],
+ "pains":["这一段点到的读者痛点，最多 2 条"]}`,
+            '你是出版社的内容编辑，只输出 JSON，不要任何解释文字。', 1200);
+          model = model || r.model;
+          say(`已读完 ${++done}/${chunks.n} 段`);
+          return aiJson(r.content);
+        } catch (e) {
+          done++;
+          say(`第 ${i + 1} 段读取失败（${e.message}），跳过这一段`);
+          return null;
+        }
+      });
+
+      const got = parts.filter(Boolean);
+      if (!got.length) throw new Error('每一段都没读成功');
+
+      // ---- 收敛成全书分析 ----
+      say(`${got.length} 段读完，正在收敛成全书分析…`);
+      const merged = {
+        summaries: got.map((x, i) => `[第${i + 1}段] ${x.summary || ''}`).join('\n'),
+        themes: dedupe(got.reduce((a, x) => a.concat(x.themes || []), [])),
+        quotes: dedupe(got.reduce((a, x) => a.concat(x.quotes || []), [])),
+        pains: dedupe(got.reduce((a, x) => a.concat(x.pains || []), []))
+      };
+
+      const r2 = await call(`下面是《${p.title}》${p.author ? '（作者' + p.author + '）' : ''}逐段读完之后的笔记，把它收敛成一份全书分析。
+
+【各段摘要】
+${merged.summaries.slice(0, 9000)}
+
+【各段整理出的论点】${merged.themes.slice(0, 40).join('；')}
+【各段摘录的原句】${merged.quotes.slice(0, 60).join('；')}
+【各段点到的痛点】${merged.pains.slice(0, 20).join('；')}
+
+要求：论点要是贯穿全书的，不是某一段的枝节；金句一律从上面的原句里挑，不要自己造。
 
 只输出这个 JSON：
 {"summary":"全书摘要 200-300 字",
  "themes":["核心论点，5 条"],
- "quotes":["书中金句，8-12 条，要从内文原句里挑，不要自己编"],
+ "quotes":["书中金句，8-12 条，从上面的原句里挑"],
  "audiences":[{"name":"读者画像名称","size":30,"note":"特征"}],
  "pains":["这些读者的痛点，4 条"],
- "hots":["可搭配的热点话题标签，5 个，带 # 号"]}`
-        }, pick))
-      });
-      const j = aiJson(r.content);
+ "hots":["可搭配的热点话题标签，5 个，带 # 号"]}`,
+        '你是出版社的内容编辑，只输出 JSON，不要任何解释文字。', 2500);
+
+      const j = aiJson(r2.content);
       if (!j.summary) throw new Error('模型没有回传摘要');
-      return { data: j, model: r.model, note: mpServedNote(pick, r.model) };
+      // 收敛那一步偶尔会把金句改写掉，缺的话拿逐段抄回来的原句补上
+      if (!j.quotes || j.quotes.length < 4) j.quotes = merged.quotes.slice(0, 12);
+
+      return {
+        data: j, model: r2.model || model,
+        note: mpServedNote(pick, r2.model),
+        read: { chunks: chunks.n, ok: got.length, chars: text.length, clipped: chunks.clipped }
+      };
     },
 
-    /* STEP 4：真的写标题、Hook、开场白与几篇完整对谈稿。
-     * 拆成两次呼叫——一次要模型同时产出这么多内容会跑超过 30 秒，
-     * 容易撞到闸道器的执行时间上限（实测过一次 502）。分开跑各自都很快，
-     * 而且其中一段失败还能保住另一段。 */
-    async writeScripts(p) {
-      // 标题与口播稿是同一步的两次呼叫，只问一次模型，两次都用它
-      const pick = await askModel('script');
+    /* ============================================================
+     * STEP 4：每一篇稿子都真的让模型写
+     *
+     * 以前只写 3 篇，其余 11 篇是模板骨架，介面上却一律显示成稿子，
+     * 使用者要逐篇点「重写」才会变成真的。现在整批都送，分批写完，
+     * 哪一批失败就只有那一批退回模板，而且如实说是哪几篇。
+     * ========================================================== */
+    async writeScripts(p, onProgress) {
+      const say = onProgress || function () {};
+      const total = 14;                 // 与 DATA.genScripts(p, 14) 对齐
+      const batch = 2;                  // 一次两篇：再多输出会撞到闸道器的时间上限
+      const rounds = Math.ceil(total / batch);
+
+      const pick = await askModel('script', {
+        est: { in: 1200 * (rounds + 1) + 1800, out: 2600 * rounds + 2500 },
+        note: `这一步会写 20 个标题、20 个 Hook、10 个开场白，加上 ${total} 篇完整口播稿——`
+          + `口播稿分 ${rounds} 批送，总共 ${rounds + 1} 次呼叫。`
+      });
       if (!pick) throw new Error('已取消选择模型');
+
       const ctx = `【书名】《${p.title}》${p.author ? '，作者' + p.author : ''}
 【摘要】${(p.summary || '（未提供）').slice(0, 600)}
 【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
@@ -7477,9 +8208,10 @@ ${text.slice(0, 12000)}
           system: '你是短视频编剧，只输出 JSON，不要任何解释文字。',
           maxTokens, wantJson: true, prompt
         }, pick))
-      });
+      }, 90000);
 
       // 第一段：标题 / Hook / 开场白（输出短，很快）
+      say('正在写标题、Hook 与开场白…');
       const r1 = await call(`帮这本书写短视频文案。
 
 ${ctx}
@@ -7490,7 +8222,7 @@ ${ctx}
       const d1 = aiJson(r1.content);
       if (!d1.titles || !d1.titles.length) throw new Error('模型没有回传标题');
 
-      /* 第二段：完整口播稿（输出较大，单独跑）
+      /* 口播稿分批写。
        *
        * 一定要写「单人口播」而不是双人对谈：数字人服务一次只能让一个形象、
        * 一个声音念一段话。写成对谈的话，生成时只能由同一个人把两边台词都念完，
@@ -7499,11 +8231,22 @@ ${ctx}
       const duration = defaultVideoDuration();
       const minWords = Math.max(80, Math.round(duration * 4.1));
       const maxWords = Math.max(minWords + 30, Math.round(duration * 5.3));
-      let scripts = [];
-      try {
-        const r2 = await call(`帮这本书写 3 篇 ${duration} 秒短视频口播稿。
+      const angles = ['故事切入', '痛点切入', '金句切入', '数据或事实切入', '反常识切入',
+        '自身经历切入', '提问切入', '对比切入', '场景重现切入', '结论先讲切入',
+        '拆解方法切入', '常见误解切入', '一个人物切入', '给谁看切入'];
+
+      let wrote = 0;
+      say(`标题写完，开始写 ${total} 篇口播稿（分 ${rounds} 批）…`);
+      const packs = await pool(Array.from({ length: rounds }, (_, i) => i), 2, async (ri) => {
+        const from = ri * batch;
+        const want = Math.min(batch, total - from);
+        const use = angles.slice(from, from + want).join('、') || angles[ri % angles.length];
+        try {
+          const r = await call(`帮这本书写 ${want} 篇 ${duration} 秒短视频口播稿，这是第 ${from + 1}-${from + want} 篇。
 
 ${ctx}
+
+【这几篇的切入角度】${use}（每篇角度都不一样，也不要跟一般书评的开场雷同）
 
 形式：**一个人对着镜头讲**，全程只有一个说话的人，不要写成两个人对谈、不要有主持人问答。
 这个人叫「${speaker}」，所有台词的 speaker 都填「${speaker}」。
@@ -7516,16 +8259,66 @@ ${ctx}
 - 结尾给一个今天就能做的具体动作，再自然带出引导语
 - 每篇 8-10 句，全篇加起来 ${minWords}-${maxWords} 字（${duration} 秒念得完）
 
-只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3500);
-        scripts = (aiJson(r2.content).scripts || []);
-      } catch (e) {
-        // 口播稿失败不影响标题/Hook，照样把第一段的结果交回去
-        scripts = [];
-      }
+只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3000);
+          const list = (aiJson(r.content).scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
+          wrote += list.length;
+          say(`口播稿 ${wrote}/${total} 篇`);
+          return list;
+        } catch (e) {
+          say(`第 ${from + 1}-${from + want} 篇没写成（${e.message}），这几篇退回模板`);
+          return [];
+        }
+      });
 
-      return { data: Object.assign({}, d1, { scripts }), model: r1.model, note: mpServedNote(pick, r1.model) };
+      const scripts = packs.reduce((a, x) => a.concat(x), []);
+      return {
+        data: Object.assign({}, d1, { scripts }),
+        model: r1.model, note: mpServedNote(pick, r1.model),
+        write: { want: total, got: scripts.length }
+      };
     }
   };
+
+  /* 把整本书切成模型吃得下的段落。优先断在段落与句号，不要把一句话
+   * 从中间剖开——切在句子中间会让那一段的摘要变得莫名其妙。 */
+  function splitBook(text, size, maxChunks) {
+    const list = [];
+    let i = 0;
+    while (i < text.length && list.length < maxChunks) {
+      let end = Math.min(i + size, text.length);
+      if (end < text.length) {
+        const tail = text.slice(end - 400, end);
+        const br = Math.max(tail.lastIndexOf('\n\n'), tail.lastIndexOf('。'), tail.lastIndexOf('\n'));
+        if (br > 0) end = end - 400 + br + 1;
+      }
+      list.push(text.slice(i, end));
+      i = end;
+    }
+    return { list, n: list.length, clipped: i < text.length };
+  }
+
+  /* 有限并发：全部同时送会被服务方挡下来，一次一个又太慢。 */
+  async function pool(items, limit, fn) {
+    const out = new Array(items.length);
+    let next = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i], i);
+      }
+    });
+    await Promise.all(workers);
+    return out;
+  }
+
+  function dedupe(list) {
+    const seen = Object.create(null);
+    return (list || []).filter(x => {
+      const k = String(x || '').trim();
+      if (!k || seen[k]) return false;
+      seen[k] = 1; return true;
+    });
+  }
 
   /* ============================================================
    * 书中角色 —— 让书里的主角走进影片
