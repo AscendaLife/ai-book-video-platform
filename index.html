@@ -5838,6 +5838,14 @@ window.TOUR = (function () {
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
     if (a === 'ga-preset') { const box = $('#ga-prompt'); if (box) { box.value = el.dataset.text || ''; box.focus(); } return; }
     if (a === 'bg-run') return batchGenRun();
+    if (a === 'ga-pick-history') {
+      GA.url = el.dataset.url;
+      gaRender(`<img src="${esc(GA.url)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
+        <div class="hint" style="margin-top:6px">这是之前生成过的。要用就按「用這張」。</div>`);
+      const ub = $('#ga-use');
+      if (ub) { ub.disabled = false; ub.style.opacity = '1'; ub.style.pointerEvents = 'auto'; }
+      return;
+    }
     if (a === 'ga-run') return hgGenAvatarRun();
     if (a === 'ga-use') return hgGenAvatarUse();
     if (a === 'mp-ok') return mpFinish(el.dataset.step, true);
@@ -6283,6 +6291,43 @@ window.TOUR = (function () {
    * ========================================================== */
   const GA = { url: null, busy: false };
 
+  /* 生成记录。
+   * 每一张图都是真的花过钱的，但弹窗一关就找不回来——手滑点到旁边空白
+   * 就没了，使用者回报过。所以生成成功当下立刻存起来，重开弹窗还看得到，
+   * 点一下就能换回那张。 */
+  const GA_HISTORY_MAX = 8;
+
+  function gaHistory() {
+    const p = STORE.s.persona;
+    if (!Array.isArray(p.gaHistory)) p.gaHistory = [];
+    return p.gaHistory;
+  }
+
+  function gaHistoryAdd(url, desc, sceneKey) {
+    if (!url) return;
+    const h = gaHistory();
+    if (h.some(x => x.url === url)) return;
+    const sc = GA_SCENES.find(x => x[0] === sceneKey);
+    h.unshift({ url, desc: (desc || '').slice(0, 20), scene: sc ? sc[1] : '', at: Date.now() });
+    if (h.length > GA_HISTORY_MAX) h.length = GA_HISTORY_MAX;
+    STORE.update();
+  }
+
+  function gaHistoryHtml() {
+    const h = gaHistory();
+    if (!h.length) return '';
+    return `<div class="label" style="margin-top:16px">生成记录
+        <span class="hint" style="margin-left:8px;font-weight:400">点一下换回那张。只留最近 ${GA_HISTORY_MAX} 张</span></div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+        ${h.map(it => `<div data-modal-act="ga-pick-history" data-url="${esc(it.url)}"
+            style="flex:0 0 74px;cursor:pointer;text-align:center">
+          <img src="${esc(it.url)}" style="width:74px;height:104px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
+          <div style="font-size:11px;color:var(--txt-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.scene || '')}</div>
+        </div>`).join('')}
+      </div>
+      <div class="hint" style="margin-top:6px">图片网址由生成服务托管，可能会过期；真的要留就先按「用這張」，那一步会把图存进形象库。</div>`;
+  }
+
   /* ---- 形象库 ----
    * 生成或上传过的形象存下来，之后可以直接点回去用，不用每次重做。
    * 存的是素材编号（assetId）与预览网址——素材编号是数字人服务那边的
@@ -6343,10 +6388,11 @@ window.TOUR = (function () {
    * 一面平板书架；把光线、材质、桌上有什么、窗外什么样都讲清楚，画面
    * 才有纵深，也才像真的有人在那里工作。 */
   const GA_SCENES = [
-    ['study', '书房',
-     '身后是一整面顶到天花板的木质书架，书脊颜色深浅不一、高低错落，'
-     + '侧边有一张厚实的胡桃木书桌，桌上摊着一本翻开的书、一支钢笔和一杯冒着热气的茶，'
-     + '一盏黄铜关节阅读灯从左侧打下暖光，右后方有一扇窗透进柔和日光，空气里有细微浮尘'],
+    ['study', '家里的阅读角',
+     '身后是家中一面及腰到胸口高度的木书架，书摆得不算整齐、有几本横躺着，'
+     + '架上还放着相框、一株小盆栽和一个陶马克杯，'
+     + '旁边是一张软布单椅与一盏落地阅读灯，光晕打在书背上，'
+     + '木地板，侧边窗户透进午后的斜光，整体是自家客厅的尺度，不是图书馆'],
     ['bookstore', '书店',
      '身后是独立书店的原木书架与斜摆的陈列平台，书籍封面朝外排列，'
      + '架上挂着手写的推荐小卡，天花板垂下暖黄色吊灯，'
@@ -6390,11 +6436,13 @@ window.TOUR = (function () {
       + '画面中不要出现任何品牌标志、商标或可辨识的校徽。';
   }
 
+  /* 穿着刻意写得居家、放松。讲书的人穿全套西装反而有距离感，
+   * 观众要的是「像个真的会读书的人坐在自己家里跟你聊」。 */
   const GA_PRESETS = [
-    ['知性女主持', '三十多岁亚洲女性，气质知性沉稳，深色西装外套，短发'],
-    ['亲切男主持', '三十多岁亚洲男性，笑容亲切，浅色衬衫，短发干净'],
-    ['文艺书店店长', '四十岁亚洲女性，温柔文艺气质，针织衫，长发微卷'],
-    ['专业讲师', '四十多岁亚洲男性，稳重专业，衬衫加毛衣背心，戴细框眼镜']
+    ['居家女主人', '三十五岁亚洲女性，米白色宽松针织毛衣，头发随意扎起几缕散落，素颜带自然气色，神情放松'],
+    ['居家男主人', '三十五岁亚洲男性，浅灰色棉质卫衣，短发微乱，没有刻意整理，笑起来眼角有细纹'],
+    ['文艺读书人', '四十岁亚洲女性，燕麦色棉麻衬衫外罩薄开衫，长发微卷自然垂下，戴细框眼镜'],
+    ['週末的讲师', '四十多岁亚洲男性，深蓝色法兰绒衬衫袖口随意捲起，短发有些花白，神情温和']
   ];
 
   function hgGenAvatarModal() {
@@ -6425,6 +6473,8 @@ window.TOUR = (function () {
       </div>
 
       <div id="ga-result" style="margin-top:14px"></div>
+
+      <div id="ga-history">${gaHistoryHtml()}</div>
 
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn btn-primary" data-modal-act="ga-run">✨ 生成形象</button>
@@ -6463,6 +6513,8 @@ window.TOUR = (function () {
       });
       if (!j.url) throw new Error('模型没有回传图片网址');
       GA.url = j.url;
+      gaHistoryAdd(j.url, desc, scene);
+      const hb = $('#ga-history'); if (hb) hb.innerHTML = gaHistoryHtml();
       gaRender(`<img src="${esc(j.url)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
         <div class="hint" style="margin-top:6px">不满意就改描述再按一次「生成形象」。</div>`);
       if (useBtn) { useBtn.disabled = false; useBtn.style.opacity = '1'; useBtn.style.pointerEvents = 'auto'; }
