@@ -4281,27 +4281,15 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">声音的语气</div>
-          <div class="card-s">内建声音念起来会有点平，这三项可以拉回来一些</div></div></div>
-      <div class="grid g3">
-        <div class="field"><div class="label">语速
-            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceSpeed == null ? 1 : p.voiceSpeed)}×</span></div>
-          <input type="range" min="0.8" max="1.2" step="0.05" value="${p.voiceSpeed == null ? 1 : p.voiceSpeed}"
-                 data-act="voice-set" data-k="voiceSpeed">
-          <div class="hint" style="margin-top:2px">1 是原速。讲书稍微慢一点比较好听</div></div>
-        <div class="field"><div class="label">起伏
-            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceStability == null ? 0.4 : p.voiceStability)}</span></div>
-          <input type="range" min="0.1" max="0.9" step="0.05" value="${p.voiceStability == null ? 0.4 : p.voiceStability}"
-                 data-act="voice-set" data-k="voiceStability">
-          <div class="hint" style="margin-top:2px">数字<b>越小起伏越大</b>。调太高就是新闻播报那种一板一眼</div></div>
-        <div class="field"><div class="label">情绪
-            <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceStyle == null ? 0.35 : p.voiceStyle)}</span></div>
-          <input type="range" min="0" max="0.8" step="0.05" value="${p.voiceStyle == null ? 0.35 : p.voiceStyle}"
-                 data-act="voice-set" data-k="voiceStyle">
-          <div class="hint" style="margin-top:2px">越高越有戏。太高会用力过猛</div></div>
-      </div>
-      <div class="hint" style="margin-top:12px">调完之后<b>要重新生成影片才听得到差别</b>，已经做好的影片不会变。
-        真的要像本人，还是得用上面的<b>上传录音克隆</b>——内建声音再怎么调都有机器味，这是它的天花板。</div>
+      <div class="card-h"><div><div class="card-t">语速</div>
+          <div class="card-s">讲书稍微慢一点比较好听</div></div></div>
+      <div class="field"><div class="label">说话速度
+          <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceSpeed == null ? 1 : p.voiceSpeed)}×</span></div>
+        <input type="range" min="0.8" max="1.2" step="0.05" value="${p.voiceSpeed == null ? 1 : p.voiceSpeed}"
+               data-act="voice-set" data-k="voiceSpeed">
+        <div class="hint" style="margin-top:4px">1 是原速。调完要<b>重新生成影片</b>才听得到差别，已经做好的不会变。</div></div>
+      <div class="hint" style="margin-top:10px">想让声音更有起伏、更有情绪？内建声音再怎么调都有机器味，这是它的天花板——
+        真的要像本人，用上面的<b>上传录音克隆</b>。</div>
     </div>
 
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
