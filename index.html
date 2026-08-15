@@ -6446,7 +6446,12 @@ window.TOUR = (function () {
   ];
 
   function hgGenAvatarModal() {
-    GA.url = null;
+    /* 一打开就把最近生成的那张选起来。
+     * 以前每次重开都清空，使用者明明刚生成过一张、缩图也还在，却因为
+     * 「用这张」是灰的而按不动，按「生成形象」又被要求重新描述一次——
+     * 图都有了还要描述，这个流程本身就不合理。 */
+    const last = gaHistory()[0];
+    GA.url = last ? last.url : null;
     modal('用提示词生成形象', `
       <div class="explain" style="margin:0 0 14px">
         <div class="ex-r"><span class="ex-k">这是做什么的</span><span>
@@ -6472,14 +6477,17 @@ window.TOUR = (function () {
         </select>
       </div>
 
-      <div id="ga-result" style="margin-top:14px"></div>
+      <div id="ga-result" style="margin-top:14px">${GA.url
+        ? `<img src="${esc(GA.url)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
+           <div class="hint" style="margin-top:6px">这是你上次生成的。直接按「用这张」就能用；想换就改描述再按「生成形象」。</div>`
+        : ''}</div>
 
       <div id="ga-history">${gaHistoryHtml()}</div>
 
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn btn-primary" data-modal-act="ga-run">✨ 生成形象</button>
-        <button class="btn" data-modal-act="ga-use" id="ga-use" disabled
-          style="opacity:.45;pointer-events:none">用这张</button>
+        <button class="btn ${GA.url ? 'btn-primary' : ''}" data-modal-act="ga-use" id="ga-use"
+          ${GA.url ? '' : 'disabled style="opacity:.45;pointer-events:none"'}>用这张</button>
       </div>
     `);
   }
