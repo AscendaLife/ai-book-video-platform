@@ -1577,7 +1577,7 @@ window.PARSE = (function () {
   function decodeStr(raw, font) {
     if (!font || !font.map) {
       if (font && font.unreadable) return '';     // 翻不回来的字型，宁可空白也不要乱码
-      return raw.replace(/[ --]/g, '');
+      return raw.replace(/[\x00-\x08\x0e-\x1f]/g, '');
     }
     let out = '';
     if (font.bytes === 2) {
