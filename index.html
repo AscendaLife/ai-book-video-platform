@@ -654,7 +654,7 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
            人物自述是挑一个人物做一支，跟这本书跑到流水线第几步无关，
            塞进流程里就等于逼人先跑完前面几步才能用。 -->
       <div class="nav-group" style="padding-top:12px;font-size:9.5px">单独功能</div>
-      <a class="nav-item" data-route="roles"><span class="ni">✦</span>书中人物自述</a>
+      <a class="nav-item" data-route="roles"><span class="ni">✦</span>书影（书中人物）</a>
 
       <details class="nav-more">
         <summary>团队 / 管理员</summary>
@@ -2493,7 +2493,7 @@ window.STORE = (function () {
       if (!Array.isArray(p.materials)) p.materials = [];
       // 书中角色：旧资料没有这个栏位，不补齐的话「让主角走进影片」一读就崩
       if (!Array.isArray(p.characters)) p.characters = [];
-      /* 「书中人物自述」用同一份人物名单，但多两个栏位：
+      /* 「书影（书中人物）」用同一份人物名单，但多两个栏位：
          id 是生成影片时跨页、跨重整追踪那一支的依据（光靠阵列索引不行——
          中间删掉一个人，索引就对到别人身上）；intro 是自述稿的六段。 */
       p.characters.forEach(c => {
@@ -5119,7 +5119,7 @@ window.VIEWS = window.VIEWS || {};
 
 /* ===== views-roles.js ===== */
 /* ============================================================
- * views-roles.js — 书中人物自述（单独功能，不在流水线里）
+ * views-roles.js — 书影（书中人物）（单独功能，不在流水线里）
  *
  * 这一页做的事：把书里的男主角、女主角与其他主要人物，一个一个变成
  * 数字人，让他自己对着镜头做自我介绍——我是谁、这本书是什么情景、
@@ -5221,7 +5221,7 @@ window.VIEWS = window.VIEWS || {};
 
     return `
     <div class="page-h">
-      <div><div class="page-t">书中人物自述</div>
+      <div><div class="page-t">书影（书中人物）</div>
         <div class="page-d">当前项目：《${esc(p.title)}》 · 让书里的人物自己站出来讲一段话，跟流水线无关，随时可以做一支</div></div>
       <div class="right">
         <select class="input" style="width:190px" data-act="switch-proj">
@@ -5624,7 +5624,7 @@ window.TOUR = (function () {
 
   const TITLES = {
     dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
-    roles: '书中人物自述',
+    roles: '书影（书中人物）',
     engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
@@ -5932,7 +5932,7 @@ window.TOUR = (function () {
       case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
       case 'char-to-prompt': return charToPrompt(+el.dataset.i);
 
-      /* ---- 书中人物自述（单独功能，不在流水线里）---- */
+      /* ---- 书影（书中人物）（单独功能，不在流水线里）---- */
       case 'ai-read-cast': return aiReadCast();
       case 'ai-char-intro': return aiCharIntro(+el.dataset.i);
       case 'compose-intro': return composeIntro(+el.dataset.i);
@@ -8353,7 +8353,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     portrait: { t: '生成角色定妆照', kind: 'image', def: 'fast', est: null,
                note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' },
     cast:    { t: 'AI 读出书里的主要人物', kind: 'text', def: 'auto', est: { in: 1600, out: 2200 },
-               note: '「书中人物自述」用的：读这本书抓出男主角、女主角与其他主要人物，输出很短，很便宜。' },
+               note: '「书影（书中人物）」用的：读这本书抓出男主角、女主角与其他主要人物，输出很短，很便宜。' },
     intro:   { t: 'AI 写人物自述稿', kind: 'text', def: 'auto', est: { in: 1800, out: 2400 },
                note: '一次只写一个人物的自述稿（钩子／他是谁、在哪里／他心里的事／收尾，十几段加一篇成稿），输出不长，很便宜。' }
   };
@@ -9064,7 +9064,7 @@ ${ctx}
   }
 
   /* ============================================================
-   * 书中人物自述 —— 单独功能，介面在 views-roles.js
+   * 书影（书中人物） —— 单独功能，介面在 views-roles.js
    *
    * 做的是跟主理人口播同一条数字人生成路径（一张脸 + 一个声音 + 一段
    * 台词 → 服务端合成），差别只有两处：脸用的是这个人物的定妆照，
