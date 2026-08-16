@@ -650,6 +650,12 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
 
       <a class="nav-item" data-route="billing" style="margin-top:10px"><span class="ni">＄</span>支付与方案</a>
 
+      <!-- 单独功能：刻意不放进上面「每本书都会用到」那条流水线。
+           人物自述是挑一个人物做一支，跟这本书跑到流水线第几步无关，
+           塞进流程里就等于逼人先跑完前面几步才能用。 -->
+      <div class="nav-group" style="padding-top:12px;font-size:9.5px">单独功能</div>
+      <a class="nav-item" data-route="roles"><span class="ni">✦</span>书中人物自述</a>
+
       <details class="nav-more">
         <summary>团队 / 管理员</summary>
         <a class="nav-item admin" data-route="engine"><span class="ni">◇</span>人物引擎</a>
@@ -2487,6 +2493,14 @@ window.STORE = (function () {
       if (!Array.isArray(p.materials)) p.materials = [];
       // 书中角色：旧资料没有这个栏位，不补齐的话「让主角走进影片」一读就崩
       if (!Array.isArray(p.characters)) p.characters = [];
+      /* 「书中人物自述」用同一份人物名单，但多两个栏位：
+         id 是生成影片时跨页、跨重整追踪那一支的依据（光靠阵列索引不行——
+         中间删掉一个人，索引就对到别人身上）；intro 是自述稿的六段。 */
+      p.characters.forEach(c => {
+        if (!c) return;
+        if (!c.id) c.id = DATA.uid('ch');
+        if (!c.intro || typeof c.intro !== 'object') c.intro = {};
+      });
       if (!Array.isArray(p.videoPrompts)) p.videoPrompts = [];
       ['titles', 'hooks', 'opens', 'scripts', 'videos'].forEach(k => { if (!Array.isArray(p[k])) p[k] = []; });
       /* 旧版影片全是凭空造的假数据（随机播放量、随机「已发布」状态），
@@ -5103,6 +5117,206 @@ window.VIEWS = window.VIEWS || {};
 })();
 
 
+/* ===== views-roles.js ===== */
+/* ============================================================
+ * views-roles.js — 书中人物自述（单独功能，不在流水线里）
+ *
+ * 这一页做的事：把书里的男主角、女主角与其他主要人物，一个一个变成
+ * 数字人，让他自己对着镜头做自我介绍——我是谁、这本书是什么情景、
+ * 我现在什么心态、正在做什么、身边是什么环境、心里在想什么、接下来
+ * 要做什么。
+ *
+ * 为什么单独一个入口，不塞进「一键生成短视频」那条流水线：
+ *   - 流水线是整批产线：一本书 → 三十支主理人口播短片，一条龙跑完。
+ *     人物自述是另一件事——挑一个人物、生成一支，跟书跑到第几步无关。
+ *   - 塞进流水线就要排在某一步后面，等于逼使用者先跑完前面几步才能用；
+ *     单独放在侧边栏最外层，随时进来就能做一支。
+ *
+ * 自述稿固定讲六件事，这是这个功能的定义，不是随手写的段落：
+ *   ①这本书的情景 ②我的心态 ③我现在的行为 ④我周遭的环境
+ *   ⑤我的想法 ⑥我接下来要做什么
+ * 六段各自可以改，改完按「用这六段重新组稿」就重新拼成要念的台词。
+ *
+ * 人物名单跟「创意分镜 · 书中角色」共用同一份资料（p.characters）：
+ * 在那边读出来、生成过定妆照的角色，这边直接看得到，不用再做一次。
+ * ========================================================== */
+(function () {
+  const { esc } = UI;
+
+  /* 角色定位：AI 读出来的会落在这几档，使用者也可以自己改 */
+  const CASTS = ['男主角', '女主角', '主要人物', '配角', '叙述者', '作者本人', '读者化身'];
+
+  /* 自述稿的六段。key 要跟 AI 回传的 JSON 栏位一致。 */
+  const INTRO_PARTS = [
+    { k: 'scene', t: '这本书的情景', ph: '这个故事发生在什么时候、什么地方、正在发生什么事' },
+    { k: 'mindset', t: '我的心态', ph: '此刻他心里是什么状态：焦虑、笃定、不甘、疲惫…' },
+    { k: 'action', t: '我现在的行为', ph: '镜头前这一刻他正在做什么' },
+    { k: 'surroundings', t: '我周遭的环境', ph: '身边有什么人、什么声音、什么光线、什么味道' },
+    { k: 'thought', t: '我的想法', ph: '他对这件事、对自己、对别人的看法' },
+    { k: 'plan', t: '我接下来要做什么', ph: '他打算怎么做，下一步是什么' }
+  ];
+  window.ROLE_INTRO_PARTS = INTRO_PARTS;
+
+  VIEWS.roles = function () {
+    const p = STORE.current;
+    if (!p) return '<div class="card empty">请先创建书籍项目</div>';
+    const list = Array.isArray(p.characters) ? p.characters : [];
+    const pa = STORE.s.persona;
+    const done = list.filter(c => c.videoUrl).length;
+
+    return `
+    <div class="page-h">
+      <div><div class="page-t">书中人物自述</div>
+        <div class="page-d">当前项目：《${esc(p.title)}》 · 让书里的人物自己站出来讲一段话，跟流水线无关，随时可以做一支</div></div>
+      <div class="right">
+        <select class="input" style="width:190px" data-act="switch-proj">
+          ${STORE.s.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>《${esc(x.title)}》</option>`).join('')}
+        </select>
+        <span class="tag v">单独功能</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;border-color:var(--violet)">
+      <div class="card-h"><div><div class="card-t">这一页在做什么</div>
+          <div class="card-s">书里的人物 → 有脸有声音的数字人 → 对着镜头自我介绍</div></div>
+        <div class="right"><span class="tag ${done ? 'g' : ''}">${done ? '已做出 ' + done + ' 支' : '还没做过'}</span></div></div>
+      <div class="explain" style="margin:0;border-left-color:var(--violet)">
+        <div class="ex-r"><span class="ex-k">跟流水线的差别</span><span>「一键生成短视频」是<b>主理人</b>用同一张脸讲三十支书评；
+          这一页是<b>书里的人</b>自己出来讲话，男主角、女主角、其他主要人物各是一个人、各一张脸、各一个声音。</span></div>
+        <div class="ex-r"><span class="ex-k">他会讲什么</span><span>固定讲六件事：<b>这本书的情景</b>、<b>他的心态</b>、<b>他现在在做什么</b>、
+          <b>周遭的环境</b>、<b>他的想法</b>、<b>他接下来要做什么</b>。六段都可以自己改。</span></div>
+        <div class="ex-r"><span class="ex-k">三步</span><span>①让 AI 从书里读出人物 → ②生成定妆照（这是他的脸）＋写自述稿 → ③生成自述短片。</span></div>
+        <div class="ex-r"><span class="ex-k">花多少</span><span>读人物几乎不花钱；定妆照一张约 <b>US$0.03-0.07</b>；
+          真正贵的是最后生成影片那一步，一支约 <b>US$1-3</b>，而且会占掉一支月额度。前两步随便试，第三步才要想一下。</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">人物名单</div>
+          <div class="card-s">跟「创意分镜 · 书中角色」共用同一份名单；在那边读过的角色这里直接看得到</div></div>
+        <div class="right"><span class="tag">${list.length} 个人物</span></div></div>
+
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" data-act="ai-read-cast">✨ 让 AI 从书里读出主要人物</button>
+        <button class="btn btn-sm" data-act="add-blank-char">＋ 自己加一个人物</button>
+        ${list.length ? `<button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
+      </div>
+      <div id="ai-cast-status"></div>
+      <div class="hint">AI 会优先抓男主角、女主角这类核心人物；非虚构的书没有故事人物时，会抓书里出现的真实人物、案例主角，
+        或一个能代表读者的具体化身。读出来之后名字、身份、长相都可以自己改。</div>
+    </div>
+
+    ${!STORE.s.persona.realVoiceId ? `
+    <div class="card" style="margin-bottom:18px;border-color:var(--amber)">
+      <div class="card-h"><div><div class="card-t">还没有可用的声音</div>
+        <div class="card-s">人物要开口讲话，得先有一个声音；每个人物可以在自己那张卡上单独换</div></div></div>
+      <button class="btn btn-sm" data-act="goto" data-route="persona">去「数字人 / 声音 / 克隆」选一个声音</button>
+    </div>` : ''}
+
+    ${list.length
+      ? `<div class="grid g2">${list.map((c, i) => roleCard(c, i, p, pa)).join('')}</div>`
+      : `<div class="card empty">还没有人物。按上面「让 AI 从书里读出主要人物」，AI 读完这本书会把男主角、女主角与其他主要人物列出来。</div>`}
+`;
+  };
+
+  function roleCard(c, i, p, pa) {
+    const intro = c.intro || {};
+    const voices = (window.HGINFO && HGINFO.voices()) || [];
+    const voiceId = c.voiceId || pa.realVoiceId || '';
+    const script = (c.introScript || '').trim();
+
+    return `
+    <div class="card" style="background:var(--panel-2);margin:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span class="tag v">${String(i + 1).padStart(2, '0')}</span>
+        <b style="font-size:16px;flex:1">${esc(c.name || '未命名人物')}</b>
+        ${c.cast ? `<span class="tag c">${esc(c.cast)}</span>` : ''}
+        <b data-act="del-char" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px" title="删掉这个人物">✕</b>
+      </div>
+
+      <div class="char-portrait" data-for="${i}">${c.portraitUrl
+        ? `<img src="${esc(c.portraitUrl)}" style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;margin-bottom:10px">`
+        : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
+             padding:26px 10px;text-align:center;margin-bottom:10px">还没有定妆照。这张脸就是影片里会出现的脸，先生成一张。</div>`}</div>
+
+      <div class="row2" style="margin-bottom:8px">
+        <div class="field"><div class="label">名字</div>
+          <input class="input" data-act="edit-char" data-i="${i}" data-k="name" value="${esc(c.name || '')}" placeholder="人物的名字"></div>
+        <div class="field"><div class="label">角色定位</div>
+          <select class="input" data-act="char-cast" data-i="${i}">
+            <option value="">未标注</option>
+            ${CASTS.map(x => `<option value="${esc(x)}" ${c.cast === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+          </select></div>
+      </div>
+      <div class="field" style="margin-bottom:8px"><div class="label">在书里是谁</div>
+        <input class="input" data-act="edit-char" data-i="${i}" data-k="role" value="${esc(c.role || '')}" placeholder="例如：故事的男主角、书中的年轻工程师、作者本人"></div>
+      <div class="field" style="margin-bottom:10px"><div class="label">长什么样<span class="hint" style="margin-left:8px;font-weight:400">脸不对就改这里再生成一次</span></div>
+        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="look" rows="3"
+          placeholder="年龄、性别、脸型、发型、穿着、神情、时代感…越具体越像">${esc(c.look || '')}</textarea></div>
+
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-sm" data-act="gen-char-portrait" data-i="${i}">${c.portraitUrl ? '重生成定妆照' : '✨ 生成定妆照'}</button>
+        <button class="btn btn-sm btn-primary" data-act="ai-char-intro" data-i="${i}">✨ 写自述稿</button>
+      </div>
+
+      <!-- 六段折叠起来：一张卡上六个输入框会把整张卡拉得很长，
+           平常看的是下面那篇组好的稿子，要逐段改的时候才展开。
+           已经写过内容的就预设展开，不然 AI 写完看不到东西。 -->
+      <details class="adv" style="margin-bottom:12px" ${INTRO_PARTS.some(x => (intro[x.k] || '').trim()) ? 'open' : ''}>
+        <summary>自述稿的六段<span class="hint" style="font-weight:400">情景／心态／行为／环境／想法／接下来要做什么</span></summary>
+        <div class="adv-b">
+          <div class="char-intro-parts" data-for="${i}">${INTRO_PARTS.map(part => `
+            <div class="field" style="margin-bottom:8px"><div class="label">${part.t}</div>
+              <textarea class="input" data-act="edit-char-intro" data-i="${i}" data-k="${part.k}" rows="2"
+                placeholder="${esc(part.ph)}">${esc(intro[part.k] || '')}</textarea></div>`).join('')}</div>
+          <button class="btn btn-sm" data-act="compose-intro" data-i="${i}">用这六段重新组稿</button>
+        </div>
+      </details>
+      <div class="char-intro-status" data-for="${i}"></div>
+
+      <div class="field" style="margin-bottom:10px">
+        <div class="label">他要念的自述稿<span class="hint" style="margin-left:8px;font-weight:400">${script ? '约 ' + script.length + ' 字，念起来约 ' + Math.max(1, Math.round(script.length / 4.5)) + ' 秒' : '还没有稿子'}</span></div>
+        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="introScript" rows="6"
+          placeholder="第一人称，从头到尾都是这个人物自己在讲话">${esc(c.introScript || '')}</textarea>
+      </div>
+
+      <div class="field" style="margin-bottom:10px"><div class="label">用哪个声音</div>
+        ${voices.length
+          ? `<select class="input" data-act="char-voice" data-i="${i}">
+              ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(v.name)}${v.gender ? ' · ' + esc(v.gender) : ''}${v.language ? ' · ' + esc(v.language) : ''}</option>`).join('')}
+            </select>`
+          : `<div class="hint">${voiceId ? '目前用「数字人 / 声音」那边选好的声音。' : '声音清单还没读到；先去「数字人 / 声音 / 克隆」选一个。'}</div>`}
+      </div>
+
+      <button class="btn btn-primary btn-sm" data-act="gen-char-video" data-i="${i}" style="width:100%">🎬 生成这个人物的自述短片（会扣额度）</button>
+      <div class="char-video" data-for="${i}">${charVideoHtml(c)}</div>
+      <div class="hint" style="margin-top:8px">一支约 US$1-3、占一支月额度。定妆照与自述稿都很便宜，先在上面调到满意再按这里。</div>
+    </div>`;
+  }
+
+  /* 影片区块：待生成 / 生成中 / 已生成 / 失败，四种状态都要看得懂 */
+  function charVideoHtml(c) {
+    if (c.videoUrl) {
+      const sec = Number(c.realDuration);
+      return `<video src="${esc(c.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:10px;margin-top:10px"></video>
+        <div class="hint" style="margin-top:6px">
+          ${sec ? `实际时长 <b>${sec.toFixed(1)} 秒</b>　估算费用 <b>约 US$${(sec * 0.05).toFixed(2)}</b><span style="opacity:.7">（按 US$0.05/秒 估，实际以供应商帐单为准）</span><br>` : ''}
+          影片网址可能有时效，要保留请自行下载。</div>`;
+    }
+    if (c.videoStatus === '生成中') {
+      return '<div class="hint" style="margin-top:8px;color:var(--violet-2)">生成中，通常 1-3 分钟…可以关掉这一页去看别的，做好了会自己更新。</div>';
+    }
+    if (c.videoStatus === '生成失败') {
+      return `<div class="hint" style="margin-top:8px;color:var(--red)">生成失败：${esc(c.videoError || '未知原因')}</div>`;
+    }
+    return '';
+  }
+
+  window.ROLE_VIDEO_HTML = charVideoHtml;
+
+})();
+
+
 /* ===== tour.js ===== */
 /* ============================================================
  * tour.js — 新手导览（聚光灯式分步引导）
@@ -5334,6 +5548,7 @@ window.TOUR = (function () {
 
   const TITLES = {
     dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
+    roles: '书中人物自述',
     engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
@@ -5360,6 +5575,8 @@ window.TOUR = (function () {
     if (route === 'pipeline') $('#view').scrollTop = 0;
     if (route === 'persona') showVoiceInfo();
     if (route === 'persona' || route === 'pipeline') hgAutoCheck();
+    // 人物自述页要给每个人物挑声音，声音清单得先拿到（只抓一次）
+    if (route === 'roles') rolesLoadVoices();
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
   }
   window.render = render;
@@ -5624,7 +5841,7 @@ window.TOUR = (function () {
       case 'ai-read-characters': return aiReadCharacters();
       case 'add-blank-char': {
         const p = STORE.current; if (!p) return;
-        p.characters = (p.characters || []).concat([{ name: '', role: '', look: '', scene: '' }]);
+        p.characters = (p.characters || []).concat([{ id: DATA.uid('ch'), name: '', role: '', look: '', scene: '', intro: {} }]);
         STORE.update(); render(); return;
       }
       case 'clear-chars': {
@@ -5638,6 +5855,12 @@ window.TOUR = (function () {
       }
       case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
       case 'char-to-prompt': return charToPrompt(+el.dataset.i);
+
+      /* ---- 书中人物自述（单独功能，不在流水线里）---- */
+      case 'ai-read-cast': return aiReadCast();
+      case 'ai-char-intro': return aiCharIntro(+el.dataset.i);
+      case 'compose-intro': return composeIntro(+el.dataset.i);
+      case 'gen-char-video': return charVideoConfirm(+el.dataset.i);
 
       case 'gen-prompt-video': return promptVideoConfirm(+el.dataset.i);
       case 'hg-upload-photo-btn':
@@ -5781,6 +6004,17 @@ window.TOUR = (function () {
     if (el.dataset.act === 'video-format') {
       setVideoFormat(el.dataset.id, el.value, true);
     }
+    /* 人物自述：角色定位与声音都是选完就存，不用另外按储存 */
+    if (el.dataset.act === 'char-cast' || el.dataset.act === 'char-voice') {
+      const p = STORE.current;
+      const c = p && (p.characters || [])[+el.dataset.i];
+      if (c) {
+        if (el.dataset.act === 'char-cast') c.cast = el.value;
+        else { c.voiceId = el.value; c.voiceName = (HG.voices.find(v => v.id === el.value) || {}).name || ''; }
+        STORE.update(); render();
+      }
+      return;
+    }
     if (el.dataset.act === 'set-quota-total' || el.dataset.act === 'set-quota-used') {
       const k = el.dataset.act === 'set-quota-total' ? 'quotaTotal' : 'quotaUsed';
       STORE.s.settings[k] = Math.max(0, Math.floor(+el.value || 0));
@@ -5800,6 +6034,14 @@ window.TOUR = (function () {
       const p = STORE.current;
       const c = p && (p.characters || [])[+ce.dataset.i];
       if (c) { c[ce.dataset.k] = ce.value; STORE.update(); }
+      return;
+    }
+    // 自述稿的六段：同样边打边存，也一样不重画
+    const ie = e.target.closest('[data-act="edit-char-intro"]');
+    if (ie) {
+      const p = STORE.current;
+      const c = p && (p.characters || [])[+ie.dataset.i];
+      if (c) { (c.intro || (c.intro = {}))[ie.dataset.k] = ie.value; STORE.update(); }
       return;
     }
     const pe = e.target.closest('[data-act="edit-prompt"]');
@@ -5850,6 +6092,18 @@ window.TOUR = (function () {
       STORE.log('ok', '批量发布完成'); closeModal(); render(); toast('全部内容已发布', 'ok');
     }
     if (a === 'confirm-reset') { STORE.reset(); closeModal(); go('dashboard'); toast('已恢复初始演示数据', 'ok'); }
+    if (a === 'confirm-char-video') {
+      const ta = $('#cv-text');
+      const text = ta ? ta.value.trim() : '';
+      const pid = el.dataset.pid, cid = el.dataset.cid;
+      closeModal();
+      if (!text) return toast('台词是空的，没东西可念', 'warn');
+      // 弹窗里改过的台词要存回去，不然下次打开又变回旧的那一版
+      const hit = findChar(pid, cid);
+      if (hit) { hit.c.introScript = text; STORE.update(); }
+      toast('已送出，生成中，通常 1-3 分钟', 'ok');
+      return doCharVideo(pid, cid, text);
+    }
     if (a === 'ga-preset') { const box = $('#ga-prompt'); if (box) { box.value = el.dataset.text || ''; box.focus(); } return; }
     if (a === 'bg-run') return batchGenRun();
     if (a === 'ga-pick-history') {
@@ -7394,6 +7648,13 @@ window.TOUR = (function () {
         pollAiPlatformVideo(v.id);
       }
     }));
+    // 人物自述影片同理：重整一次就永远卡在「生成中」的话，等于影片凭空消失
+    STORE.s.projects.forEach(p => (p.characters || []).forEach(c => {
+      if (c.videoStatus === '生成中' && c.heygenId && c.id && !charJobs[c.id]) {
+        charJobs[c.id] = true;
+        pollCharVideo(p.id, c.id);
+      }
+    }));
   }
 
   /* YouTube 上传弹窗：直接选本机影片档，不需要公开网址 */
@@ -8012,7 +8273,11 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     chars:   { t: 'AI 读出书里的角色', kind: 'text', def: 'auto', est: { in: 1500, out: 1500 },
                note: '读这本书抽出几个可以「演出来」的角色，输出很短，很便宜。' },
     portrait: { t: '生成角色定妆照', kind: 'image', def: 'fast', est: null,
-               note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' }
+               note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' },
+    cast:    { t: 'AI 读出书里的主要人物', kind: 'text', def: 'auto', est: { in: 1600, out: 2200 },
+               note: '「书中人物自述」用的：读这本书抓出男主角、女主角与其他主要人物，输出很短，很便宜。' },
+    intro:   { t: 'AI 写人物自述稿', kind: 'text', def: 'auto', est: { in: 1500, out: 1800 },
+               note: '一次只写一个人物的自述稿（情景／心态／行为／环境／想法／接下来要做什么），输出很短，很便宜。' }
   };
 
   /* 「策略」不是模型，是「让平台自己挑」。文字与图像两边的可选档位不一样：
@@ -8648,8 +8913,8 @@ ${ctx}
       const list = (out.characters || [])
         .filter(x => x && (x.name || x.look))
         .map(x => ({
-          name: x.name || '', role: x.role || '',
-          look: x.look || '', scene: x.scene || ''
+          id: DATA.uid('ch'), name: x.name || '', role: x.role || '',
+          look: x.look || '', scene: x.scene || '', intro: {}
         }));
       if (!list.length) throw new Error('模型没有读出角色');
       p.characters = (p.characters || []).concat(list);
@@ -8718,6 +8983,339 @@ ${ctx}
     toast(`已把「${name}」写成影片提示词，在下面可以再改`, 'ok');
     const box = $('#ai-prompt-status');
     if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /* ============================================================
+   * 书中人物自述 —— 单独功能，介面在 views-roles.js
+   *
+   * 做的是跟主理人口播同一条数字人生成路径（一张脸 + 一个声音 + 一段
+   * 台词 → 服务端合成），差别只有两处：脸用的是这个人物的定妆照，
+   * 台词是他的第一人称自述稿。所以这里不另外接新的外部服务，
+   * 只是把既有的那条路径换一张脸、换一段稿子。
+   *
+   *   rolesLoadVoices()    进这一页时把声音清单抓回来（唯读、免费）
+   *   aiReadCast()         读书 → 抓出男主角／女主角／其他主要人物
+   *   aiCharIntro(i)       写这个人物的自述稿，固定六段
+   *   composeIntro(i)      六段 → 拼成要念的台词（纯拼接，不花钱）
+   *   charVideoConfirm / doCharVideo / pollCharVideo   真的生成影片
+   *
+   * 会花钱的只有两处：定妆照（很便宜，共用「创意分镜」那支函式）与最后
+   * 生成影片（一支约 US$1-3）。影片跟流水线共用同一个月额度闸门，
+   * 用满就挡下来，不会因为多开一个入口就多一条绕过额度的路。
+   * ========================================================== */
+
+  const charJobs = {};       // 人物 id -> true，挡住同一个人物被重复送出
+  let rolesVoiceTried = false;
+
+  /* views-roles.js 在另一个 IIFE 里，拿不到 HG；开一个只读的窗口给它。 */
+  window.HGINFO = { voices: () => HG.voices, canWrite: () => hgCanWrite() };
+
+  /* 声音清单：人物自述页每个人物都要挑声音，但这一页没有 #hg-status 挂载点，
+   * hgAutoCheck() 那一套用不上，所以自己抓一次就好。抓失败不挡任何事——
+   * 页面照样能用「数字人 / 声音」那边已经选好的声音。 */
+  async function rolesLoadVoices() {
+    if (HG.voices.length || rolesVoiceTried) return;
+    rolesVoiceTried = true;
+    try {
+      const vo = await hgFetch('/api/heygen/voices');
+      HG.voices = vo.voices || [];
+      hgRestoreChoice();
+      if (!HG.voiceId && HG.voices[0]) { HG.voiceId = HG.voices[0].id; hgSaveChoice(); }
+      if (route === 'roles' && HG.voices.length) render();
+    } catch (e) {
+      rolesVoiceTried = false;   // 网络断一下而已，下次进这一页再试一次
+    }
+  }
+
+  /* 人物在生成影片这段期间要被跨页、跨重整地追踪，光靠阵列索引不够用
+   * （中间删掉一个人，索引就对到别人身上了），所以给一个稳定的 id。 */
+  function ensureCharId(c) {
+    if (!c.id) { c.id = DATA.uid('ch'); STORE.update(); }
+    return c.id;
+  }
+
+  function findChar(pid, cid) {
+    const p = (STORE.s.projects || []).find(x => x.id === pid);
+    if (!p) return null;
+    const c = (p.characters || []).find(x => x.id === cid);
+    return c ? { p, c } : null;
+  }
+
+  /* 读出这本书的主要人物。跟「创意分镜 · 书中角色」共用同一份名单，
+   * 差别是这里会多要一个「角色定位」——男主角、女主角还是配角，
+   * 决定的是使用者先做谁，不是给模型的技术栏位。 */
+  async function aiReadCast() {
+    const p = STORE.current;
+    if (!p) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+
+    const box = $('#ai-cast-status');
+    const setMsg = (t, color) => {
+      if (box) box.innerHTML = `<div class="hint" style="color:${color || 'var(--violet-2)'};margin-bottom:12px">${esc(t)}</div>`;
+    };
+    const pick = await askModel('cast');
+    if (!pick) return toast('已取消，没有去读人物', 'warn');
+    setMsg('✨ AI 正在读这本书找人物，约 10-30 秒…');
+
+    const prompt = `读这本书，列出 4-6 个「可以自己出来讲话」的主要人物，之后要让他们各自做一段自我介绍的短视频。
+
+【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【摘要】${p.summary || '（未提供）'}
+【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
+【金句】${(p.quotes || []).slice(0, 5).join('；') || '（未提供）'}
+【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
+
+要求：
+- 小说、传记、故事类：抓真正的主要人物，男主角与女主角一定要抓到，名字用书里的名字
+- 非虚构、商管、知识类：抓书里出现的真实人物、案例主角，或一个能代表读者的具体化身
+  （要给具体的名字与身份，不要写成「读者A」）
+- cast 只能填：男主角 / 女主角 / 主要人物 / 配角 / 叙述者 / 作者本人 / 读者化身
+- 重要的排前面，男主角与女主角排最前
+- look 要具体到画得出来：年龄、性别、脸型、发型、穿着、神情、时代与地域感，60-100 字
+- scene 是这个人物最有代表性的一幕：他在哪里、在做什么、气氛如何，40-80 字
+- 只写书里真的有依据的人物，不要凭空发明与全书无关的人
+
+只输出这个 JSON：
+{"characters":[{"name":"名字","cast":"角色定位","role":"他在书里是谁","look":"外貌描述","scene":"代表场景"}]}`;
+
+    try {
+      const r = await hgFetchSlow('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({
+          prompt, system: '你是选角导演，只输出 JSON，不要任何解释文字。',
+          maxTokens: 2200, wantJson: true
+        }, pick))
+      }, 60000);
+      const out = aiJson(r.content);
+      const list = (out.characters || [])
+        .filter(x => x && (x.name || x.look))
+        .map(x => ({
+          id: DATA.uid('ch'), intro: {},
+          name: x.name || '', cast: x.cast || '', role: x.role || '',
+          look: x.look || '', scene: x.scene || ''
+        }));
+      if (!list.length) throw new Error('模型没有读出人物');
+      p.characters = (p.characters || []).concat(list);
+      STORE.update(); render();
+      toast(`AI 从书里读出 ${list.length} 个人物，接下来生成定妆照与自述稿`, 'ok');
+      const note = mpServedNote(pick, r.model);
+      if (note) toast(note, 'warn');
+    } catch (e) {
+      setMsg('AI 读人物失败：' + e.message, 'var(--red)');
+    }
+  }
+
+  /* 自述稿：固定讲六件事——这本书的情景、他的心态、他现在的行为、
+   * 周遭的环境、他的想法、他接下来要做什么。六段分开存，是为了让人
+   * 可以只改其中一段再重新组稿，而不是每次都要重写一整篇。 */
+  async function aiCharIntro(i) {
+    const p = STORE.current;
+    const c = p && (p.characters || [])[i];
+    if (!c) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+    if (!(c.name || '').trim() && !(c.role || '').trim()) return toast('先写下这个人物的名字或身份', 'warn');
+
+    const slot = $(`.char-intro-status[data-for="${i}"]`);
+    const setMsg = (t, color) => {
+      if (slot) slot.innerHTML = `<div class="hint" style="color:${color || 'var(--violet-2)'};margin-top:8px">${esc(t)}</div>`;
+    };
+    const pick = await askModel('intro');
+    if (!pick) return toast('已取消，没有写自述稿', 'warn');
+    setMsg('✨ AI 正在替这个人物写自述稿，约 10-30 秒…');
+
+    const prompt = `用第一人称，替这本书里的这个人物写一段「自我介绍」的口播稿，之后会由数字人对着镜头念出来。
+
+【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
+【摘要】${p.summary || '（未提供）'}
+【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
+【金句】${(p.quotes || []).slice(0, 4).join('；') || '（未提供）'}
+
+【这个人物】
+名字：${c.name || '（未命名）'}
+角色定位：${c.cast || '（未标注）'}
+在书里是谁：${c.role || '（未提供）'}
+长什么样：${c.look || '（未提供）'}
+代表场景：${c.scene || '（未提供）'}
+
+要写的六段，每段 40-70 字，全部用「我」开头的第一人称，像人在讲话，不要书面语：
+1. scene：这本书的情景——我在哪个故事里，这本书讲的是什么处境
+2. mindset：我现在的心态——此刻我心里是什么状态
+3. action：我现在的行为——镜头前这一刻我正在做什么
+4. surroundings：我周遭的环境——我身边有什么、什么声音、什么光线
+5. thought：我的想法——我怎么看这件事、怎么看我自己
+6. plan：我接下来要做什么——我打算怎么做
+
+另外把六段串成一篇可以直接念的稿子 script：
+- 开头先自报身份（「我是⋯⋯」），结尾用一句话把观众引回这本书
+- 全篇 220-300 字，一个人从头讲到尾，不要有第二个人说话、不要旁白、不要舞台指示
+- 不要出现「第一段」「接下来」这种结构词，就是一段自然的独白
+- 只讲书里有依据的事，不要编造书里没有的情节
+
+只输出这个 JSON：
+{"scene":"","mindset":"","action":"","surroundings":"","thought":"","plan":"","script":""}`;
+
+    try {
+      const r = await hgFetchSlow('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({
+          prompt, system: '你是短视频编剧，只输出 JSON，不要任何解释文字。',
+          maxTokens: 1800, wantJson: true
+        }, pick))
+      }, 60000);
+      const out = aiJson(r.content);
+      const intro = {};
+      (window.ROLE_INTRO_PARTS || []).forEach(part => { intro[part.k] = String(out[part.k] || '').trim(); });
+      if (!Object.keys(intro).some(k => intro[k])) throw new Error('模型没有写出内容');
+      c.intro = intro;
+      c.introScript = String(out.script || '').trim() || composeIntroText(c);
+      STORE.update(); render();
+      toast(`「${c.name || '这个人物'}」的自述稿写好了，可以直接改`, 'ok');
+      const note = mpServedNote(pick, r.model);
+      if (note) toast(note, 'warn');
+    } catch (e) {
+      setMsg('AI 写自述稿失败：' + e.message, 'var(--red)');
+    }
+  }
+
+  /* 六段 → 要念的台词。纯拼接，不呼叫模型、不花钱，
+   * 所以改完其中一段可以随便重按。 */
+  function composeIntroText(c) {
+    const it = c.intro || {};
+    const parts = (window.ROLE_INTRO_PARTS || []).map(x => String(it[x.k] || '').trim()).filter(Boolean);
+    if (!parts.length) return '';
+    const name = (c.name || '').trim();
+    const head = name ? `我是${name}${(c.role || '').trim() ? '，' + c.role.trim() : ''}。` : '';
+    return [head].concat(parts).filter(Boolean).join('\n');
+  }
+
+  function composeIntro(i) {
+    const p = STORE.current;
+    const c = p && (p.characters || [])[i];
+    if (!c) return;
+    const text = composeIntroText(c);
+    if (!text) return toast('六段都还是空的，先按「✨ 写自述稿」或自己填几段', 'warn');
+    c.introScript = text;
+    STORE.update(); render();
+    toast('已用这六段重新组稿，下面可以再改', 'ok');
+  }
+
+  /* 生成前先确认——这一步是真的花钱，而且占一支月额度 */
+  function charVideoConfirm(i) {
+    const p = STORE.current;
+    const c = p && (p.characters || [])[i];
+    if (!c) return;
+    if (!hgCanWrite()) return hgDemoNotice();
+    if (!c.portraitUrl) return toast('还没有定妆照——影片里那张脸就是定妆照，先生成一张', 'warn');
+
+    const text = (c.introScript || '').trim() || composeIntroText(c);
+    if (!text) return toast('还没有自述稿，先按「✨ 写自述稿」', 'warn');
+
+    const voiceId = c.voiceId || STORE.s.persona.realVoiceId;
+    if (!voiceId) return toast('还没有声音，先去「数字人 / 声音 / 克隆」选一个', 'err');
+    if (quotaLeft() <= 0) return toast('本月额度已用完（可到「系统设置 → 用量与额度」调高上限）', 'err');
+
+    const cid = ensureCharId(c);
+    if (charJobs[cid]) return toast('这个人物已经在生成中了', 'warn');
+    const voName = (HG.voices.find(v => v.id === voiceId) || {}).name
+      || STORE.s.persona.realVoiceName || '已选好的声音';
+
+    modal('要真的生成这一支自述短片吗？', `
+      <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px">${esc(c.name || '这个人物')}${c.cast ? '（' + esc(c.cast) + '）' : ''} 的自述</div>
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">会用谁</span><span>脸用<b>这个人物的定妆照</b>　声音用 <b>${esc(voName)}</b></span></div>
+        <div class="ex-r"><span class="ex-k">会花多少</span><span><b style="color:var(--amber)">这一步真的会产生费用</b>，一支约 US$1-3，并占掉一支月额度。做出来之后无法退。</span></div>
+        <div class="ex-r"><span class="ex-k">要等多久</span><span>通常 1-3 分钟。送出后可以关掉这个窗、去看别的，做好了会自己更新。</span></div>
+        <div class="ex-r"><span class="ex-k">出来会是什么</span><span>一支<b>单人自述</b>短片——这个人物对着镜头，把下面这段话讲完。稿子写的就是成品的样子。</span></div>
+      </div>
+      <div class="field"><div class="label">实际要念的台词（可以改）</div>
+        <textarea class="input" id="cv-text" style="min-height:150px;line-height:1.75">${esc(text)}</textarea></div>
+      <div class="hint">约 ${text.length} 字。太长会让影片变长、费用变高，可以自行删减。</div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="confirm-char-video" data-pid="${esc(p.id)}" data-cid="${esc(cid)}">确认生成（会扣额度）</button>`);
+  }
+
+  async function doCharVideo(pid, cid, text) {
+    const hit = findChar(pid, cid);
+    if (!hit) return;
+    const { c } = hit;
+    if (charJobs[cid]) return;
+    charJobs[cid] = true;
+    c.videoStatus = '生成中'; c.videoError = null; c.videoUrl = null; c.realDuration = null;
+    STORE.update(); render();
+
+    try {
+      /* 定妆照是一个网址，数字人服务只认它自己的 asset。同一张脸只换一次，
+       * 换过就记住是哪一张换的——重生成定妆照之后会自动重换，不会拿旧脸去合成。 */
+      if (!c.assetId || c.assetFor !== c.portraitUrl) {
+        const up = await hgFetchSlow(
+          `/api/heygen/upload?url=${encodeURIComponent(c.portraitUrl)}&name=${encodeURIComponent('role-' + cid + '.png')}`,
+          { method: 'POST' });
+        if (!up.assetId) throw new Error('定妆照没有换到 asset id');
+        c.assetId = up.assetId; c.assetFor = c.portraitUrl;
+        STORE.update();
+      }
+
+      const r = await hgFetch('/api/heygen/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'image',
+          assetId: c.assetId,
+          voiceId: c.voiceId || STORE.s.persona.realVoiceId,
+          text,
+          voiceSettings: voiceSettings()
+        })
+      });
+      if (!r.videoId) throw new Error('服务没有回传影片 ID');
+      c.heygenId = r.videoId; c.spokenText = text;
+      STORE.update();
+      STORE.log('ok', `送出人物自述影片：${c.name || '未命名人物'}`);
+      pollCharVideo(pid, cid);
+    } catch (e) {
+      delete charJobs[cid];
+      // 人脸侦测没过是最常见的失败，直接讲清楚怎么改，不要只丢一句英文错误
+      const msg = /face|detect/i.test(e.message || '')
+        ? '这张定妆照没通过人脸侦测。请在「长什么样」里强调「正面半身、脸部完整清楚」，重生成定妆照再试。'
+        : e.message;
+      c.videoStatus = '生成失败'; c.videoError = msg;
+      STORE.update(); render();
+      toast('送出失败：' + msg, 'err');
+    }
+  }
+
+  function pollCharVideo(pid, cid) {
+    const tick = async () => {
+      const hit = findChar(pid, cid);
+      if (!hit) { delete charJobs[cid]; return; }     // 人物或项目被删了
+      const { c } = hit;
+      if (!c.heygenId) { delete charJobs[cid]; return; }
+      try {
+        const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(c.heygenId));
+        if (s.status === 'completed' && s.videoUrl) {
+          delete charJobs[cid];
+          c.videoStatus = '已生成'; c.videoUrl = s.videoUrl;
+          if (s.duration) c.realDuration = Number(s.duration);
+          // 额度跟流水线共用同一本帐：影片真的做出来了才算用掉一支
+          const st = STORE.s.settings;
+          st.quotaUsed = Math.min(st.quotaTotal, st.quotaUsed + 1);
+          STORE.update(); render();
+          STORE.log('ok', `人物自述影片已生成：${c.name || '未命名人物'}`);
+          toast(`「${c.name || '这个人物'}」的自述短片做好了`, 'ok');
+          return;
+        }
+        if (s.status === 'failed') {
+          delete charJobs[cid];
+          c.videoStatus = '生成失败'; c.videoError = s.error || '未知原因';
+          STORE.update(); render();
+          toast('生成失败：' + c.videoError, 'err');
+          return;
+        }
+        setTimeout(tick, 5000);
+      } catch (e) {
+        // 查询失败通常是暂时的（网络断一下），继续再试，不要直接判死
+        setTimeout(tick, 8000);
+      }
+    };
+    tick();
   }
 
   async function aiWritePrompts() {
