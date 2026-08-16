@@ -5132,10 +5132,27 @@ window.VIEWS = window.VIEWS || {};
  *   - 塞进流水线就要排在某一步后面，等于逼使用者先跑完前面几步才能用；
  *     单独放在侧边栏最外层，随时进来就能做一支。
  *
- * 自述稿固定讲六件事，这是这个功能的定义，不是随手写的段落：
- *   ①这本书的情景 ②我的心态 ③我现在的行为 ④我周遭的环境
- *   ⑤我的想法 ⑥我接下来要做什么
- * 六段各自可以改，改完按「用这六段重新组稿」就重新拼成要念的台词。
+ * 自述稿的结构（INTRO_GROUPS）不是随手分的段落，是照「一支自述短片
+ * 实际念出来的顺序」排的，每一段都有它非在不可的理由：
+ *
+ *   开场 ── ①一句话钩子：短视频前三秒决定人走不走，先讲一句让人停下来的话，
+ *           不要一开口就自报名字（「大家好我是⋯」是最快被划掉的开头）
+ *   他是谁、在哪里 ── ②我是谁 ③这本书的情景 ④我周遭的环境 ⑤我现在的行为
+ *           （情景／环境／行为是这个功能被提出来时就指定要讲的三件事）
+ *   他心里的事 ── ⑥我的心态 ⑦我怎么走到这一步 ⑧我卡在哪里 ⑨我身边的人
+ *           ⑩我的想法 ⑪我后来明白了什么
+ *           前史与「卡在哪里」是补上去的：只讲此刻的心态与想法，一段自述会很平，
+ *           没有张力就没有人看完。「我身边的人」则让同一本书的几个人物互相提到
+ *           对方，几支影片才会像同一个故事，而不是各讲各的。
+ *           「我后来明白了什么」是这本书的观点落在人物身上的地方——书评是别人
+ *           讲道理，人物自己讲出来才有人听。
+ *   收尾 ── ⑫我接下来要做什么 ⑬我最想说的一句话 ⑭给看到这里的你
+ *           金句是拿来当封面字与截图转发的；最后一句把人带回这本书，
+ *           不然影片好看归好看，跟卖书没有关系。
+ *
+ * 每一段都可以自己改、可以留空（留空就不会念到），改完按「用这几段重新组稿」
+ * 重新拼成要念的台词。另外两个不会被念出来的设定：影片长度（决定 AI 写多少字，
+ * 也就决定这支影片多贵）与念的口吻（男主角跟女主角不该同一个语气）。
  *
  * 人物名单跟「创意分镜 · 书中角色」共用同一份资料（p.characters）：
  * 在那边读出来、生成过定妆照的角色，这边直接看得到，不用再做一次。
@@ -5146,16 +5163,54 @@ window.VIEWS = window.VIEWS || {};
   /* 角色定位：AI 读出来的会落在这几档，使用者也可以自己改 */
   const CASTS = ['男主角', '女主角', '主要人物', '配角', '叙述者', '作者本人', '读者化身'];
 
-  /* 自述稿的六段。key 要跟 AI 回传的 JSON 栏位一致。 */
-  const INTRO_PARTS = [
-    { k: 'scene', t: '这本书的情景', ph: '这个故事发生在什么时候、什么地方、正在发生什么事' },
-    { k: 'mindset', t: '我的心态', ph: '此刻他心里是什么状态：焦虑、笃定、不甘、疲惫…' },
-    { k: 'action', t: '我现在的行为', ph: '镜头前这一刻他正在做什么' },
-    { k: 'surroundings', t: '我周遭的环境', ph: '身边有什么人、什么声音、什么光线、什么味道' },
-    { k: 'thought', t: '我的想法', ph: '他对这件事、对自己、对别人的看法' },
-    { k: 'plan', t: '我接下来要做什么', ph: '他打算怎么做，下一步是什么' }
+  /* 自述稿的结构。顺序就是念出来的顺序；k 要跟 AI 回传的 JSON 栏位一致，
+   * ask 是这一段给模型的写作指示——介面与提示词共用同一份定义，
+   * 以后要加一段、改一段，只改这里，两边不会走岔。 */
+  const INTRO_GROUPS = [
+    { g: '开场 · 前三秒', parts: [
+      { k: 'hook', t: '一句话钩子', ph: '第一句就要让人停下来：一个问题、一句反常的话、一个具体的画面',
+        ask: '开场第一句，三秒内要让人停下来。可以是一个问题、一句反常的话或一个很具体的画面。不要在这一句自报名字，不要「大家好」。' } ] },
+    { g: '他是谁、他在哪里', parts: [
+      { k: 'identity', t: '我是谁', ph: '自报名字与身份：我是谁、在这本书里是什么人',
+        ask: '自报名字与身份，一句话讲清楚我是谁、在这本书里是什么人。' },
+      { k: 'scene', t: '这本书的情景', ph: '这个故事发生在什么时候、什么地方、正在发生什么事',
+        ask: '这本书的情景：故事发生在什么时候、什么地方、正在发生什么事。' },
+      { k: 'surroundings', t: '我周遭的环境', ph: '身边有什么人、什么声音、什么光线、什么味道',
+        ask: '我周遭的环境：身边有什么、什么声音、什么光线、什么气味，写得让人看得见。' },
+      { k: 'action', t: '我现在的行为', ph: '镜头前这一刻他正在做什么',
+        ask: '我现在的行为：镜头前这一刻我正在做的事，一个具体的动作，不是笼统的「我在努力」。' } ] },
+    { g: '他心里的事', parts: [
+      { k: 'mindset', t: '我的心态', ph: '此刻心里是什么状态：焦虑、笃定、不甘、疲惫…',
+        ask: '我的心态：此刻心里是什么状态，用感觉讲，不要用形容词堆。' },
+      { k: 'past', t: '我怎么走到这一步', ph: '很短的前史：以前是什么样、中间发生过什么事',
+        ask: '我怎么走到这一步：很短的前史，以前是什么样、中间发生过什么，一两句就好。' },
+      { k: 'conflict', t: '我卡在哪里', ph: '最难的是什么、我在跟什么较劲——没有这一段，自述会很平',
+        ask: '我卡在哪里：最难的是什么、我在跟什么较劲。这一段是整支影片的张力来源，一定要具体。' },
+      { k: 'relation', t: '我身边的人', ph: '书里跟我有关系的人：谁支持我、谁挡我、我欠谁一句话',
+        ask: '我身边的人：书里跟我有关系的人，谁支持我、谁挡着我、我欠谁一句话。有名字就点名字。' },
+      { k: 'thought', t: '我的想法', ph: '我怎么看这件事、怎么看我自己',
+        ask: '我的想法：我怎么看这件事、怎么看我自己，可以带一点自嘲或不服气。' },
+      { k: 'turn', t: '我后来明白了什么', ph: '这本书真正在讲的道理，从我的经历里长出来',
+        ask: '我后来明白了什么：把这本书真正想讲的道理，从我自己的经历里讲出来，是体会不是说教，不要剧透结局。' } ] },
+    { g: '收尾', parts: [
+      { k: 'plan', t: '我接下来要做什么', ph: '我打算怎么做，下一步是什么',
+        ask: '我接下来要做什么：具体的下一步，讲得出来、做得到。' },
+      { k: 'line', t: '我最想说的一句话', ph: '短、能当封面字、能被截图转发的一句',
+        ask: '我最想说的一句话：短，二十字以内，能当封面字、能被截图转发。' },
+      { k: 'cta', t: '给看到这里的你', ph: '把观众引回这本书：你如果也在…，这本书写的就是这件事',
+        ask: '给看到这里的你：把观众引回这本书，「你如果也在⋯⋯，这本书写的就是这件事」，一句话，不要硬推销。' } ] }
   ];
+  const INTRO_PARTS = INTRO_GROUPS.reduce((a, g) => a.concat(g.parts), []);
   window.ROLE_INTRO_PARTS = INTRO_PARTS;
+
+  /* 影片长度：中文口播大约每秒 4.5 个字，长度直接决定这支影片多少钱
+   * （数字人按秒计费），所以在写稿前就选，而不是写完再删。 */
+  const INTRO_LENGTHS = [
+    { id: '30', t: '30 秒 · 约 135 字', note: '一个点讲透，最省钱，适合先试水温' },
+    { id: '60', t: '60 秒 · 约 270 字', note: '预设。够讲完情景、心里的事与收尾' },
+    { id: '90', t: '90 秒 · 约 400 字', note: '人物复杂、故事线长的书才需要' }
+  ];
+  window.ROLE_INTRO_LENGTHS = INTRO_LENGTHS;
 
   VIEWS.roles = function () {
     const p = STORE.current;
@@ -5183,9 +5238,15 @@ window.VIEWS = window.VIEWS || {};
       <div class="explain" style="margin:0;border-left-color:var(--violet)">
         <div class="ex-r"><span class="ex-k">跟流水线的差别</span><span>「一键生成短视频」是<b>主理人</b>用同一张脸讲三十支书评；
           这一页是<b>书里的人</b>自己出来讲话，男主角、女主角、其他主要人物各是一个人、各一张脸、各一个声音。</span></div>
-        <div class="ex-r"><span class="ex-k">他会讲什么</span><span>固定讲六件事：<b>这本书的情景</b>、<b>他的心态</b>、<b>他现在在做什么</b>、
-          <b>周遭的环境</b>、<b>他的想法</b>、<b>他接下来要做什么</b>。六段都可以自己改。</span></div>
-        <div class="ex-r"><span class="ex-k">三步</span><span>①让 AI 从书里读出人物 → ②生成定妆照（这是他的脸）＋写自述稿 → ③生成自述短片。</span></div>
+        <div class="ex-r"><span class="ex-k">他会讲什么</span><span>照一支影片实际念出来的顺序分成四块：
+          <b>开场钩子</b> → <b>他是谁、在哪里</b>（我是谁 / 这本书的情景 / 周遭的环境 / 现在的行为）→
+          <b>他心里的事</b>（心态 / 怎么走到这一步 / 卡在哪里 / 身边的人 / 我的想法 / 后来明白了什么）→
+          <b>收尾</b>（接下来要做什么 / 最想说的一句话 / 给看到这里的你）。每一段都可以改，留空就不会念到。</span></div>
+        <div class="ex-r"><span class="ex-k">为什么不只讲此刻</span><span>只讲「现在在做什么、心里怎么想」的自述会很平，没有张力就没有人看完。
+          所以补上<b>前史</b>与<b>卡在哪里</b>撑起张力，<b>身边的人</b>让同一本书的几个人物互相提到对方、几支影片像同一个故事，
+          <b>后来明白了什么</b>把这本书的观点落在人身上，<b>最后一句</b>把人带回这本书。</span></div>
+        <div class="ex-r"><span class="ex-k">三步</span><span>①让 AI 从书里读出人物 → ②生成定妆照（这是他的脸）＋写自述稿 → ③生成自述短片。
+          写稿前先挑<b>影片长度</b>与<b>念的口吻</b>——长度直接决定这支影片多贵。</span></div>
         <div class="ex-r"><span class="ex-k">花多少</span><span>读人物几乎不花钱；定妆照一张约 <b>US$0.03-0.07</b>；
           真正贵的是最后生成影片那一步，一支约 <b>US$1-3</b>，而且会占掉一支月额度。前两步随便试，第三步才要想一下。</span></div>
       </div>
@@ -5254,22 +5315,37 @@ window.VIEWS = window.VIEWS || {};
         <textarea class="input" data-act="edit-char" data-i="${i}" data-k="look" rows="3"
           placeholder="年龄、性别、脸型、发型、穿着、神情、时代感…越具体越像">${esc(c.look || '')}</textarea></div>
 
+      <!-- 这两个设定不会被念出来，但都得在写稿前决定：
+           长度决定 AI 写多少字，也就决定这支影片多贵；口吻决定他怎么讲话，
+           男主角跟女主角用同一个语气，几支影片放在一起会像同一个人。 -->
+      <div class="row2" style="margin-bottom:10px">
+        <div class="field"><div class="label">影片长度<span class="hint" style="margin-left:6px;font-weight:400">越长越贵</span></div>
+          <select class="input" data-act="char-len" data-i="${i}">
+            ${INTRO_LENGTHS.map(x => `<option value="${x.id}" ${String(c.introLength || '60') === x.id ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}
+          </select></div>
+        <div class="field"><div class="label">念的口吻</div>
+          <input class="input" data-act="edit-char" data-i="${i}" data-k="introTone" value="${esc(c.introTone || '')}"
+            placeholder="低沉、压着火／轻快带笑／疲惫但温柔"></div>
+      </div>
+
       <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-sm" data-act="gen-char-portrait" data-i="${i}">${c.portraitUrl ? '重生成定妆照' : '✨ 生成定妆照'}</button>
         <button class="btn btn-sm btn-primary" data-act="ai-char-intro" data-i="${i}">✨ 写自述稿</button>
       </div>
 
-      <!-- 六段折叠起来：一张卡上六个输入框会把整张卡拉得很长，
+      <!-- 分段折叠起来：一张卡上十几个输入框会把整张卡拉得很长，
            平常看的是下面那篇组好的稿子，要逐段改的时候才展开。
            已经写过内容的就预设展开，不然 AI 写完看不到东西。 -->
       <details class="adv" style="margin-bottom:12px" ${INTRO_PARTS.some(x => (intro[x.k] || '').trim()) ? 'open' : ''}>
-        <summary>自述稿的六段<span class="hint" style="font-weight:400">情景／心态／行为／环境／想法／接下来要做什么</span></summary>
+        <summary>自述稿的 ${INTRO_PARTS.length} 段<span class="hint" style="font-weight:400">钩子／他是谁、在哪里／他心里的事／收尾——留空的段落不会念到</span></summary>
         <div class="adv-b">
-          <div class="char-intro-parts" data-for="${i}">${INTRO_PARTS.map(part => `
-            <div class="field" style="margin-bottom:8px"><div class="label">${part.t}</div>
-              <textarea class="input" data-act="edit-char-intro" data-i="${i}" data-k="${part.k}" rows="2"
-                placeholder="${esc(part.ph)}">${esc(intro[part.k] || '')}</textarea></div>`).join('')}</div>
-          <button class="btn btn-sm" data-act="compose-intro" data-i="${i}">用这六段重新组稿</button>
+          <div class="char-intro-parts" data-for="${i}">${INTRO_GROUPS.map(group => `
+            <div class="label" style="margin:14px 0 8px;color:var(--violet-2)">${group.g}</div>
+            ${group.parts.map(part => `
+              <div class="field" style="margin-bottom:8px"><div class="label">${part.t}</div>
+                <textarea class="input" data-act="edit-char-intro" data-i="${i}" data-k="${part.k}" rows="2"
+                  placeholder="${esc(part.ph)}">${esc(intro[part.k] || '')}</textarea></div>`).join('')}`).join('')}</div>
+          <button class="btn btn-sm" data-act="compose-intro" data-i="${i}">用这几段重新组稿</button>
         </div>
       </details>
       <div class="char-intro-status" data-for="${i}"></div>
@@ -6004,14 +6080,16 @@ window.TOUR = (function () {
     if (el.dataset.act === 'video-format') {
       setVideoFormat(el.dataset.id, el.value, true);
     }
-    /* 人物自述：角色定位与声音都是选完就存，不用另外按储存 */
-    if (el.dataset.act === 'char-cast' || el.dataset.act === 'char-voice') {
+    /* 人物自述：角色定位、影片长度与声音都是选完就存，不用另外按储存 */
+    if (el.dataset.act === 'char-cast' || el.dataset.act === 'char-voice' || el.dataset.act === 'char-len') {
       const p = STORE.current;
       const c = p && (p.characters || [])[+el.dataset.i];
       if (c) {
         if (el.dataset.act === 'char-cast') c.cast = el.value;
+        else if (el.dataset.act === 'char-len') c.introLength = el.value;
         else { c.voiceId = el.value; c.voiceName = (HG.voices.find(v => v.id === el.value) || {}).name || ''; }
         STORE.update(); render();
+        if (el.dataset.act === 'char-len') toast('长度已设定，下次按「写自述稿」会照这个字数写', 'ok');
       }
       return;
     }
@@ -8276,8 +8354,8 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
                note: '一次只生一张，价钱看档位与模型，大约 US$0.03-0.15。' },
     cast:    { t: 'AI 读出书里的主要人物', kind: 'text', def: 'auto', est: { in: 1600, out: 2200 },
                note: '「书中人物自述」用的：读这本书抓出男主角、女主角与其他主要人物，输出很短，很便宜。' },
-    intro:   { t: 'AI 写人物自述稿', kind: 'text', def: 'auto', est: { in: 1500, out: 1800 },
-               note: '一次只写一个人物的自述稿（情景／心态／行为／环境／想法／接下来要做什么），输出很短，很便宜。' }
+    intro:   { t: 'AI 写人物自述稿', kind: 'text', def: 'auto', est: { in: 1800, out: 2400 },
+               note: '一次只写一个人物的自述稿（钩子／他是谁、在哪里／他心里的事／收尾，十几段加一篇成稿），输出不长，很便宜。' }
   };
 
   /* 「策略」不是模型，是「让平台自己挑」。文字与图像两边的可选档位不一样：
@@ -8995,8 +9073,8 @@ ${ctx}
    *
    *   rolesLoadVoices()    进这一页时把声音清单抓回来（唯读、免费）
    *   aiReadCast()         读书 → 抓出男主角／女主角／其他主要人物
-   *   aiCharIntro(i)       写这个人物的自述稿，固定六段
-   *   composeIntro(i)      六段 → 拼成要念的台词（纯拼接，不花钱）
+   *   aiCharIntro(i)       写这个人物的自述稿（分段结构见 views-roles.js）
+   *   composeIntro(i)      各段 → 拼成要念的台词（纯拼接，不花钱）
    *   charVideoConfirm / doCharVideo / pollCharVideo   真的生成影片
    *
    * 会花钱的只有两处：定妆照（很便宜，共用「创意分镜」那支函式）与最后
@@ -9105,9 +9183,10 @@ ${ctx}
     }
   }
 
-  /* 自述稿：固定讲六件事——这本书的情景、他的心态、他现在的行为、
-   * 周遭的环境、他的想法、他接下来要做什么。六段分开存，是为了让人
-   * 可以只改其中一段再重新组稿，而不是每次都要重写一整篇。 */
+  /* 自述稿：段落的定义、顺序与给模型的写作指示都在 views-roles.js 的
+   * INTRO_GROUPS 里，这里只是把它翻成提示词——介面与提示词共用同一份
+   * 定义，以后加一段、改一段只要改那边，两边不会走岔。
+   * 分段存而不是存一整篇，是为了让人只改其中一段就能重新组稿。 */
   async function aiCharIntro(i) {
     const p = STORE.current;
     const c = p && (p.characters || [])[i];
@@ -9123,12 +9202,26 @@ ${ctx}
     if (!pick) return toast('已取消，没有写自述稿', 'warn');
     setMsg('✨ AI 正在替这个人物写自述稿，约 10-30 秒…');
 
-    const prompt = `用第一人称，替这本书里的这个人物写一段「自我介绍」的口播稿，之后会由数字人对着镜头念出来。
+    /* 段落、顺序与每段的写作指示都从 INTRO_PARTS 长出来，
+     * 介面上看到几段、模型就写几段，不会有介面加了一栏、
+     * 模型却不知道要写的情况。 */
+    const parts = window.ROLE_INTRO_PARTS || [];
+    const secs = Number(c.introLength || 60);
+    const words = Math.round(secs * 4.5);        // 中文口播约每秒 4.5 字
+    const per = Math.max(20, Math.round(words / Math.max(1, parts.length)));
+    // 同一本书的其他人物：写「我身边的人」时要点得出名字，才像同一个故事
+    const others = (p.characters || [])
+      .filter(x => x !== c && (x.name || '').trim())
+      .map(x => `${x.name}${x.cast ? '（' + x.cast + '）' : ''}`)
+      .slice(0, 5).join('、');
+
+    const prompt = `用第一人称，替这本书里的这个人物写一支「自我介绍」短视频的口播稿，之后会由数字人用他的脸和声音对着镜头念出来。
 
 【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
 【摘要】${p.summary || '（未提供）'}
 【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
 【金句】${(p.quotes || []).slice(0, 4).join('；') || '（未提供）'}
+【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
 
 【这个人物】
 名字：${c.name || '（未命名）'}
@@ -9136,30 +9229,29 @@ ${ctx}
 在书里是谁：${c.role || '（未提供）'}
 长什么样：${c.look || '（未提供）'}
 代表场景：${c.scene || '（未提供）'}
+${others ? '书里其他人物：' + others : ''}
+念的口吻：${(c.introTone || '').trim() || '（没有指定，你按这个人物的性格自己定，但要有明确的情绪，不要平铺直叙）'}
 
-要写的六段，每段 40-70 字，全部用「我」开头的第一人称，像人在讲话，不要书面语：
-1. scene：这本书的情景——我在哪个故事里，这本书讲的是什么处境
-2. mindset：我现在的心态——此刻我心里是什么状态
-3. action：我现在的行为——镜头前这一刻我正在做什么
-4. surroundings：我周遭的环境——我身边有什么、什么声音、什么光线
-5. thought：我的想法——我怎么看这件事、怎么看我自己
-6. plan：我接下来要做什么——我打算怎么做
+要写的 ${parts.length} 段，每段约 ${per} 字，全部第一人称，像人在讲话，不要书面语、不要成语堆砌：
+${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
 
-另外把六段串成一篇可以直接念的稿子 script：
-- 开头先自报身份（「我是⋯⋯」），结尾用一句话把观众引回这本书
-- 全篇 220-300 字，一个人从头讲到尾，不要有第二个人说话、不要旁白、不要舞台指示
-- 不要出现「第一段」「接下来」这种结构词，就是一段自然的独白
-- 只讲书里有依据的事，不要编造书里没有的情节
+再把这些段落串成一篇可以直接念的稿子 script：
+- 顺序就是上面的顺序，串起来要顺，不要出现「第一段」「接下来」这种结构词
+- 全篇约 ${words} 字（这支影片要控制在 ${secs} 秒左右，字数超了影片会变长、费用会变高）
+- 从头到尾只有这一个人在讲话：不要第二个人、不要旁白、不要舞台指示、不要括号里的动作说明
+- 只讲书里真的有依据的事，不要编造书里没有的情节；不要剧透结局
+- 讲的是这个人物自己的经历与感受，不是在评论这本书，更不要说「这本书告诉我们」
+- 最后一句把人带回这本书，但不要像广告
 
-只输出这个 JSON：
-{"scene":"","mindset":"","action":"","surroundings":"","thought":"","plan":"","script":""}`;
+只输出这个 JSON（每个栏位都要有内容）：
+{${parts.map(x => `"${x.k}":""`).join(',')},"script":""}`;
 
     try {
       const r = await hgFetchSlow('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.assign({
           prompt, system: '你是短视频编剧，只输出 JSON，不要任何解释文字。',
-          maxTokens: 1800, wantJson: true
+          maxTokens: 2800, wantJson: true
         }, pick))
       }, 60000);
       const out = aiJson(r.content);
@@ -9177,15 +9269,26 @@ ${ctx}
     }
   }
 
-  /* 六段 → 要念的台词。纯拼接，不呼叫模型、不花钱，
-   * 所以改完其中一段可以随便重按。 */
+  /* 各段 → 要念的台词。纯拼接，不呼叫模型、不花钱，
+   * 所以改完其中一段可以随便重按。留空的段落直接跳过——
+   * 有人只想讲钩子＋一句话，那也是一支能用的影片。 */
   function composeIntroText(c) {
     const it = c.intro || {};
-    const parts = (window.ROLE_INTRO_PARTS || []).map(x => String(it[x.k] || '').trim()).filter(Boolean);
-    if (!parts.length) return '';
+    const list = window.ROLE_INTRO_PARTS || [];
     const name = (c.name || '').trim();
-    const head = name ? `我是${name}${(c.role || '').trim() ? '，' + c.role.trim() : ''}。` : '';
-    return [head].concat(parts).filter(Boolean).join('\n');
+    /* 「我是谁」那一段没写时自动补一句自报身份，但位置照原顺序摆——
+     * 补在钩子后面，不要跑到最前面去把钩子挤掉（第一句就自报名字，
+     * 是短视频最快被划走的开头）。写过就不补，免得念两次。 */
+    const fallbackId = name ? `我是${name}${(c.role || '').trim() ? '，' + c.role.trim() : ''}。` : '';
+    let real = 0;
+    const lines = [];
+    list.forEach(x => {
+      let v = String(it[x.k] || '').trim();
+      if (v) real++;
+      else if (x.k === 'identity') v = fallbackId;
+      if (v) lines.push(v);
+    });
+    return real ? lines.join('\n') : '';
   }
 
   function composeIntro(i) {
@@ -9193,10 +9296,10 @@ ${ctx}
     const c = p && (p.characters || [])[i];
     if (!c) return;
     const text = composeIntroText(c);
-    if (!text) return toast('六段都还是空的，先按「✨ 写自述稿」或自己填几段', 'warn');
+    if (!text) return toast('每一段都还是空的，先按「✨ 写自述稿」或自己填几段', 'warn');
     c.introScript = text;
     STORE.update(); render();
-    toast('已用这六段重新组稿，下面可以再改', 'ok');
+    toast('已重新组稿，下面可以再改', 'ok');
   }
 
   /* 生成前先确认——这一步是真的花钱，而且占一支月额度 */
@@ -9229,7 +9332,8 @@ ${ctx}
       </div>
       <div class="field"><div class="label">实际要念的台词（可以改）</div>
         <textarea class="input" id="cv-text" style="min-height:150px;line-height:1.75">${esc(text)}</textarea></div>
-      <div class="hint">约 ${text.length} 字。太长会让影片变长、费用变高，可以自行删减。</div>`,
+      <div class="hint">约 ${text.length} 字，念起来约 ${Math.max(1, Math.round(text.length / 4.5))} 秒，
+        估算约 US$${(text.length / 4.5 * 0.05).toFixed(2)}（按 US$0.05/秒 估）。太长就在这里删几句，删掉的字就是省下的钱。</div>`,
       `<button class="btn" onclick="UI.closeModal()">取消</button>
        <button class="btn btn-primary" data-modal-act="confirm-char-video" data-pid="${esc(p.id)}" data-cid="${esc(cid)}">确认生成（会扣额度）</button>`);
   }
