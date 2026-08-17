@@ -7403,7 +7403,7 @@ window.TOUR = (function () {
       result.innerHTML = '<div class="hint">已送出，生成中，通常 1-3 分钟…</div>';
       hgVideoAdd({ id: r.videoId, at: Date.now(), status: 'pending', text: snippet, via: r.via || null });
       hgRenderVideoHistory();
-      hgPoll(r.videoId, result);
+      hgPoll(r.videoId, result, r.via);
     } catch (e) {
       HG.busy = false;
       result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`;
@@ -7413,12 +7413,16 @@ window.TOUR = (function () {
   /* result 可以是 null：从生成记录续追时没有那个容器，状态只写回记录。
    * 轮询不再绑在容器活着与否上——绑了就变成「切一下页面就不再更新」，
    * 影片其实照做照扣钱。 */
-  function hgPoll(videoId, result) {
+  function hgPoll(videoId, result, via) {
     hgPolling[videoId] = true;
     const paint = html => { if (result && document.body.contains(result)) result.innerHTML = html; };
+    /* 两条路的任务编号是两套东西，拿错地方查只会得到「not found」。
+     * via 是送出时服务端告诉我们的，记录里也存了一份，重整回来照样对。 */
+    const rec = hgVideos().find(x => x.id === videoId);
+    const svc = (via || (rec && rec.via)) === 'model-router' ? 'mr-task' : 'heygen-video';
     const tick = async () => {
       try {
-        const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(videoId));
+        const s = await hgFetch('/api/status?service=' + svc + '&id=' + encodeURIComponent(videoId));
         if (s.status === 'completed' && s.videoUrl) {
           HG.busy = false; delete hgPolling[videoId];
           hgVideoPatch(videoId, { status: 'done', url: s.videoUrl, thumb: s.thumbnailUrl || null, duration: s.duration || null });
