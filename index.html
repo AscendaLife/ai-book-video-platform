@@ -5909,8 +5909,12 @@ window.TOUR = (function () {
       }
       case 'hg-pick-voice': {
         HG.voiceId = el.dataset.id;
-        hgSaveChoice(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
+        hgSaveChoice(); hgRenderVoiceList(); hgRenderGenerate(); hgRenderChoiceSummary();
         toast('已选定这个声音', 'ok'); return;
+      }
+      case 'hg-voice-filter': {
+        HG.voiceFilter = el.dataset.k || 'all';
+        hgRenderVoices(); return;
       }
       case 'ai-scene-image': return aiSceneImage(el.dataset.id);
       /* ---- 提示词直接生成短片（不受固定场景限制）---- */
@@ -6144,6 +6148,13 @@ window.TOUR = (function () {
     }
   });
   $('#view').addEventListener('input', e => {
+    /* 声音搜寻：只重画清单那一块，搜寻框本身不动，不然每打一个字
+     * 焦点就掉回去，一百个声音里根本搜不到东西。 */
+    if (e.target.id === 'hg-voice-search') {
+      HG.voiceQuery = e.target.value;
+      hgRenderVoiceList();
+      return;
+    }
     // 提示词是使用者随时会改的，边打边存，不用另外按储存
     // 角色的名字/身份/外貌也是边打边存，跟提示词一样不重画，免得打断打字
     const ce = e.target.closest('[data-act="edit-char"]');
@@ -6447,7 +6458,7 @@ window.TOUR = (function () {
     mode: 'avatar',      // 'avatar' 用现成形象 / 'image' 用刚上传的照片
     avatarId: null, assetId: null, assetPreview: null,
     voiceId: null, text: '',
-    avatars: [], voices: []
+    avatars: [], voices: [], voiceFilter: 'all', voiceQuery: ''
   };
   /* 部署在 Vercel、一直开着的数字人生成服务，金钥存在 Vercel 项目的
    * 环境变量里——网页上不再需要「服务网址」「API Key」这些欄位，
@@ -7072,24 +7083,76 @@ window.TOUR = (function () {
     }
   }
 
-  /* ---- 声音：挑现成的，或上传录音克隆 ---- */
+  /* ---- 声音：挑现成的，或上传录音克隆 ----
+   *
+   * 以前这里写死只显示前 9 个，而服务端又用白名单只放行三个台湾腔，
+   * 使用者反映「声音太少了」——实际上语音服务能讲中文的有一百个。
+   * 现在服务端把全部拿回来并标上腔调，这里按腔调分组 + 可搜寻。
+   *
+   * 粤语那两个一定要单独标出来：名字叫 HiuMaan / HiuGaai，从名字完全
+   * 看不出是粤语，选到了整支影片都会是粤语，钱就白花了。 */
+  const VOICE_GROUPS = [
+    ['tw', '台湾腔', '微软官方 zh-TW。咬字最标准，但语气偏平，长句容易听起来僵。'],
+    ['multi', '语气自然', '别家模型的声音，起伏和停顿明显自然得多，讲书最适合——但腔调不保证，一定要先试听。'],
+    ['cn', '大陆腔', '微软官方 zh-CN。'],
+    ['other', '其他中文', '供应商没标腔调，先试听再决定。'],
+    ['yue', '粤语', '⚠ 这是粤语不是国语。选了整支影片都会是粤语。']
+  ];
+
+  function hgVoiceMatch(v) {
+    if (HG.voiceFilter && HG.voiceFilter !== 'all' && v.accent !== HG.voiceFilter) return false;
+    const q = (HG.voiceQuery || '').trim().toLowerCase();
+    return !q || (v.name || '').toLowerCase().indexOf(q) >= 0;
+  }
+
+  function hgVoiceListHtml() {
+    const list = HG.voices.filter(hgVoiceMatch);
+    if (!list.length) return '<div class="hint" style="padding:14px 2px">没有符合的声音。换个分类，或把搜寻字清掉。</div>';
+    return `<div class="grid g3">${list.map(v => {
+      const g = VOICE_GROUPS.find(x => x[0] === v.accent);
+      const on = v.id === HG.voiceId;
+      return `<div class="hg-avatar ${on ? 'on' : ''}" data-act="hg-pick-voice" data-id="${esc(v.id)}"
+          style="border:1px solid ${on ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:10px;cursor:pointer">
+        <div style="font-size:15px;font-weight:700">${esc(v.name)}</div>
+        <div class="hint" style="margin-top:3px">${esc(g ? g[1] : (v.language || ''))}${v.gender && v.gender !== 'unknown' ? ' · ' + esc(v.gender) : ''}</div>
+        ${v.preview ? `<audio src="${esc(v.preview)}" preload="none" controls
+            style="width:100%;height:28px;margin-top:6px" onclick="event.stopPropagation()"></audio>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  /* 只重画清单、不动搜寻框——不然每打一个字焦点就掉，根本没办法搜。 */
+  function hgRenderVoiceList() {
+    const box = $('#hg-voice-list');
+    if (box) box.innerHTML = hgVoiceListHtml();
+  }
+
   function hgRenderVoices() {
     const panel = $('#hg-voice-panel');
     if (!panel) return;
+    if (!HG.voiceFilter) HG.voiceFilter = 'all';
+    const n = k => HG.voices.filter(v => v.accent === k).length;
+    const cur = VOICE_GROUPS.find(g => g[0] === HG.voiceFilter);
     panel.innerHTML = `
-      <div class="grid g3" style="margin-bottom:12px">
-        ${HG.voices.slice(0, 9).map(v => `<div class="hg-avatar ${v.id === HG.voiceId ? 'on' : ''}" data-act="hg-pick-voice" data-id="${esc(v.id)}"
-            style="border:1px solid ${v.id === HG.voiceId ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:10px;cursor:pointer">
-          <div style="font-size:15px;font-weight:700">${esc(v.name)}</div>
-          <div class="hint" style="margin-top:3px">${esc(v.language || '')}${v.gender ? ' · ' + esc(v.gender) : ''}</div>
-          ${v.preview ? `<audio src="${esc(v.preview)}" controls style="width:100%;height:28px;margin-top:6px" onclick="event.stopPropagation()"></audio>` : ''}
-        </div>`).join('')}
+      <div class="chip-list" style="margin-bottom:8px">
+        <span class="tag ${HG.voiceFilter === 'all' ? 'v' : ''}" style="cursor:pointer"
+          data-act="hg-voice-filter" data-k="all">全部 ${HG.voices.length}</span>
+        ${VOICE_GROUPS.filter(g => n(g[0])).map(g => `<span class="tag ${HG.voiceFilter === g[0] ? 'v' : ''}"
+          style="cursor:pointer" data-act="hg-voice-filter" data-k="${g[0]}">${g[1]} ${n(g[0])}</span>`).join('')}
+      </div>
+      ${cur ? `<div class="hint" style="margin-bottom:8px">${esc(cur[2])}</div>` : ''}
+      <input class="input" id="hg-voice-search" placeholder="搜声音名字…"
+        value="${esc(HG.voiceQuery || '')}" style="margin-bottom:10px">
+      <div id="hg-voice-list" style="max-height:430px;overflow-y:auto;padding-right:4px">${hgVoiceListHtml()}</div>
+      <div class="grid g3" style="margin-top:10px">
         <div class="hg-avatar" data-act="hg-upload-audio-btn"
             style="border:1px dashed var(--line-2);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90px">
           <div style="font-size:24px;color:var(--txt-3)">＋</div><div style="font-size:14px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
         </div>
       </div>
-      <div class="hint">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音，克隆完成后会自动加进上面的列表。上传免费，<b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
+      <div class="hint" style="margin-top:10px">试听是免费的，多听几个再决定——声音换了要重新生成影片才听得到差别，已经做好的不会变。
+        上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音可以克隆自己的声音，上传免费，
+        <b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
   }
 
   async function hgUploadAudio(file) {
