@@ -6302,7 +6302,12 @@ window.TOUR = (function () {
     }
     if (a === 'new-proj-from-del') { closeModal(); return newProjectModal(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
-    if (a === 'confirm-prompt-video') { const i = +el.dataset.i; closeModal(); return doPromptVideo(i); }
+    if (a === 'confirm-prompt-video') {
+      const i = +el.dataset.i;
+      /* 一定要在 closeModal 之前读——关掉弹窗 DOM 就没了，读到的会是 null。 */
+      const opt = { model: ($('#dv-model') || {}).value, duration: +(($('#dv-dur') || {}).value) || undefined };
+      closeModal(); return doPromptVideo(i, opt);
+    }
     if (a === 'ai-rewrite') return aiRewriteScript(el.dataset.id);
     if (a === 'create-proj') createProject();
     if (a === 'ig-do') return igDoPublish(el.dataset.id, el);
@@ -9969,7 +9974,17 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     }
   }
 
-  /* 生成前先确认——这一步是真的花钱 */
+  /* 场景短片的模型选项。清单是探测 DeeVid 的 text-video/models 拿到的，
+   * 官方开发者文件只写了一条最便宜的路径。
+   * 预设仍然是 Fast V2.0 / 5 秒——同一颗按钮，不能因为多了选项就默默
+   * 变贵好几倍。要好画质、要更长，自己往下选。 */
+  const DV_MODELS = [
+    ['Fast V2.0', '快速', [5, 10], '720p', '最便宜，草稿和试拍用这个'],
+    ['Quality V2.0', '高画质', [5, 10], '1080p', '画质好一些，贵一些'],
+    ['Master V2.0', '旗舰 · 固定 8 秒', [8], '1080p', '只能 8 秒，不能调'],
+    ['Master 4.5', '旗舰 · 最长 30 秒', [5, 10, 15, 20, 30], '720p', '目前最长的，一支抵好几支，也最贵']
+  ];
+
   function promptVideoConfirm(i) {
     const p = STORE.current;
     const pr = p && (p.videoPrompts || [])[i];
@@ -9978,14 +9993,32 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     if (!(pr.text || '').trim()) return toast('提示词是空的，先写点东西', 'warn');
 
     modal('确定要生成这支短片吗？',
-      `<div style="font-size:15.5px;line-height:1.9">这会真的呼叫外部服务生成一支约 5 秒的影片，从额度扣钱，送出后无法撤销。<br><br>
-        <b>用的提示词：</b><br>
+      `<div style="font-size:15.5px;line-height:1.9">这会真的呼叫外部服务生成一支影片，从额度扣钱，送出后无法撤销。
+        <b>越长越贵、画质越高越贵</b>，草稿阶段用预设的就好。</div>
+      <div class="field" style="margin-top:14px"><div class="label">画质</div>
+        <select class="input" id="dv-model">
+          ${DV_MODELS.map((m, k) => `<option value="${esc(m[0])}" ${k === 0 ? 'selected' : ''}>${esc(m[1])} —— ${esc(m[4])}</option>`).join('')}
+        </select></div>
+      <div class="field" style="margin-top:10px"><div class="label">长度</div>
+        <select class="input" id="dv-dur"></select></div>
+      <div style="margin-top:14px"><b>用的提示词：</b><br>
         <span style="color:var(--txt-2)">${esc(pr.text)}</span></div>`,
       `<button class="btn" onclick="UI.closeModal()">取消</button>
        <button class="btn btn-primary" data-modal-act="confirm-prompt-video" data-i="${i}">确认生成（会扣额度）</button>`);
-  }
 
-  async function doPromptVideo(i) {
+    /* 每个模型支援的秒数不一样，选完模型才知道能选几秒——写死一份
+     * 秒数清单送上去只会被上游打回。 */
+    const ms = $('#dv-model'), ds = $('#dv-dur');
+    if (!ms || !ds) return;
+    const sync = () => {
+      const m = DV_MODELS.find(x => x[0] === ms.value) || DV_MODELS[0];
+      ds.innerHTML = m[2].map(s => `<option value="${s}">${s} 秒</option>`).join('');
+      ds.disabled = m[2].length < 2;
+    };
+    ms.addEventListener('change', sync);
+    sync();
+  }
+  async function doPromptVideo(i, opt) {
     const p = STORE.current;
     const pr = p && (p.videoPrompts || [])[i];
     const slot = $(`.prompt-video[data-for="${i}"]`);
@@ -9995,7 +10028,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     try {
       const r = await hgFetch('/api/deevid/video', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: pr.text })
+        body: JSON.stringify(Object.assign({ prompt: pr.text }, opt || {}))
       });
       if (!r.taskId) throw new Error('服务没有回传任务 ID');
       slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">生成中，通常 1-2 分钟…</div>';
