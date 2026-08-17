@@ -6013,6 +6013,13 @@ window.TOUR = (function () {
         const hasSubject = HG.mode === 'image' ? HG.assetId : HG.avatarId;
         if (!hasSubject || !HG.voiceId || !textEl || !textEl.value.trim()) return toast('请先选好形象、声音，并填台词', 'warn');
         HG.text = textEl.value.trim();
+        /* 余额不够就先挡下来。送出去要等 1-3 分钟才被打回，讯息还是
+         * 一句看不懂的英文——不如在这里讲清楚。 */
+        const est = hgEstimate(HG.text);
+        if (HGW.balance != null && HGW.balance < est.usd) {
+          return toast('余额只剩 US$' + HGW.balance.toFixed(2) + '，这一支估要 US$' + est.usd.toFixed(2)
+            + '，先去 app.heygen.com 的 Billing 储值 API credits', 'err');
+        }
         return modal('确定要真的生成吗？',
           '<div style="font-size:15.5px">这会真的呼叫外部数字人生成服务产出一支影片，从你的额度扣钱（约 US$1-3，按秒计费），送出后无法撤销、无法退款。</div>',
           `<button class="btn" onclick="UI.closeModal()">取消</button>
@@ -7258,10 +7265,49 @@ window.TOUR = (function () {
         >${esc(HG.text || '')}</textarea>
         <div class="hint" style="margin-top:6px">影片按秒计费，稿子越长越贵。先用两三句话试一支，确认形象和声音搭起来满意，再写长的。</div></div>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成这一支（真的花钱）</button>
+      <div id="hg-wallet" style="margin-top:10px">${hgWalletHtml()}</div>
       <div id="hg-result" style="margin-top:14px"></div>
       <div id="hg-vhistory"></div>`;
     hgRenderVideoHistory();
     hgResumePending();
+    hgLoadWallet();
+  }
+
+  /* ---- 数位人服务的真实余额 ----
+   *
+   * 左下角那条「本月生成额度」是我们自己的支数计数器，跟钱没有关系。
+   * 之前它显示 279/500、看起来还有一大半，实际上钱包只剩 US$0.02，
+   * 按下去就是失败——画面上完全看不出来。真正会挡住人的是这个数字。 */
+  const HGW = { balance: null, at: 0, loading: false };
+
+  async function hgLoadWallet(force) {
+    if (!hgCanWrite()) return;
+    if (HGW.loading) return;
+    if (!force && HGW.at && Date.now() - HGW.at < 60000) return;
+    HGW.loading = true;
+    try {
+      const j = await hgFetch('/api/status?service=hg-wallet');
+      HGW.balance = j.balance;
+      HGW.at = Date.now();
+    } catch (e) {
+      HGW.balance = null;   // 查不到就别显示，不要编一个数字
+    } finally {
+      HGW.loading = false;
+      hgRenderWallet();
+    }
+  }
+
+  function hgWalletHtml() {
+    if (HGW.balance == null) return '';
+    const low = HGW.balance < 1;
+    return `<span class="tag ${low ? 'r' : 'g'}">余额 US$${HGW.balance.toFixed(2)}</span>`
+      + (low ? `<span class="hint" style="margin-left:8px">余额太低，生成会失败。到 app.heygen.com 的 Billing 储值
+           <b>API credits</b>（跟订阅方案是两个池子）</span>` : '');
+  }
+
+  function hgRenderWallet() {
+    const box = $('#hg-wallet');
+    if (box) box.innerHTML = hgWalletHtml();
   }
 
   /* ---- 试生成的影片记录 ----
@@ -7426,6 +7472,7 @@ window.TOUR = (function () {
         if (s.status === 'completed' && s.videoUrl) {
           HG.busy = false; delete hgPolling[videoId];
           hgVideoPatch(videoId, { status: 'done', url: s.videoUrl, thumb: s.thumbnailUrl || null, duration: s.duration || null });
+          hgLoadWallet(true);
           paint(`<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
             <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`);
           return;
