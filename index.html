@@ -5919,6 +5919,7 @@ window.TOUR = (function () {
         hgSaveChoice(); hgRenderVoiceList(); hgRenderGenerate(); hgRenderChoiceSummary();
         toast('已选定这个声音', 'ok'); return;
       }
+      case 'hg-recover': return hgRecover();
       case 'hg-voice-filter': {
         HG.voiceFilter = el.dataset.k || 'all';
         hgRenderVoices(); return;
@@ -7252,8 +7253,123 @@ window.TOUR = (function () {
         >${esc(HG.text || '')}</textarea>
         <div class="hint" style="margin-top:6px">影片按秒计费，稿子越长越贵。先用两三句话试一支，确认形象和声音搭起来满意，再写长的。</div></div>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成这一支（真的花钱）</button>
-      <div id="hg-result" style="margin-top:14px"></div>`;
+      <div id="hg-result" style="margin-top:14px"></div>
+      <div id="hg-vhistory"></div>`;
+    hgRenderVideoHistory();
+    hgResumePending();
   }
+
+  /* ---- 试生成的影片记录 ----
+   *
+   * 以前结果只画在 #hg-result 上，页面一重整、或点了别的东西重画，
+   * 记录就没了——影片钱照花，但你连它生成到哪一步都看不到。形象生成
+   * 那边早就有历史，这里当初漏了。
+   *
+   * 记录存进 STORE，所以：重整还在、隔天回来还在；还没跑完的那几支
+   * 回来会自动接着追踪，不用重送（重送等于再花一次钱）。 */
+  const HGV_MAX = 12;
+
+  function hgVideos() {
+    const p = STORE.s.persona;
+    if (!Array.isArray(p.testVideos)) p.testVideos = [];
+    return p.testVideos;
+  }
+
+  function hgVideoAdd(rec) {
+    const h = hgVideos();
+    h.unshift(rec);
+    if (h.length > HGV_MAX) h.length = HGV_MAX;
+    STORE.update();
+  }
+
+  function hgVideoPatch(id, patch) {
+    const rec = hgVideos().find(x => x.id === id);
+    if (!rec) return;
+    Object.assign(rec, patch);
+    STORE.update();
+    hgRenderVideoHistory();
+  }
+
+  function hgVideoHistoryHtml() {
+    const h = hgVideos();
+    return `<div class="label" style="margin-top:18px">生成记录
+        <span class="hint" style="margin-left:8px;font-weight:400">只留最近 ${HGV_MAX} 支。影片网址约 7 天后失效，要保留请自行下载</span>
+        <button class="btn btn-sm" style="margin-left:auto" data-act="hg-recover">找回之前生成的</button></div>
+      ${h.length ? '' : '<div class="hint" style="padding:10px 2px">还没有记录。这一版之前生成的影片没有存下来，按上面「找回之前生成的」可以从服务端拉回来。</div>'}
+      ${h.map(r => {
+        const when = new Date(r.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const money = r.duration ? ' · 约 US$' + (r.duration * USD_PER_SEC).toFixed(2) : '';
+        const len = r.duration ? Math.round(r.duration) + ' 秒' : '';
+        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)">
+          <div style="flex:0 0 96px">
+            ${r.url
+              ? `<video src="${esc(r.url)}" controls preload="none" ${r.thumb ? `poster="${esc(r.thumb)}"` : ''}
+                   style="width:96px;border-radius:8px;background:#000"></video>`
+              : `<div style="width:96px;height:128px;border-radius:8px;border:1px dashed var(--line-2);
+                   display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--txt-3);text-align:center">${
+                     r.status === 'failed' ? '失败' : '生成中'}</div>`}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;line-height:1.5">${esc(r.text || '')}</div>
+            <div class="hint" style="margin-top:4px">${esc(when)}${len ? ' · ' + len : ''}${money}</div>
+            ${r.status === 'failed'
+              ? `<div class="hint" style="color:var(--red);margin-top:4px">${esc(r.error || '未知原因')}</div>`
+              : r.status === 'pending'
+                ? '<div class="hint" style="color:var(--violet-2);margin-top:4px">生成中，可以离开这一页，回来会接着追踪</div>'
+                : ''}
+          </div>
+        </div>`;
+      }).join('')}`;
+  }
+
+  function hgRenderVideoHistory() {
+    const box = $('#hg-vhistory');
+    if (box) box.innerHTML = hgVideoHistoryHtml();
+  }
+
+  /* 还在生成中的那几支，重新进页面时自动接着轮询。
+   * pollingIds 挡重复：同一支被两个轮询同时追会互相覆盖状态。 */
+  const hgPolling = {};
+  function hgResumePending() {
+    hgVideos().forEach(r => {
+      if (r.status === 'pending' && !hgPolling[r.id]) hgPoll(r.id, null);
+    });
+  }
+
+  /* 从服务端把这个帐号最近生成过的影片拉回来，补进记录。
+   * 之前的版本根本没存过记录，使用者花过钱的影片等于凭空消失——
+   * 服务端那边其实都还查得到，拉回来就是了。 */
+  async function hgRecover() {
+    if (!hgCanWrite()) return hgDemoNotice();
+    toast('正在从服务端找…', 'ok');
+    try {
+      const j = await hgFetch('/api/status?service=heygen-recent&limit=20');
+      const list = j.videos || [];
+      const have = new Set(hgVideos().map(x => x.id));
+      let n = 0;
+      /* 由旧到新塞，最后排出来才是新的在最上面。 */
+      list.slice().reverse().forEach(v => {
+        if (!v.id || have.has(v.id)) return;
+        hgVideoAdd({
+          id: v.id,
+          at: (v.created_at || 0) * 1000 || Date.now(),
+          status: v.status === 'completed' ? 'done' : v.status === 'failed' ? 'failed' : 'pending',
+          text: '（更早生成的，找回来的记录）',
+          url: v.video_url || null,
+          thumb: v.thumbnail_url || null,
+          duration: v.duration || null,
+          error: v.failure_message || null
+        });
+        n++;
+      });
+      hgRenderVideoHistory();
+      hgResumePending();
+      toast(n ? '找回 ' + n + ' 支' : '没有找到记录以外的影片', n ? 'ok' : 'warn');
+    } catch (e) {
+      toast('找不回来：' + e.message, 'err');
+    }
+  }
+
   async function hgDoGenerate() {
     const result = $('#hg-result');
     if (!result) return;
@@ -7265,6 +7381,11 @@ window.TOUR = (function () {
         body: JSON.stringify({ mode: HG.mode, avatarId: HG.avatarId, assetId: HG.assetId, voiceId: HG.voiceId, text: HG.text })
       });
       result.innerHTML = '<div class="hint">已送出，生成中，通常 1-3 分钟…</div>';
+      /* 记录在送出的当下就建立，不是等成功才建——失败的那几支同样
+       * 要留着，不然使用者只会看到「又没了」，不知道失败过几次、为什么。 */
+      hgVideoAdd({ id: r.videoId, at: Date.now(), status: 'pending',
+                   text: (HG.text || '').slice(0, 40) });
+      hgRenderVideoHistory();
       hgPoll(r.videoId, result);
     } catch (e) {
       HG.busy = false;
@@ -7272,26 +7393,33 @@ window.TOUR = (function () {
     }
   }
 
+  /* result 可以是 null：从生成记录续追时没有那个容器，状态只写回记录。
+   * 轮询不再绑在容器活着与否上——绑了就变成「切一下页面就不再更新」，
+   * 影片其实照做照扣钱。 */
   function hgPoll(videoId, result) {
+    hgPolling[videoId] = true;
+    const paint = html => { if (result && document.body.contains(result)) result.innerHTML = html; };
     const tick = async () => {
-      if (!document.body.contains(result)) return; // 使用者已离开这一页，停止轮询
       try {
         const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(videoId));
         if (s.status === 'completed' && s.videoUrl) {
-          HG.busy = false;
-          result.innerHTML = `<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
-            <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`;
+          HG.busy = false; delete hgPolling[videoId];
+          hgVideoPatch(videoId, { status: 'done', url: s.videoUrl, thumb: s.thumbnailUrl || null, duration: s.duration || null });
+          paint(`<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
+            <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`);
           return;
         }
         if (s.status === 'failed') {
-          HG.busy = false;
-          result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(s.error || '未知原因')}</div>`;
+          HG.busy = false; delete hgPolling[videoId];
+          hgVideoPatch(videoId, { status: 'failed', error: s.error || '未知原因' });
+          paint(`<div class="hint" style="color:var(--red)">生成失败：${esc(s.error || '未知原因')}</div>`);
           return;
         }
-        result.innerHTML = `<div class="hint">生成中…（${esc(s.status || 'processing')}）</div>`;
+        paint(`<div class="hint">生成中…（${esc(s.status || 'processing')}）</div>`);
         setTimeout(tick, 5000);
       } catch (e) {
-        result.innerHTML = `<div class="hint" style="color:var(--amber)">查询失败：${esc(e.message)}</div>`;
+        delete hgPolling[videoId];
+        paint(`<div class="hint" style="color:var(--amber)">查询失败：${esc(e.message)}</div>`);
       }
     };
     tick();
