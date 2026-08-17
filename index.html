@@ -649,12 +649,12 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
       <a class="nav-item" data-route="publish"><span class="ni">▦</span>发布与数据</a>
 
       <a class="nav-item" data-route="billing" style="margin-top:10px"><span class="ni">＄</span>支付与方案</a>
-
       <!-- 单独功能：刻意不放进上面「每本书都会用到」那条流水线。
            人物自述是挑一个人物做一支，跟这本书跑到流水线第几步无关，
            塞进流程里就等于逼人先跑完前面几步才能用。 -->
       <div class="nav-group" style="padding-top:12px;font-size:9.5px">单独功能</div>
       <a class="nav-item" data-route="roles"><span class="ni">✦</span>书影（书中人物）</a>
+
 
       <details class="nav-more">
         <summary>团队 / 管理员</summary>
@@ -2627,6 +2627,8 @@ window.STORE = (function () {
     on(f) { subs.push(f); }
   };
 })();
+
+
 
 
 /* ===== ui.js ===== */
@@ -5393,6 +5395,8 @@ window.VIEWS = window.VIEWS || {};
 })();
 
 
+
+
 /* ===== tour.js ===== */
 /* ============================================================
  * tour.js — 新手导览（聚光灯式分步引导）
@@ -7070,7 +7074,7 @@ window.TOUR = (function () {
   function scriptToSpeech(v, p) {
     const s = (p.scripts || []).find(x => x.id === v.scriptId);
     if (!s || !(s.dialogue || []).length) return v.title || '';
-    return s.dialogue.map(l => l.text).join('  ');
+    return cleanSpeech(s.dialogue.map(l => l.text).join('  '));
   }
 
   /* ---------- 访谈式对谈影片 ----------
@@ -9256,10 +9260,10 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
       }, 60000);
       const out = aiJson(r.content);
       const intro = {};
-      (window.ROLE_INTRO_PARTS || []).forEach(part => { intro[part.k] = String(out[part.k] || '').trim(); });
+      (window.ROLE_INTRO_PARTS || []).forEach(part => { intro[part.k] = cleanSpeech(out[part.k]); });
       if (!Object.keys(intro).some(k => intro[k])) throw new Error('模型没有写出内容');
       c.intro = intro;
-      c.introScript = String(out.script || '').trim() || composeIntroText(c);
+      c.introScript = cleanSpeech(out.script) || composeIntroText(c);
       STORE.update(); render();
       toast(`「${c.name || '这个人物'}」的自述稿写好了，可以直接改`, 'ok');
       const note = mpServedNote(pick, r.model);
@@ -9267,6 +9271,70 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     } catch (e) {
       setMsg('AI 写自述稿失败：' + e.message, 'var(--red)');
     }
+  }
+
+  /* ============================================================
+   * 台词清洗
+   *
+   * 提示词已经写明「不要舞台指示、不要括号说明」，但模型不见得照做，
+   * 而我们以前对回传内容一个字都没清就直接送去念——结果影片里真的会
+   * 念出「钩子：」「（微笑）」「**」这种东西。使用者回报过。
+   *
+   * 这里是送去合成之前的最后一道拦截：不管模型怎么写，一律洗过。
+   * 括号内容一律拿掉——口播稿里的括号几乎都是给人看的动作或语气指示，
+   * 不是要念出来的。
+   * ========================================================== */
+
+  /* 直接列出自述稿实际用的段落名，加上其他常见结构词。
+   * 只有命中这份清单才剥掉行首标签——像「他说：」这种真正的对白不能动，
+   * 所以宁可列得具体，也不要用「凡是冒号就剥」那种粗暴规则。 */
+  const SPEECH_LABELS = ['一句话钩子', '钩子', '开场',
+    '我是谁', '这本书的情景', '我周遭的环境', '我现在的行为', '我的心态',
+    '我怎么走到这一步', '我卡在哪里', '我身边的人', '我的想法',
+    '我后来明白了什么', '我接下来要做什么', '我最想说的一句话', '给看到这里的你',
+    '身份', '情景', '环境', '行为', '心态', '前史', '困境', '想法', '领悟',
+    '金句', '收尾', 'CTA', '结尾', '旁白', '独白', '台词', '口播'];
+
+  function cleanSpeech(t) {
+    let s = String(t || '').replace(/\r/g, '');
+
+    // 整段被引号包起来的，拆掉最外层（句子里真的在引述的不动）
+    s = s.replace(/^\s*[「『“"']([\s\S]*)[」』”"']\s*$/, '$1');
+
+    // Markdown 粗体记号
+    s = s.replace(/\*\*|__/g, '');
+
+    s = s.split('\n').map(function (line) {
+      let x = line.trim();
+      x = x.replace(/^#{1,6}\s*/, '');        // 标题
+      x = x.replace(/^[-–—•·]\s+/, '');       // 条列
+      x = x.replace(/^\d+[.、)]\s*/, '');     // 编号
+      const m = x.match(/^([^：:]{1,10})[：:]\s*/);
+      if (m) {
+        for (let i = 0; i < SPEECH_LABELS.length; i++) {
+          if (m[1].indexOf(SPEECH_LABELS[i]) >= 0) { x = x.slice(m[0].length); break; }
+        }
+      }
+      return x;
+    }).join('\n');
+
+    // 括号内容（动作／语气指示）
+    s = s.replace(/[（(][^（()）]{0,40}[)）]/g, '');
+
+    // 模型常见的开场白，可能连着好几层（「好的，以下是⋯」），所以一直剥到没有为止
+    for (let g = 0; g < 4; g++) {
+      const before = s;
+      s = s.replace(/^(好的|当然|没问题|以下是|这是|这里是)[^，,。！？\n]{0,10}[，,：:]\s*/, '');
+      if (s === before) break;
+    }
+
+    // 收尾：多余空白、行首孤立标点
+    s = s.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n');
+    s = s.split('\n').map(function (x) {
+      return x.replace(/^[，,、。.；;：:]+/, '').trim();
+    }).join('\n');
+
+    return s.trim();
   }
 
   /* 各段 → 要念的台词。纯拼接，不呼叫模型、不花钱，
@@ -10182,6 +10250,7 @@ function setVideoFormat(videoId, value, notify) {
     UI.toast(format === 'conversation' ? '已改为访谈式对谈' : '已改为单人口播', 'ok');
   }
 }
+
 
 </script>
 </body>
