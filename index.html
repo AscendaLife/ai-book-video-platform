@@ -5302,6 +5302,21 @@ window.VIEWS = window.VIEWS || {};
         : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
              padding:26px 10px;text-align:center;margin-bottom:10px">还没有定妆照。这张脸就是影片里会出现的脸，先生成一张。</div>`}</div>
 
+      ${(c.portraitHistory || []).length > 1 ? `
+      <div class="label" style="margin-top:2px">生成过的定妆照
+        <span class="hint" style="margin-left:6px;font-weight:400">点一下换回那张</span></div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
+        ${c.portraitHistory.map(u => `<img src="${esc(u)}" data-act="pick-portrait" data-i="${i}" data-url="${esc(u)}"
+          style="flex:0 0 52px;width:52px;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;
+                 border:2px solid ${u === c.portraitUrl ? 'var(--violet)' : 'var(--line)'}">`).join('')}
+      </div>` : ''}
+
+      <div class="field" style="margin-bottom:8px">
+        <div class="label">定妆照补充说明<span class="hint" style="margin-left:6px;font-weight:400">想调整长相或氛围就写在这，会加进生成条件</span></div>
+        <input class="input" value="${esc(c.portraitNote || '')}" data-act="edit-char" data-i="${i}" data-k="portraitNote"
+          placeholder="例如：年纪再大一点、表情更疲惫、光线暗一些">
+      </div>
+
       <div class="row2" style="margin-bottom:8px">
         <div class="field"><div class="label">名字</div>
           <input class="input" data-act="edit-char" data-i="${i}" data-k="name" value="${esc(c.name || '')}" placeholder="人物的名字"></div>
@@ -5934,6 +5949,15 @@ window.TOUR = (function () {
         STORE.update(); render(); return;
       }
       case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
+      case 'pick-portrait': {
+        const p2 = STORE.current;
+        const c2 = p2 && (p2.characters || [])[+el.dataset.i];
+        if (!c2) return;
+        c2.portraitUrl = el.dataset.url;
+        STORE.update(); render();
+        toast('已换成这一张', 'ok');
+        return;
+      }
       case 'char-to-prompt': return charToPrompt(+el.dataset.i);
 
       /* ---- 书影（书中人物）（单独功能，不在流水线里）---- */
@@ -9048,6 +9072,23 @@ ${ctx}
   }
 
   /* 角色定妆照：一次只生一张、按一次生一次，跟场景示意图同样的成本考量 */
+  /* 定妆照的历史。每一张都真的花过钱，覆盖掉就再也找不回来——
+   * 形象生成那边早就有这个机制，人物这边是后来另外写的，漏了。 */
+  const PORTRAIT_MAX = 6;
+
+  function portraitHistory(c) {
+    if (!Array.isArray(c.portraitHistory)) c.portraitHistory = [];
+    return c.portraitHistory;
+  }
+
+  function portraitHistoryAdd(c, url) {
+    if (!url) return;
+    const h = portraitHistory(c);
+    if (h.indexOf(url) >= 0) return;
+    h.unshift(url);
+    if (h.length > PORTRAIT_MAX) h.length = PORTRAIT_MAX;
+  }
+
   async function aiCharPortrait(i) {
     const p = STORE.current;
     const c = p && (p.characters || [])[i];
@@ -9059,24 +9100,40 @@ ${ctx}
     const pick = await askModel('portrait');
     if (!pick) return toast('已取消，没有生成定妆照', 'warn');
 
-    slot.innerHTML = '<div class="hint" style="color:var(--violet-2);margin-bottom:10px">✨ 生成中，约 10-20 秒…</div>';
-    const prompt = `人物定妆照，直式 9:16 半身构图，单一人物。`
-      + (c.name ? `角色：${c.name}。` : '')
-      + (c.role ? `身份：${c.role}。` : '')
-      + (c.look ? `外貌：${c.look}。` : '')
-      + (c.scene ? `所处情境：${c.scene}。` : '')
-      + `内容与《${p.title}》这本书有关。电影感打光、真实摄影风格、脸部清晰、不要出现文字或字幕。`;
+    slot.innerHTML = '<div class="hint" style="color:var(--violet-2);margin-bottom:10px">✨ 生成中，约 20-30 秒…</div>';
+
+    /* 提示词沿用形象生成那边调过的摄影语言。
+     * 「真实人像摄影风格」六个字模型没有依据，出来就是磨皮塑胶脸；
+     * 给镜头、光圈、景深、肤质这些具体条件才像真人。 */
+    const extra = (c.portraitNote || '').trim();
+    const prompt = `${c.name ? c.name + '，' : ''}${c.role || ''}${c.look ? '，' + c.look : ''}。`
+      + (c.scene ? `场景：${c.scene}。` : '')
+      + (extra ? `${extra}。` : '')
+      + '中景，人物在画面中间偏一侧、上半身入镜并留出头顶空间，'
+      + '脸部正对镜头、五官完整清晰不被遮挡，'
+      + '以全画幅相机搭配 85mm 定焦镜头拍摄，光圈 f/2.0，浅景深，背景自然虚化，'
+      + '光线有层次，皮肤保有真实质感与细微毛孔、脸上有自然的光泽与瑕疵，'
+      + '发丝与衣物织纹清晰可见，神情自然，像抓拍而不是摆拍，'
+      + '纪实人像摄影，色调自然不过饱和，高解析度，'
+      + '不要磨皮、不要美颜滤镜、不要塑胶感皮肤、不要过度锐化、'
+      + '不要 HDR 感、不要过曝、不要 3D 渲染感、不要插画或卡通风格，'
+      + '不要侧脸、不要背影、不要多个人、不要任何文字或浮水印、'
+      + '不要出现任何品牌标志或商标。';
 
     try {
       const r = await hgFetchSlow('/api/ai/image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({ prompt }, pick))
-      }, 60000);
+        body: JSON.stringify(Object.assign({
+          prompt,
+          deevid: { resolution: '1K', size: 'NINE_BY_SIXTEEN' }
+        }, pick))
+      });
       if (!r.url) throw new Error('平台没有回传图片网址');
+      portraitHistoryAdd(c, c.portraitUrl);   // 旧的先收进历史，再换新的
       c.portraitUrl = r.url;
-      STORE.update();
-      slot.innerHTML = `<img src="${esc(r.url)}" style="width:100%;border-radius:10px;margin-bottom:10px">`;
-      toast('定妆照好了，长相不对就改「长什么样」再生成一次', 'ok');
+      portraitHistoryAdd(c, r.url);
+      STORE.update(); render();
+      toast('定妆照好了。不满意可以改「长什么样」或补充说明再生成一次', 'ok');
     } catch (e) {
       slot.innerHTML = `<div class="hint" style="color:var(--amber);margin-bottom:10px">生成失败：${esc(e.message)}</div>`;
     }
