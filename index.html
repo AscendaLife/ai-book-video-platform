@@ -6856,7 +6856,9 @@ window.TOUR = (function () {
      '身后是客厅的整面书墙与几株绿植，旁边有一张亚麻布沙发与暖色地毯，'
      + '午后的日光从侧面的落地窗斜射进来，在墙上留下柔和的光影'],
     ['plain', '纯色棚',
-     '中性灰的无缝背景纸，柔光箱从正面偏侧打光，背景由中央向四周有轻微的明暗渐层']
+     '中性灰的无缝背景纸，柔光箱从正面偏侧打光，背景由中央向四周有轻微的明暗渐层'],
+    ['custom', '自己写背景',
+     '（不自动加场景，背景请自己写在上面的描述里，连打光也一起写）']
   ];
 
   /* 人脸侦测过不过，取决于脸够不够正、够不够清楚；但要不要有书房背景，
@@ -6864,8 +6866,14 @@ window.TOUR = (function () {
    * 把书房排除掉，产出的都是大头照——那不是讲书的样子。 */
   function gaPrompt(desc, sceneKey) {
     const sc = GA_SCENES.find(x => x[0] === sceneKey) || GA_SCENES[0];
+    /* 选「自己写背景」时，场景与打光这两段都不加。
+     * 场景不加是当然的；打光也要一起拿掉——使用者写了「只开一盏桌灯、
+     * 明暗对比明显」，我们却还硬加一句「窗光为主光、侧后方有柔和补光」，
+     * 两段会打架，出来的光就是四不像。
+     * 镜头、肤质、反向条列那几段留着：那些跟背景无关，是真人感的来源。 */
+    const own = sc[0] === 'custom';
     return `${desc.trim()}。`
-      + `场景：${sc[2]}。`
+      + (own ? '' : `场景：${sc[2]}。`)
       /* 构图：留头顶空间、人物偏一侧，之后影片才有地方摆字幕与书封 */
       + '中景，人物在画面中间偏一侧、上半身入镜并留出头顶空间，'
       + '脸部正对镜头、五官完整清晰不被遮挡，'
@@ -6873,7 +6881,7 @@ window.TOUR = (function () {
        * 给镜头、光圈、景深、肤质这些具体条件，模型才不会输出那种
        * 一眼假的磨皮塑胶脸。 */
       + '以全画幅相机搭配 85mm 定焦镜头拍摄，光圈 f/2.0，浅景深，背景自然虚化，'
-      + '窗光为主光、侧后方有柔和补光，明暗有层次，'
+      + (own ? '' : '窗光为主光、侧后方有柔和补光，明暗有层次，')
       + '皮肤保有真实质感与细微毛孔、脸上有自然的光泽与瑕疵，'
       + '发丝与衣物织纹清晰可见，'
       + '神情自然放松、眼神有神，像抓拍而不是摆拍，'
@@ -6927,6 +6935,7 @@ window.TOUR = (function () {
         <select class="input" id="ga-scene">
           ${GA_SCENES.map((x, i) => `<option value="${x[0]}" ${i === 0 ? 'selected' : ''}>${x[1]} —— ${x[2]}</option>`).join('')}
         </select>
+        <div class="hint" id="ga-scene-hint" style="margin-top:6px"></div>
       </div>
 
       <div id="ga-result" style="margin-top:14px">${GA.url
@@ -6942,6 +6951,28 @@ window.TOUR = (function () {
           ${GA.url ? '' : 'disabled style="opacity:.45;pointer-events:none"'}>用这张</button>
       </div>
     `);
+
+    /* 选到「自己写背景」时，提示要跟着换掉。
+     * 不然使用者只看到下拉选单变了，不会知道背景跟打光现在都得自己写，
+     * 描述里没写背景就等于没背景。 */
+    const sel = $('#ga-scene');
+    const tip = $('#ga-scene-hint');
+    const ta = $('#ga-prompt');
+    if (sel && tip) {
+      const sync = () => {
+        const own = sel.value === 'custom';
+        tip.innerHTML = own
+          ? '你选了自己写背景：<b>场景和打光都不会自动加</b>，请在上面的描述里连背景一起写完'
+          : '镜头、打光、构图这些系统会自动加，你只要选场景就好';
+        if (ta) {
+          ta.placeholder = own
+            ? '例如：三十五岁亚洲女性，米白色宽松针织毛衣…。背景是自家客厅靠窗的一角，一面及胸高的原木书架，书脊高低不齐…'
+            : '例如：三十多岁亚洲女性，气质知性，深色西装外套，短发';
+        }
+      };
+      sel.addEventListener('change', sync);
+      sync();
+    }
   }
 
   function gaRender(html) { const b = $('#ga-result'); if (b) b.innerHTML = html; }
