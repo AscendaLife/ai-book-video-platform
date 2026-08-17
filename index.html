@@ -6933,7 +6933,7 @@ window.TOUR = (function () {
       <div class="field" style="margin-top:12px">
         <div class="label">拍摄场景<span class="hint" style="margin-left:8px;font-weight:400">影片的背景就是这里选的，之后改不了</span></div>
         <select class="input" id="ga-scene">
-          ${GA_SCENES.map((x, i) => `<option value="${x[0]}" ${i === 0 ? 'selected' : ''}>${x[1]} —— ${x[2]}</option>`).join('')}
+          ${GA_SCENES.map((x, i) => `<option value="${x[0]}" ${i === 0 ? 'selected' : ''}>${x[1]}</option>`).join('')}
         </select>
         <div class="hint" id="ga-scene-hint" style="margin-top:6px"></div>
       </div>
@@ -6961,9 +6961,10 @@ window.TOUR = (function () {
     if (sel && tip) {
       const sync = () => {
         const own = sel.value === 'custom';
+        const sc = GA_SCENES.find(x => x[0] === sel.value);
         tip.innerHTML = own
-          ? '你选了自己写背景：<b>场景和打光都不会自动加</b>，请在上面的描述里连背景一起写完'
-          : '镜头、打光、构图这些系统会自动加，你只要选场景就好';
+          ? '<b>场景和打光都不会自动加</b>，请在上面的描述里连背景、连光线一起写完，没写就等于没背景。'
+          : esc(sc ? sc[2] : '') + '<br>镜头、打光、构图系统会自动加，你只要选场景就好。';
         if (ta) {
           ta.placeholder = own
             ? '例如：三十五岁亚洲女性，米白色宽松针织毛衣…。背景是自家客厅靠窗的一角，一面及胸高的原木书架，书脊高低不齐…'
