@@ -6196,6 +6196,29 @@ window.TOUR = (function () {
       if (ub) { ub.disabled = false; ub.style.opacity = '1'; ub.style.pointerEvents = 'auto'; }
       return;
     }
+    if (a === 'save-script') {
+      const box = $('#sm-speech');
+      if (!box) return;
+      let sc = null;
+      STORE.s.projects.forEach(x => (x.scripts || []).forEach(y => { if (y.id === el.dataset.id) sc = y; }));
+      if (!sc) return;
+      const t = box.value.trim();
+      if (!t) return toast('口播稿是空的，没东西可存', 'warn');
+      sc.manualSpeech = t;
+      STORE.update(); closeModal(); render();
+      toast('已保存。之后生成影片会念你改的这一版', 'ok');
+      return;
+    }
+    if (a === 'revert-script') {
+      let sc = null;
+      STORE.s.projects.forEach(x => (x.scripts || []).forEach(y => { if (y.id === el.dataset.id) sc = y; }));
+      if (!sc) return;
+      if (!confirm('要丢掉你手动改的版本、还原成 AI 写的那一版吗？')) return;
+      delete sc.manualSpeech;
+      STORE.update(); closeModal(); render();
+      toast('已还原成 AI 版本', 'ok');
+      return;
+    }
     if (a === 'ga-run') return hgGenAvatarRun();
     if (a === 'ga-use') return hgGenAvatarUse();
     if (a === 'mp-ok') return mpFinish(el.dataset.step, true);
@@ -7073,7 +7096,11 @@ window.TOUR = (function () {
    * 完整台词——念的人、稿子、成品三者一致，不需要任何取舍或说明。 */
   function scriptToSpeech(v, p) {
     const s = (p.scripts || []).find(x => x.id === v.scriptId);
-    if (!s || !(s.dialogue || []).length) return v.title || '';
+    if (!s) return v.title || '';
+    /* 手动改过的优先。使用者改了稿子却还是念 AI 那版，是最糟的情况——
+     * 他会以为编辑没生效，而且钱已经花掉了。 */
+    if (s.manualSpeech && s.manualSpeech.trim()) return cleanSpeech(s.manualSpeech);
+    if (!(s.dialogue || []).length) return v.title || '';
     return cleanSpeech(s.dialogue.map(l => l.text).join('  '));
   }
 
@@ -8134,6 +8161,9 @@ window.TOUR = (function () {
     if (!s) return;
     const shots = DATA.genShots(s, p);
     const dialogueText = (s.dialogue || []).map(x => `【${x.t}｜${x.speaker}｜${x.cue}】\n${x.text}`).join('\n\n');
+    /* 编辑框只放真正会被念出来的字。dialogueText 那份带着
+     * 【时间｜讲者｜语气】标注，是给人看的——直接拿去存会被念出声。 */
+    const plainSpeech = (s.dialogue || []).map(function (x) { return x.text; }).join(String.fromCharCode(10, 10));
     const sceneText = (s.scenePlan || []).map(x => `【${x.name}】${x.visual}；用途：${x.role}`).join('\n');
     const voiceText = (s.voicePlan || []).map(x => `【${x.role}】${x.voice}；${x.pace}；${x.emotion}`).join('\n');
     const full = `【标题】${s.title}\n【平台】${s.platformName} · ${s.sceneMode || s.angleName} · ${s.duration}s\n\n【场地计划】\n${sceneText}\n\n【声音配置】\n${voiceText}\n\n【口播稿】\n${dialogueText}\n\n【CTA】\n${s.cta}`;
@@ -8141,6 +8171,7 @@ window.TOUR = (function () {
       <div class="chip-list" style="margin-bottom:14px">
         <span class="tag v">${s.platformName}</span><span class="tag">${s.duration} 秒</span>
         <span class="tag">${s.words} 字</span><span class="tag c">${esc(s.rhythm || '口播节奏')}</span><span class="tag c">预估评分 ${s.score}</span>
+        ${s.manualSpeech ? '<span class="tag g">口播稿已手动编辑</span>' : ''}
         ${s.personaByAI ? '<span class="tag g">已用 AI 改成'+STORE.s.account.name+'口吻</span>'
           : s.persona ? '<span class="tag a">只做了规则替换（加口头禅，非真改写）</span>'
           : '<span class="tag a">未套用人格</span>'}
@@ -8155,8 +8186,13 @@ window.TOUR = (function () {
         <div class="field"><div class="label">声音配置</div>
           <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.9;white-space:pre-wrap">${esc(voiceText || '未配置')}</div></div>
       </div>
-      <div class="field"><div class="label">口播稿（这就是数字人会念的内容，含语气与停顿提示）</div>
-        <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.95;white-space:pre-wrap">${esc(dialogueText || s.body)}</div></div>
+      <div class="field"><div class="label">口播稿　<span class="hint" style="font-weight:400">这就是数字人会念的内容。可以直接改，也可以整段贴上你自己写的稿子</span></div>
+        <textarea class="input" id="sm-speech" rows="10"
+          style="line-height:1.95;white-space:pre-wrap">${esc(s.manualSpeech || plainSpeech || s.body || '')}</textarea>
+        <div class="hint" style="margin-top:6px">
+          存档之后，生成影片就会念你改的版本，不会再被 AI 覆盖。
+          ${s.manualSpeech ? '目前用的是<b>你手动改过的版本</b>。' : ''}
+        </div></div>
       <div class="field"><div class="label">结尾 CTA</div>
         <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(s.cta)}</div></div>
       <div class="label" style="margin-top:18px">分镜表</div>
@@ -8168,7 +8204,9 @@ window.TOUR = (function () {
       </div>`).join('')}`,
       `<button class="btn" data-act="copy" data-t="${esc(full)}" onclick="UI.copy(this.dataset.t)">复制全文</button>
        <button class="btn" data-modal-act="ai-rewrite" data-id="${s.id}">✨ 用真实 AI 重写</button>
-       <button class="btn btn-primary" onclick="UI.closeModal()">关闭</button>`, true);
+       ${s.manualSpeech ? `<button class="btn" data-modal-act="revert-script" data-id="${esc(s.id)}">还原成 AI 版本</button>` : ''}
+       <button class="btn btn-primary" data-modal-act="save-script" data-id="${esc(s.id)}">保存口播稿</button>
+       <button class="btn" onclick="UI.closeModal()">关闭</button>`, true);
   }
 
   /* ============================================================
@@ -9317,6 +9355,9 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
       }
       return x;
     }).join('\n');
+
+    // 【】里的是时间轴与语气标注，给人看的，不是要念的
+    s = s.replace(/【[^】]{0,60}】/g, '');
 
     // 括号内容（动作／语气指示）
     s = s.replace(/[（(][^（()）]{0,40}[)）]/g, '');
