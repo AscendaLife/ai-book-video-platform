@@ -4336,6 +4336,13 @@ window.VIEWS = window.VIEWS || {};
 
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
 
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-h"><div><div class="card-t">③ 自己写一段，直接生成一支</div>
+          <div class="card-s">形象和声音选好了就可以在这里直接试——不用先上传书、不用跑流水线</div></div>
+        <div class="right"><span class="tag a">真的花钱</span></div></div>
+      <div id="hg-gen-panel"><div class="hint">读取中…</div></div>
+    </div>
+
     ${interviewCard(p)}
 
     ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
@@ -6150,6 +6157,12 @@ window.TOUR = (function () {
   $('#view').addEventListener('input', e => {
     /* 声音搜寻：只重画清单那一块，搜寻框本身不动，不然每打一个字
      * 焦点就掉回去，一百个声音里根本搜不到东西。 */
+    if (e.target.id === 'hg-text') {
+      HG.text = e.target.value;
+      const est = $('#hg-est');
+      if (est) est.textContent = hgEstimateHtml(HG.text);
+      return;
+    }
     if (e.target.id === 'hg-voice-search') {
       HG.voiceQuery = e.target.value;
       hgRenderVoiceList();
@@ -7202,23 +7215,50 @@ window.TOUR = (function () {
   }
 
   /* ---- 生成 ---- */
+  /* 中文 TTS 大约每秒 4.5 个字（不算标点空白），乘上使用者调的语速。
+   * 这只是估算，用来让人在按下去之前心里有数——影片按秒计费，
+   * 稿子多长直接决定这一支多少钱，之前完全看不出来。 */
+  function hgEstimate(text) {
+    const n = String(text || '').replace(/\s/g, '').length;
+    const speed = STORE.s.persona.voiceSpeed == null ? 1 : Number(STORE.s.persona.voiceSpeed);
+    const sec = n / (4.5 * (speed || 1));
+    return { n, sec, usd: sec * USD_PER_SEC };
+  }
+
+  function hgEstimateHtml(text) {
+    const e = hgEstimate(text);
+    if (!e.n) return '还没写字';
+    return `${e.n} 字 · 估约 ${e.sec < 60 ? Math.round(e.sec) + ' 秒' : Math.floor(e.sec / 60) + ' 分 ' + Math.round(e.sec % 60) + ' 秒'}`
+      + ` · 估约 US$${e.usd.toFixed(2)}`;
+  }
+
   function hgRenderGenerate() {
     const panel = $('#hg-gen-panel');
     if (!panel) return;
+    /* 正在生成时不要重画。轮询靠 #hg-result 还在不在页面上判断要不要继续，
+     * 重画会把它换掉、轮询就停了——使用者只是顺手点了另一个声音想比较，
+     * 影片其实照做照扣钱，画面却什么都不再更新，看起来像失败。 */
+    if (HG.busy && panel.querySelector('#hg-result')) return;
     const avName = HG.mode === 'image' ? '你上传的照片' : ((HG.avatars.find(a => a.id === HG.avatarId) || {}).name || '（未选）');
     const voName = (HG.voices.find(v => v.id === HG.voiceId) || {}).name || '（未选）';
+    const ready = (HG.mode === 'image' ? HG.assetId : HG.avatarId) && HG.voiceId;
     panel.innerHTML = `
       <div class="chip-list" style="margin-bottom:10px"><span class="tag v">形象：${esc(avName)}</span><span class="tag c">声音：${esc(voName)}</span></div>
-      <div class="field"><div class="label">要说的台词</div>
-        <textarea class="input" id="hg-text" rows="3">${esc(HG.text || '你好，我是这本书的数字人主持人。')}</textarea></div>
-      <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成一支测试影片（真的花钱）</button>
+      ${ready ? '' : '<div class="hint" style="color:var(--amber);margin-bottom:10px">形象或声音还没选，上面两区各选一个就能生成。</div>'}
+      <div class="field"><div class="label">要说的话
+          <span class="hint" style="margin-left:auto;font-weight:400" id="hg-est">${hgEstimateHtml(HG.text)}</span></div>
+        <textarea class="input" id="hg-text" rows="7"
+          placeholder="直接贴你自己写的稿子。写什么就念什么——不要写【】这种标注，会被一起念出来。"
+        >${esc(HG.text || '')}</textarea>
+        <div class="hint" style="margin-top:6px">影片按秒计费，稿子越长越贵。先用两三句话试一支，确认形象和声音搭起来满意，再写长的。</div></div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成这一支（真的花钱）</button>
       <div id="hg-result" style="margin-top:14px"></div>`;
   }
-
   async function hgDoGenerate() {
     const result = $('#hg-result');
     if (!result) return;
     result.innerHTML = '<div class="hint">送出中…</div>';
+    HG.busy = true;
     try {
       const r = await hgFetch('/api/heygen/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -7227,6 +7267,7 @@ window.TOUR = (function () {
       result.innerHTML = '<div class="hint">已送出，生成中，通常 1-3 分钟…</div>';
       hgPoll(r.videoId, result);
     } catch (e) {
+      HG.busy = false;
       result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`;
     }
   }
@@ -7237,11 +7278,13 @@ window.TOUR = (function () {
       try {
         const s = await hgFetch('/api/status?service=heygen-video&id=' + encodeURIComponent(videoId));
         if (s.status === 'completed' && s.videoUrl) {
+          HG.busy = false;
           result.innerHTML = `<video src="${esc(s.videoUrl)}" controls style="width:100%;max-width:280px;border-radius:12px"></video>
             <div class="hint" style="margin-top:8px">影片网址约 7 天后失效，要保留请自行下载存档。</div>`;
           return;
         }
         if (s.status === 'failed') {
+          HG.busy = false;
           result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(s.error || '未知原因')}</div>`;
           return;
         }
