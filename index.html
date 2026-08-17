@@ -6502,8 +6502,10 @@ window.TOUR = (function () {
     const money = (m && m.inPrice != null)
       ? ' · 约 ' + mpMoney(m.inPrice * inTok / 1e6 + (m.outPrice || 0) * outTok / 1e6)
       : '';
-    toast('这一步用了 ' + nf(inTok + outTok) + ' tokens（输入 ' + nf(inTok)
-      + ' / 输出 ' + nf(outTok) + '）' + money, 'ok');
+    /* 用量数字要精确。nf() 会把 18400 显示成「1.8万」，看帐时那不够用。 */
+    const fmt = function (n) { return n.toLocaleString('en-US'); };
+    toast('这一步用了 ' + fmt(inTok + outTok) + ' tokens（输入 ' + fmt(inTok)
+      + ' / 输出 ' + fmt(outTok) + '）' + money, 'ok');
   }
 
   function hgFetchSlow(p, opt) {
