@@ -4684,6 +4684,17 @@ window.VIEWS = window.VIEWS || {};
           ${st.quotaTotal - st.quotaUsed <= 0
             ? `<div class="hint" style="color:var(--red);margin-top:8px"><b>额度已用完，目前无法生成新影片。</b>要继续做的话，把上面的「本月上限」调高。</div>`
             : ''}
+          ${(() => {
+            const a = st.aiUsage;
+            if (!a || !a.calls) return `<div class="hint" style="margin-top:14px">还没有 AI 用量纪录。跑过读书、写稿这类步骤之后，这里会显示实际用掉多少 token。</div>`;
+            return `<div style="margin-top:14px;padding:12px 14px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;line-height:2">
+              <div style="font-weight:700;margin-bottom:4px">AI 文字用量（累计）</div>
+              <div>呼叫次数 <b>${nf(a.calls)}</b> 次</div>
+              <div>输入 <b>${a.inTok.toLocaleString('en-US')}</b> tokens　输出 <b>${a.outTok.toLocaleString('en-US')}</b> tokens</div>
+              <div>估算花费 <b>${a.usd ? 'US$' + a.usd.toFixed(3) : '—'}</b>
+                <span class="hint">${a.usd ? '（按各模型公告单价估，实际以供应商帐单为准）' : '（查不到该模型单价，只记 token）'}</span></div>
+            </div>`;
+          })()}
           <div class="hint" style="margin-top:12px">成本按「大模型 + TTS + 数字人渲染 + 存储」综合估算，实际以供应商账单为准。</div>
         </div>
 
@@ -6458,7 +6469,49 @@ window.TOUR = (function () {
    * 前端先放弃——画面报「连线逾时」，但那边照样算完、钱照样花，
    * 而且结果永远拿不回来。写稿常常只有几篇是真 AI、其余退回模板，
    * 多半就是这样来的。给 90 秒，比服务端自己的 60 秒上限还宽。 */
-  function hgFetchSlow(p, opt) { return hgFetch(p, opt, 90000); }
+  /* ============================================================
+   * Token 记帐
+   *
+   * 模型接口本来就会回传 usage（用了多少 input / output token），
+   * 但我们一直丢掉——所以事后完全答不出「这一步花了多少」。
+   *
+   * 记在 hgFetchSlow 这一层：所有会真的跑模型的呼叫都经过它，
+   * 一个地方拦就全部涵盖，不用在五个呼叫点各加一次、也不会漏。
+   * ========================================================== */
+  function aiUsage() {
+    const st = STORE.s.settings;
+    if (!st.aiUsage) st.aiUsage = { calls: 0, inTok: 0, outTok: 0, usd: 0 };
+    return st.aiUsage;
+  }
+
+  function recordUsage(u, modelId) {
+    if (!u) return;
+    const a = aiUsage();
+    const inTok = Number(u.prompt_tokens || u.input_tokens || 0);
+    const outTok = Number(u.completion_tokens || u.output_tokens || 0);
+    if (!inTok && !outTok) return;
+    a.calls += 1;
+    a.inTok += inTok;
+    a.outTok += outTok;
+    /* 单价查得到才算钱。查不到宁可只记 token，不要编一个数字给人当真。 */
+    const m = (mpCache || []).find(x => x.id === modelId);
+    if (m && m.unit === 'tokens' && m.inPrice != null) {
+      a.usd += m.inPrice * inTok / 1e6 + (m.outPrice || 0) * outTok / 1e6;
+    }
+    STORE.update();
+    const money = (m && m.inPrice != null)
+      ? ' · 约 ' + mpMoney(m.inPrice * inTok / 1e6 + (m.outPrice || 0) * outTok / 1e6)
+      : '';
+    toast('这一步用了 ' + nf(inTok + outTok) + ' tokens（输入 ' + nf(inTok)
+      + ' / 输出 ' + nf(outTok) + '）' + money, 'ok');
+  }
+
+  function hgFetchSlow(p, opt) {
+    return hgFetch(p, opt, 90000).then(function (j) {
+      if (j && j.usage) recordUsage(j.usage, j.model);
+      return j;
+    });
+  }
 
   async function hgFetch(p, opt, timeoutMs) {
     const o = Object.assign({}, opt);
@@ -8467,7 +8520,7 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
     const est = mpEstOverride || (AI_STEPS[step] && AI_STEPS[step].est);
     if (!est || !m || m.unit !== 'tokens' || m.inPrice == null) return '';
     const c = m.inPrice * est.in / 1e6 + (m.outPrice || 0) * est.out / 1e6;
-    return `这一步约 ${c < 0.001 ? '<$0.001' : mpMoney(c)}`;
+    return `这一步约 ${nf(est.in)} 输入 + ${nf(est.out)} 输出 tokens，${c < 0.001 ? '<$0.001' : mpMoney(c)}`;
   }
 
   function mpCandidates(step, models) {
