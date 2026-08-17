@@ -6532,7 +6532,14 @@ window.TOUR = (function () {
       clearTimeout(timer);
     }
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    if (!r.ok) {
+      /* 服务端回错时会另外带一个「详情」阵列，讲清楚每一条路各自为什么
+       * 失败。之前只取 error，画面上就永远是那句笼统的「两个图像服务都
+       * 失败了」——缺金钥、超时、模型不存在长得一模一样，每次都得重猜。 */
+      const d = j['详情'] || j.details;
+      throw new Error((j.error || ('HTTP ' + r.status))
+        + (d ? '｜' + (Array.isArray(d) ? d.join('；') : d) : ''));
+    }
     return j;
   }
 
