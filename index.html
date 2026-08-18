@@ -10233,27 +10233,53 @@ ${hookLibBlock()}
     const setMsg = (t, color) => {
       if (box) box.innerHTML = `<div class="hint" style="color:${color || 'var(--violet-2)'};margin-bottom:12px">${esc(t)}</div>`;
     };
+
+    /* 以前这里只送摘要、论点、金句这几样——全是模型自己先前写出来的
+     * 东西。要是还没跑过「AI 读完整本书」，那几栏统统是「（未提供）」，
+     * 模型手上只剩一个书名，就照书名编人物出来。实测传《旧书店的最后
+     * 一夜》，编出了「方文山」「林小雅」，书里根本没这两个人。
+     *
+     * 人物是要拿去生成定妆照、写自述稿、做成影片对外发布的。名字错了，
+     * 后面每一步都在错的基础上往下盖。所以这里一定要送原文。 */
+    const bookText = (window.STORE && STORE.getBookText(p.id)) || (p.parsed && p.parsed.raw) || '';
+    if (!bookText.trim()) {
+      return toast('这本书还没有内文，读不出人物——先去「上传一本新书」把书档拖进来', 'err');
+    }
+
     const pick = await askModel('cast');
     if (!pick) return toast('已取消，没有去读人物', 'warn');
     setMsg('✨ AI 正在读这本书找人物，约 10-30 秒…');
 
-    const prompt = `读这本书，列出 4-6 个「可以自己出来讲话」的主要人物，之后要让他们各自做一段自我介绍的短视频。
+    /* 短的书整本送；长的书按位置摊开取样，涵盖全书而不是只有开头。 */
+    const LIMIT = 14000;
+    let excerpt;
+    if (bookText.length <= LIMIT) {
+      excerpt = bookText;
+    } else if (window.BOOKLIB && p.bookIndex) {
+      excerpt = BOOKLIB.spread(bookText, p.bookIndex, 26).map(x => x.text).join(NL + NL);
+    } else {
+      excerpt = bookText.slice(0, LIMIT);
+    }
+
+    const prompt = `读下面这本书的内文，列出 4-6 个「可以自己出来讲话」的主要人物，之后要让他们各自做一段自我介绍的短视频。
 
 【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
-【摘要】${p.summary || '（未提供）'}
-【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
-【金句】${(p.quotes || []).slice(0, 5).join('；') || '（未提供）'}
-【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
+${p.summary ? '【摘要】' + p.summary + NL : ''}
+【书的内文】
+${excerpt}
 
-要求：
-- 小说、传记、故事类：抓真正的主要人物，男主角与女主角一定要抓到，名字用书里的名字
-- 非虚构、商管、知识类：抓书里出现的真实人物、案例主角，或一个能代表读者的具体化身
-  （要给具体的名字与身份，不要写成「读者A」）
+最重要的一条规则：
+- 名字、身份、外貌，全部只能从上面的内文里找。内文里没有写到的人，一个都不准生。
+- 名字必须跟内文里出现的字一模一样，不要改写、不要音译、不要取一个「比较像小说人物」的名字。
+- 内文里没有提到长相的，look 就从他的年龄、职业、处境去推，但不要发明书里没有的物件或场景。
+
+其他要求：
+- 书里有男女主角就抓，没有就不要硬凑——非虚构、散文、群像的书本来就没有主角。
+- 非虚构、商管、知识类：抓书里出现的真实人物、案例主角，要给具体名字与身份，不要写成「读者A」。
 - cast 只能填：男主角 / 女主角 / 主要人物 / 配角 / 叙述者 / 作者本人 / 读者化身
-- 重要的排前面，男主角与女主角排最前
+- 重要的排前面
 - look 要具体到画得出来：年龄、性别、脸型、发型、穿着、神情、时代与地域感，60-100 字
-- scene 是这个人物最有代表性的一幕：他在哪里、在做什么、气氛如何，40-80 字
-- 只写书里真的有依据的人物，不要凭空发明与全书无关的人
+- scene 是这个人物在内文里最有代表性的一幕：他在哪里、在做什么、气氛如何，40-80 字
 
 只输出这个 JSON：
 {"characters":[{"name":"名字","cast":"角色定位","role":"他在书里是谁","look":"外貌描述","scene":"代表场景"}]}`;
@@ -10267,17 +10293,33 @@ ${hookLibBlock()}
         }, pick))
       }, 60000);
       const out = aiJson(r.content);
-      const list = (out.characters || [])
-        .filter(x => x && (x.name || x.look))
-        .map(x => ({
-          id: DATA.uid('ch'), intro: {},
-          name: x.name || '', cast: x.cast || '', role: x.role || '',
-          look: x.look || '', scene: x.scene || ''
-        }));
-      if (!list.length) throw new Error('模型没有读出人物');
+      const raw = (out.characters || []).filter(x => x && (x.name || x.look));
+
+      /* 送了原文还是可能编。名字在不在原文里，是一句 indexOf 就能验的事
+       * ——验得了就一定要验，不要把「希望模型乖乖听话」当成机制。 */
+      const kept = [], dropped = [];
+      raw.forEach(x => {
+        const nm = String(x.name || '').trim();
+        if (nm && bookText.indexOf(nm) < 0) { dropped.push(nm); return; }
+        kept.push(x);
+      });
+
+      const list = kept.map(x => ({
+        id: DATA.uid('ch'), intro: {},
+        name: x.name || '', cast: x.cast || '', role: x.role || '',
+        look: x.look || '', scene: x.scene || ''
+      }));
+      if (!list.length) {
+        throw new Error(dropped.length
+          ? '模型给的人物（' + dropped.join('、') + '）在书里都找不到，全部挡下了。换一个模型再试一次'
+          : '模型没有读出人物');
+      }
       p.characters = (p.characters || []).concat(list);
       STORE.update(); render();
       toast(`AI 从书里读出 ${list.length} 个人物，接下来生成定妆照与自述稿`, 'ok');
+      if (dropped.length) {
+        toast('挡掉 ' + dropped.length + ' 个书里查无此人的：' + dropped.join('、'), 'warn');
+      }
       const note = mpServedNote(pick, r.model);
       if (note) toast(note, 'warn');
     } catch (e) {
@@ -10317,6 +10359,22 @@ ${hookLibBlock()}
       .map(x => `${x.name}${x.cast ? '（' + x.cast + '）' : ''}`)
       .slice(0, 5).join('、');
 
+    /* 跟读人物同一个问题：只送摘要、论点、金句这几样，模型手上没有原文，
+     * 讲这个人物的经历时就只能自己编。这一段是要念出来对外发布的，
+     * 编出来的情节等于替作者的书捏造内容。把跟他有关的原文段落找出来
+     * 一起送，并明写不准写没有依据的事。 */
+    const bookText = (window.STORE && STORE.getBookText(p.id)) || (p.parsed && p.parsed.raw) || '';
+    let refBlock = '';
+    if (bookText && window.BOOKLIB && p.bookIndex) {
+      /* 用人物的名字与身份去检索，抓出他真正出现过的那几段。 */
+      const q = [c.name, c.role, c.scene].filter(Boolean).join(' ');
+      const hits = BOOKLIB.search(bookText, p.bookIndex, q, 5);
+      if (hits.length) {
+        refBlock = NL + '【书里跟这个人物有关的原文】（只能根据这些写，不要发明书里没有的事）' + NL
+          + hits.map((h, k) => '[' + (k + 1) + '] ' + h.label + NL + h.text.slice(0, 360)).join(NL + NL) + NL;
+      }
+    }
+
     const prompt = `用第一人称，替这本书里的这个人物写一支「自我介绍」短视频的口播稿，之后会由数字人用他的脸和声音对着镜头念出来。
 
 【书籍】《${p.title}》${p.author ? '，作者' + p.author : ''}
@@ -10324,7 +10382,7 @@ ${hookLibBlock()}
 【核心论点】${(p.themes || []).slice(0, 5).join('；') || '（未提供）'}
 【金句】${(p.quotes || []).slice(0, 4).join('；') || '（未提供）'}
 【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}
-
+${refBlock}
 【这个人物】
 名字：${c.name || '（未命名）'}
 角色定位：${c.cast || '（未标注）'}
