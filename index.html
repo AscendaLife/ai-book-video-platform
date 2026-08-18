@@ -4287,6 +4287,11 @@ window.VIEWS = window.VIEWS || {};
           ? `<button class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;justify-content:center"
                data-act="gen-video" data-id="${v.id}">
                ${v.status === '生成失败' ? '重试生成' : '▶ 生成这一支'}</button>` : ''}
+        ${/* 影片真的做好了才有得发。登记之后「发布与数据」那一页就多一笔
+             真数据——那一页目前整页都是假的，这是唯一真的来源。 */''}
+        ${!v.demo && done
+          ? `<button class="btn btn-sm" style="width:100%;margin-top:8px;justify-content:center"
+               data-act="pub-register" data-id="${v.id}">✎ 登记发布</button>` : ''}
       </div></div>`;
   };
 
@@ -4682,6 +4687,63 @@ window.VIEWS = window.VIEWS || {};
         <button class="btn btn-primary" data-act="publish-all">✓ 批量确认发布</button>
       </div>
     </div>
+
+    ${(() => {
+      /* 真实发布记录。刻意摆在最上面、跟下面那些演示数据分开——
+       * 下面的图表是假的（页面自己有标注），这一块是唯一真的。 */
+      const log = window.PUBLOG ? PUBLOG.list() : [];
+      const byType = window.PUBLOG ? PUBLOG.byType() : [];
+      const filled = log.filter(x => x.views != null).length;
+      return `
+    <div class="card" style="margin-bottom:18px;border-color:var(--violet-2)">
+      <div class="card-h"><div><div class="card-t">我真的发出去的（${log.length} 支）</div>
+          <div class="card-s">平台的数据拿不回来，得自己填。发完先登记，过几天回来补播放量</div></div>
+        <div class="right"><span class="tag g">这一块是真数据</span></div></div>
+
+      ${log.length ? `
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead><tr style="text-align:left;color:var(--txt-3)">
+          <th style="padding:6px 8px">影片</th><th style="padding:6px 8px">平台</th>
+          <th style="padding:6px 8px">选题类型</th><th style="padding:6px 8px">发布日</th>
+          <th style="padding:6px 8px">播放</th><th style="padding:6px 8px">按赞</th>
+          <th style="padding:6px 8px">留言</th><th></th></tr></thead>
+        <tbody>${log.map(r => `
+          <tr style="border-top:1px solid var(--line)">
+            <td style="padding:6px 8px;max-width:220px">
+              ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>` : esc(r.title)}
+              <div class="hint">《${esc(r.book)}》</div></td>
+            <td style="padding:6px 8px">${esc(r.platform)}</td>
+            <td style="padding:6px 8px">${r.hookTypeName ? `<span class="tag">${esc(r.hookTypeName)}</span>` : '<span class="hint">—</span>'}</td>
+            <td style="padding:6px 8px" class="mono">${esc(r.at)}</td>
+            ${['views', 'likes', 'comments'].map(k => `
+            <td style="padding:6px 8px"><input class="input" type="number" min="0" placeholder="—"
+              data-act="pub-num" data-id="${r.id}" data-k="${k}" value="${r[k] == null ? '' : r[k]}"
+              style="width:82px;padding:5px 7px;border-radius:8px"></td>`).join('')}
+            <td style="padding:6px 8px"><button class="btn btn-sm" data-act="pub-del" data-id="${r.id}">删</button></td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="hint" style="margin-top:10px">已填数据 ${filled}/${log.length} 支。
+        ${filled < 10 ? `再累积 ${10 - filled} 支填好数字的，下面这张对照表才开始有参考价值。` : ''}</div>
+      ` : `<div class="empty" style="padding:26px"><div class="big">▤</div>
+        还没有登记过。去「内容资产库 → 成片影片」，在做好的影片上按「登记发布」。</div>`}
+
+      ${byType.length ? `
+      <div class="label" style="margin-top:18px">按选题类型的平均表现
+        <span class="hint" style="margin-left:8px;font-weight:400">只算已经填了播放量的那几支</span></div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:6px">
+        <thead><tr style="text-align:left;color:var(--txt-3)">
+          <th style="padding:6px 8px">类型</th><th style="padding:6px 8px">支数</th>
+          <th style="padding:6px 8px">平均播放</th><th style="padding:6px 8px">平均按赞</th></tr></thead>
+        <tbody>${byType.map(t => `<tr style="border-top:1px solid var(--line)">
+          <td style="padding:6px 8px">${esc(t.name)}</td>
+          <td style="padding:6px 8px">${t.n}</td>
+          <td style="padding:6px 8px"><b>${nf(t.avg)}</b></td>
+          <td style="padding:6px 8px">${nf(t.like)}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="hint" style="margin-top:8px">这张表就是五类选题框架的成绩单。哪一类真的有人看，之后就多写哪一类。</div>` : ''}
+    </div>`;
+    })()}
 
     <div class="grid g-2-1">
       <div class="card">
@@ -6167,6 +6229,8 @@ window.TOUR = (function () {
           <div class="hint" style="margin-top:12px">对不上就代表模型改写过或写错了，那一句不要用。</div>`);
       }
       case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
+      case 'pub-register': return pubRegisterModal(el.dataset.id);
+      case 'pub-del': return pubDel(el.dataset.id);
       case 'hg-recover': return hgRecover();
       case 'hg-voice-filter': {
         HG.voiceFilter = el.dataset.k || 'all';
@@ -6415,6 +6479,9 @@ window.TOUR = (function () {
      * 焦点就掉回去，一百个声音里根本搜不到东西。 */
     /* 原文检索：纯本地比对，边打边搜，不呼叫任何模型、不花钱。
      * 只重画结果区，搜寻框不动，否则每打一个字焦点就掉。 */
+    /* 播放量那几格边打边存，不重画——重画会把游标弹掉，填三十笔会疯掉。 */
+    const pf = e.target.closest('[data-act="pub-num"]');
+    if (pf) { pubSet(pf.dataset.id, pf.dataset.k, pf.value); return; }
     if (e.target.id === 'bl-q') {
       const p = STORE.current;
       const box = document.getElementById('bl-r');
@@ -6574,6 +6641,7 @@ window.TOUR = (function () {
     }
     if (a === 'new-proj-from-del') { closeModal(); return newProjectModal(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
+    if (a === 'pub-save') { return pubSave(el.dataset.id); }
     if (a === 'confirm-prompt-video') {
       const i = +el.dataset.i;
       /* 一定要在 closeModal 之前读——关掉弹窗 DOM 就没了，读到的会是 null。 */
@@ -9668,6 +9736,107 @@ ${hookLibBlock()}
   };
 
   const NL = String.fromCharCode(10);
+
+  /* ---- 发布登记 ----
+   *
+   * 「发布与数据」那一页的图表全是假的（页面自己有标注）。真数据要从
+   * 哪来？现在一支都还没真的发出去，就算今天把各平台 API 全接上，回来
+   * 的也是一片空白——数据回流是最后一块，不是现在这块。
+   *
+   * 所以先做最土的版本：发出去之后自己填三个数字。丑，但是真的。
+   * 累积三、五十支之后才有第一份能回答「哪一类选题在哪个平台有用」的
+   * 对照表，那时候再谈自动化才有东西可自动。
+   *
+   * 选题类型在登记的当下就抄一份存起来，不要之后再回头去 join——稿子
+   * 可能被改、被删，抄下来的那一刻才是当时真正发出去的东西。 */
+  function pubLog() {
+    if (!Array.isArray(STORE.s.publishLog)) STORE.s.publishLog = [];
+    return STORE.s.publishLog;
+  }
+
+  function pubToday() {
+    const d = new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  }
+
+  function pubRegisterModal(videoId) {
+    const p = STORE.current;
+    const v = p && (p.videos || []).find(x => x.id === videoId);
+    if (!v) return;
+    const sc = (p.scripts || []).find(x => x.id === v.scriptId) || {};
+    modal('登记这一支发到哪了', `
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">为什么要填</span><span>
+          平台的播放数据没办法自动拿回来。先登记发到哪、什么时候发的，
+          <b>过几天再回来补播放量</b>，累积几十支之后就能看出哪一类选题真的有人看。</span></div>
+      </div>
+      <div style="font-weight:650;margin-bottom:10px">《${esc(p.title)}》 · ${esc(v.title)}</div>
+      <div class="row2">
+        <div class="field"><div class="label">发到哪个平台</div>
+          <select class="input" id="pub-plat">
+            ${DATA.PLATFORMS.map(x => `<option value="${esc(x.name)}" ${x.name === v.platformName ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+          </select></div>
+        <div class="field"><div class="label">发布日期</div>
+          <input class="input" type="date" id="pub-date" value="${pubToday()}"></div>
+      </div>
+      <div class="field"><div class="label">影片连结<span class="hint" style="margin-left:6px;font-weight:400">选填，之后回来查数据方便</span></div>
+        <input class="input" id="pub-url" placeholder="贴上发布后的网址"></div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="pub-save" data-id="${esc(videoId)}">登记</button>`);
+  }
+
+  function pubSave(videoId) {
+    const p = STORE.current;
+    const v = p && (p.videos || []).find(x => x.id === videoId);
+    if (!v) return;
+    const sc = (p.scripts || []).find(x => x.id === v.scriptId) || {};
+    pubLog().unshift({
+      id: 'pb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      videoId, projectId: p.id, book: p.title, title: v.title,
+      hookType: sc.hookType || null, hookTypeName: sc.hookTypeName || '',
+      platform: ($('#pub-plat') || {}).value || '',
+      at: ($('#pub-date') || {}).value || pubToday(),
+      url: (($('#pub-url') || {}).value || '').trim(),
+      views: null, likes: null, comments: null
+    });
+    v.status = '已发布';
+    STORE.update(); closeModal(); render();
+    toast('登记好了。过几天回「发布与数据」补上播放量', 'ok');
+  }
+
+  function pubSet(id, key, value) {
+    const rec = pubLog().find(x => x.id === id);
+    if (!rec) return;
+    const n = value === '' ? null : Number(value);
+    rec[key] = (n == null || isNaN(n)) ? null : n;
+    rec.updatedAt = Date.now();
+    STORE.update();
+  }
+
+  function pubDel(id) {
+    STORE.s.publishLog = pubLog().filter(x => x.id !== id);
+    STORE.update(); render();
+  }
+
+  /* 按选题类型汇总。这张表就是第二项那五类框架的验收成绩单——
+   * 没有它，五类只是我们自己觉得有道理。 */
+  function pubByType() {
+    const rows = {};
+    pubLog().forEach(r => {
+      if (r.views == null) return;             // 还没填数字的不算进平均
+      const k = r.hookTypeName || '（未分类）';
+      if (!rows[k]) rows[k] = { n: 0, views: 0, likes: 0 };
+      rows[k].n++; rows[k].views += r.views; rows[k].likes += (r.likes || 0);
+    });
+    return Object.keys(rows).map(k => ({
+      name: k, n: rows[k].n,
+      avg: Math.round(rows[k].views / rows[k].n),
+      like: Math.round(rows[k].likes / rows[k].n)
+    })).sort((a, b) => b.avg - a.avg);
+  }
+
+  window.PUBLOG = { list: pubLog, byType: pubByType };
 
   /* ---- 钩子库 ----
    *
