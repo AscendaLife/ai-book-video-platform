@@ -9113,13 +9113,62 @@ ${(pa.habits || []).length ? '【口头禅】自然植入其中 1-2 句，不要
    * window.AIREAL 呼叫，接不上或关闭时会自动退回原本的模板逻辑，
    * 不会把流程弄坏。
    * ========================================================== */
-  function aiJson(content) {
-    try { return JSON.parse(content); }
-    catch (e) {
-      const m = (content || '').match(/\{[\s\S]*\}/);
-      if (!m) throw new Error('模型没有回传可解析的 JSON');
-      return JSON.parse(m[0]);
+  /* 从模型的回覆里挖出 JSON。
+   *
+   * 以前是「整段 parse 不过，就用 /\{[\s\S]*\}/ 抓一次」。那个样式是贪婪的，
+   * 从第一个 { 一路吃到最后一个 }——模型只要多回一个区块（讲一句解释、
+   * 再补一个 JSON），抓下来的就是两坨黏在一起的东西，parse 直接炸，
+   * 画面上只剩一句 "Unexpected non-whitespace character after JSON at
+   * position 89"，没人看得懂那是什么意思。
+   *
+   * 改成真的做括号配对：逐个 { 往后扫，遇到字串要跳过（字串里的大括号
+   * 不算数、跳脱字元也要处理），配平了就试 parse。取第一个 parse 得过
+   * 而且有内容的。 */
+  function jsonChunks(text) {
+    const out = [];
+    const s = String(text || '');
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] !== '{') continue;
+      let depth = 0, inStr = false, esc = false;
+      for (let j = i; j < s.length; j++) {
+        const ch = s[j];
+        if (esc) { esc = false; continue; }
+        if (ch === '\\') { if (inStr) esc = true; continue; }
+        if (ch === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+          depth--;
+          if (depth === 0) { out.push(s.slice(i, j + 1)); i = j; break; }
+        }
+      }
+      if (out.length >= 8) break;      // 防呆：回来一整篇文章时不要扫到天荒地老
     }
+    return out;
+  }
+
+  function aiJson(content, wantKey) {
+    const raw = String(content || '').replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '');
+    try {
+      const j = JSON.parse(raw);
+      if (j && typeof j === 'object') return j;
+    } catch (e) { /* 往下用括号配对再试 */ }
+
+    const chunks = jsonChunks(raw);
+    let fallback = null;
+    for (const c of chunks) {
+      let j;
+      try { j = JSON.parse(c); } catch (e) { continue; }
+      if (!j || typeof j !== 'object') continue;
+      /* 指定了要哪个栏位就优先挑有那个栏位的——模型有时会先回一个
+       * 无关的小物件（例如 {"status":"ok"}），那个不是我们要的。 */
+      if (wantKey && j[wantKey] != null) return j;
+      if (!fallback && Object.keys(j).length) fallback = j;
+    }
+    if (fallback) return fallback;
+    /* 失败时要讲清楚它到底回了什么，否则每次都得重跑一遍才知道发生什么事。 */
+    throw new Error('模型没有回传可解析的 JSON。它回的是：'
+      + raw.replace(/\s+/g, ' ').slice(0, 160) + (raw.length > 160 ? '…' : ''));
   }
 
   /* ============================================================
@@ -10292,7 +10341,7 @@ ${excerpt}
           maxTokens: 2200, wantJson: true
         }, pick))
       }, 60000);
-      const out = aiJson(r.content);
+      const out = aiJson(r.content, 'characters');
       const raw = (out.characters || []).filter(x => x && (x.name || x.look));
 
       /* 送了原文还是可能编。名字在不在原文里，是一句 indexOf 就能验的事
