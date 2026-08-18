@@ -1806,6 +1806,56 @@ window.DATA = (function () {
     { key: 'author', name: '作者故事版', desc: '讲作者其人其事，建立信任', color: '#ff5d8f' }
   ];
 
+  /* ---------- 五类选题框架 ----------
+   *
+   * 以前写稿是把「全书摘要」丢给模型，说「写 14 篇短影音稿」，角度只给
+   * 一串形容词（故事切入、痛点切入…）。结果是同一本书跑两次，选题会飘，
+   * 而且没人说得出「为什么选这一段」。
+   *
+   * 改成五种写死的类型。模型的工作从「你觉得讲什么好」变成「从这本书里，
+   * 各找一个符合这五类的段落」——输出立刻稳定，也可以复制到下一本书。
+   *
+   * 每一类都写了「要找什么」「句型」「好例子」「不要写成什么」。反例这
+   * 一栏最重要：模型最容易输出的就是那种听起来很顺、但没有人想听完的
+   * 句子，不明写挡不掉。 */
+  const HOOK_TYPES = [
+    {
+      key: 'counter', name: '反直觉结论', color: '#7c6cff',
+      find: '书里推翻常识的那个结论——大家都以为 A，作者说其实是 B',
+      shape: '「你以为…其实…」「大家都说…但是…」「…根本不是…的问题」',
+      good: '努力没有杠杆，选择才有',
+      bad: '不要写成「这本书让我重新思考了努力的意义」——那是感想，不是结论'
+    },
+    {
+      key: 'scene', name: '具体场景', color: '#ff8a5b',
+      find: '书里一个能演出来的画面：有时间、有地点、有人在做一件具体的事',
+      shape: '直接从画面开始讲，不要先解释「这本书说」',
+      good: '一个商人带他去参观化妆品厂，很正当吧？完了总要吃个饭…',
+      bad: '不要写成「书里举了一个例子」——直接进画面，不要报幕'
+    },
+    {
+      key: 'punch', name: '情绪重击', color: '#ff5d8f',
+      find: '书里让人心里一沉的那个细节，通常是一个动作或一个数字，不是一段议论',
+      shape: '铺陈处境 → 一个动作 → 一句把重量压下来的话',
+      good: '这是他见这个孩子的第三面，也是最后一面',
+      bad: '不要写成「读到这里我非常感动」——把画面给读者，让他自己感动'
+    },
+    {
+      key: 'howto', name: '实用清单', color: '#2ee6a8',
+      find: '书里可以照着做的方法，最好是三个以内、今天就能试',
+      shape: '「三个方法」「第一件事就是…」，每一条都要具体到能执行',
+      good: '作者的做法很简单：把每个决定写下来，一週后回头看你当时在怕什么',
+      bad: '不要写成「要提升认知」这种做不了的话——听完不知道要干嘛就是废话'
+    },
+    {
+      key: 'ask', name: '争议提问', color: '#ffb020',
+      find: '书里那个会让人想反驳、或者不敢回答的问题',
+      shape: '「你有没有想过…」「如果是你，你会…」，问完先不要急着答',
+      good: '你有没有想过，一个人到底是怎么变坏的',
+      bad: '不要问「你想不想变得更好」——没有人会因为这种问题停下来'
+    }
+  ];
+
   /* ---------- 流水线阶段 ---------- */
   const STAGES = [
     { key: 'upload', n: 'STEP 1', t: '上传书籍资料', d: '书封 / 目录 / 推荐序 / PDF / 宣传资料',
@@ -2552,7 +2602,7 @@ window.DATA = (function () {
   ];
 
   return {
-    PLATFORMS, ANGLES, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
+    PLATFORMS, ANGLES, HOOK_TYPES, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
     applyPersona, genShots, genVideos, genPendingVideos, genAnalytics, sceneTemplateLibrary, uid, rand
@@ -4261,6 +4311,7 @@ window.VIEWS = window.VIEWS || {};
         <div class="copy-item">
           <div class="ci-h"><span class="ci-n">#${String(s.n).padStart(2, '0')}</span>
             <span class="tag" style="color:${(DATA.ANGLES.find(a => a.key === s.angle) || {}).color}">${s.angleName}</span>
+            ${s.hookTypeName ? `<span class="tag" style="color:${((DATA.HOOK_TYPES || []).find(t => t.key === s.hookType) || {}).color}">${esc(s.hookTypeName)}</span>` : ''}
             <span class="tag">${s.platformName}</span>${s.personaByAI ? `<span class="tag g">${esc(STORE.s.account.name)}口吻</span>`
               : s.persona ? '<span class="tag a">仅规则替换</span>' : ''}
             <span class="ci-a"><button class="btn btn-sm" data-act="view-script" data-id="${s.id}">详情</button></span></div>
@@ -4301,13 +4352,30 @@ window.VIEWS = window.VIEWS || {};
     } else {
       const key = { title: 'titles', hook: 'hooks', open: 'opens' }[tab];
       const items = p[key] || [];
-      body = items.length ? `<div class="grid g2">${items.map(it => `
+      /* Hook 和开场白可以按👍👎。你对「哪个开头让人想听下去」的判断，
+       * 是这个产品里模型给不出来的东西——以前只存在于对话里，讲完就没了。
+       * 按过之后会进钩子库，之后写稿会照这种感觉写、避开否掉的那种。 */
+      const markable = tab === 'hook' || tab === 'open';
+      const lib = markable && window.HOOKS ? HOOKS.verdict : null;
+      body = items.length ? `
+        ${markable ? `<div class="hint" style="margin-bottom:12px">
+          👍 是「这种开头我要」，👎 是「这种不要」。按过的会记住，下次写稿就照这个感觉走。
+          ${window.HOOKS ? `已记住 <b>${HOOKS.count().good}</b> 个要的、<b>${HOOKS.count().bad}</b> 个不要的。` : ''}</div>` : ''}
+        <div class="grid g2">${items.map(it => {
+        const v = lib ? lib(it.text) : null;
+        return `
         <div class="copy-item">
           <div class="ci-h"><span class="ci-n">${String(it.n).padStart(2, '0')}</span>
             <span class="tag v">${it.tag}</span>${scoreBar(it.score)}
-            <span class="ci-a"><button class="btn btn-sm" data-act="copy" data-t="${esc(it.text)}">复制</button></span></div>
+            <span class="ci-a">
+              ${markable ? `
+              <button class="btn btn-sm ${v === 'good' ? 'btn-primary' : ''}" title="这种开头我要"
+                data-act="hook-mark" data-v="${v === 'good' ? 'none' : 'good'}" data-t="${esc(it.text)}">👍</button>
+              <button class="btn btn-sm ${v === 'bad' ? 'btn-primary' : ''}" title="这种不要"
+                data-act="hook-mark" data-v="${v === 'bad' ? 'none' : 'bad'}" data-t="${esc(it.text)}">👎</button>` : ''}
+              <button class="btn btn-sm" data-act="copy" data-t="${esc(it.text)}">复制</button></span></div>
           <div class="copy-txt">${esc(it.text)}</div>
-        </div>`).join('')}</div>` : `<div class="empty"><div class="big">▩</div>暂无内容</div>`;
+        </div>`; }).join('')}</div>` : `<div class="empty"><div class="big">▩</div>暂无内容</div>`;
     }
 
     return `
@@ -6098,6 +6166,7 @@ window.TOUR = (function () {
           <div style="font-size:15px;line-height:1.9;color:var(--txt-2);white-space:pre-wrap">${esc(sc.sourceText || '（没有留下原文）')}</div>
           <div class="hint" style="margin-top:12px">对不上就代表模型改写过或写错了，那一句不要用。</div>`);
       }
+      case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
       case 'hg-recover': return hgRecover();
       case 'hg-voice-filter': {
         HG.voiceFilter = el.dataset.k || 'all';
@@ -9507,6 +9576,7 @@ ${JSON.stringify(payload)}
 ${ctx}
 
 要求：标题要有具体信息或反差，不要「这本书改变了我」这种空话；Hook 是前 3 秒的第一句，要让人停下来。
+${hookLibBlock()}
 
 只输出：{"titles":["20 个标题"],"hooks":["20 个 Hook"],"opens":["10 个开场白，比 Hook 长一点"]}`, 2500);
       const d1 = aiJson(r1.content);
@@ -9521,17 +9591,25 @@ ${ctx}
       const duration = defaultVideoDuration();
       const minWords = Math.max(80, Math.round(duration * 4.1));
       const maxWords = Math.max(minWords + 30, Math.round(duration * 5.3));
-      const angles = ['故事切入', '痛点切入', '金句切入', '数据或事实切入', '反常识切入',
-        '自身经历切入', '提问切入', '对比切入', '场景重现切入', '结论先讲切入',
-        '拆解方法切入', '常见误解切入', '一个人物切入', '给谁看切入'];
+      /* 五类选题框架。这份表是我们自己的行业知识——别人抄得走程式码，
+       * 抄不走「哪五类会让人停下来」。 */
+      const TYPES = (window.DATA && DATA.HOOK_TYPES) || [];
 
       let wrote = 0;
       say(`标题写完，开始写 ${total} 篇口播稿（分 ${rounds} 批）…`);
       const packs = await pool(Array.from({ length: rounds }, (_, i) => i), 2, async (ri) => {
         const from = ri * batch;
         const want = Math.min(batch, total - from);
-        const use = angles.slice(from, from + want).join('、') || angles[ri % angles.length];
         const pas = allPas.slice(ri * 3, ri * 3 + 3);
+        /* 每一篇指定一种选题类型，轮著来。以前只给一串形容词（故事切入、
+         * 痛点切入…），同一本书跑两次选题会飘，也说不出为什么选这一段。
+         * 写死成五类之后，模型的工作变成「从书里各找一个符合这类的段落」。 */
+        const types = Array.from({ length: want }, (_, k) => TYPES[(from + k) % TYPES.length]);
+        const typeBlock = types.map((ty, k) => `第 ${from + k + 1} 篇 —— ${ty.name}` + NL
+          + `　要找什么：${ty.find}` + NL
+          + `　句型：${ty.shape}` + NL
+          + `　好的例子：${ty.good}` + NL
+          + `　${ty.bad}`).join(NL + NL);
         const pasLines = pas.map((x, k) => `[${k + 1}] 出处：${x.label}` + NL + `原文：${x.text.slice(0, 380)}`);
         const pasBlock = pas.length
           ? NL + '【这几篇可以用的原文片段】（下面是书里的原话，不是摘要）' + NL
@@ -9544,8 +9622,10 @@ ${ctx}
 
 ${ctx}
 ${pasBlock}
-【这几篇的切入角度】${use}（每篇角度都不一样，也不要跟一般书评的开场雷同）
+【这几篇各要写成哪一类】
+${typeBlock}
 
+${hookLibBlock()}
 形式：**一个人对着镜头讲**，全程只有一个说话的人，不要写成两个人对谈、不要有主持人问答。
 这个人叫「${speaker}」，所有台词的 speaker 都填「${speaker}」。
 
@@ -9561,7 +9641,9 @@ ${pasBlock}
           const list = (aiJson(r.content).scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
           /* 模型回的 source 是「第几个片段」，把它换成人看得懂的出处，
            * 并留下原文——之后要查证「这句到底是不是书里写的」才有依据。 */
-          list.forEach(sc => {
+          list.forEach((sc, k2) => {
+            const ty = types[k2];
+            if (ty) { sc.hookType = ty.key; sc.hookTypeName = ty.name; }
             const k = parseInt(sc.source, 10);
             const hit = k >= 1 && pas[k - 1];
             if (hit) { sc.source = hit.label; sc.sourceText = hit.text; }
@@ -9586,6 +9668,69 @@ ${pasBlock}
   };
 
   const NL = String.fromCharCode(10);
+
+  /* ---- 钩子库 ----
+   *
+   * 你看完一支影片说「这个开头没有想停下来听的感觉」——这个判断是整个
+   * 产品里最难复制的东西，模型给不出来。但它以前只存在于对话里，讲完
+   * 就没了，下一次写稿又从零开始。
+   *
+   * 现在把它存起来：你按过👍的进范例，按过👎的进反例，写稿时一起送进
+   * 提示词。用得越久，写出来的越像你要的。 */
+  const HOOKLIB_MAX = 40;
+
+  function hookLib() {
+    const st = STORE.s.settings;
+    if (!st.hookLib) st.hookLib = { good: [], bad: [] };
+    return st.hookLib;
+  }
+
+  function hookMark(text, verdict) {
+    const t = String(text || '').trim();
+    if (!t) return;
+    const lib = hookLib();
+    /* 同一句只能站一边，改判就把另一边移掉。 */
+    lib.good = lib.good.filter(x => x.t !== t);
+    lib.bad = lib.bad.filter(x => x.t !== t);
+    const side = verdict === 'good' ? lib.good : verdict === 'bad' ? lib.bad : null;
+    if (side) {
+      side.unshift({ t, at: Date.now(), book: (STORE.current && STORE.current.title) || '' });
+      if (side.length > HOOKLIB_MAX) side.length = HOOKLIB_MAX;
+    }
+    STORE.update();
+    render();
+    toast(verdict === 'good' ? '记住了，之后写稿会照这种感觉写'
+      : verdict === 'bad' ? '记住了，之后会避开这种写法' : '已取消标记', 'ok');
+  }
+
+  /* views-*.js 是另一个 IIFE，拿不到这里的区域函式。曝露读取用的两支
+   * 就够——写入一律走 data-act，集中在一个地方好追。 */
+  window.HOOKS = {
+    verdict: hookVerdict,
+    count: () => ({ good: hookLib().good.length, bad: hookLib().bad.length })
+  };
+
+  function hookVerdict(text) {
+    const t = String(text || '').trim();
+    const lib = hookLib();
+    if (lib.good.some(x => x.t === t)) return 'good';
+    if (lib.bad.some(x => x.t === t)) return 'bad';
+    return null;
+  }
+
+  /* 送进提示词的那一段。好的当范例、坏的当反例，两边都给模型才知道
+   * 界线在哪——只给好例子，它会照抄；只给坏例子，它不知道该往哪写。 */
+  function hookLibBlock() {
+    const lib = hookLib();
+    if (!lib.good.length && !lib.bad.length) return '';
+    let out = NL + '【这个人认可的开头】（照这种感觉写，不要照抄原句）' + NL;
+    out += (lib.good.slice(0, 6).map(x => '· ' + x.t).join(NL) || '（还没有）');
+    if (lib.bad.length) {
+      out += NL + NL + '【这个人否掉的开头】（不要写成这样）' + NL
+        + lib.bad.slice(0, 4).map(x => '· ' + x.t).join(NL);
+    }
+    return out + NL;
+  }
 
   /* 把整本书切成模型吃得下的段落。优先断在段落与句号，不要把一句话
    * 从中间剖开——切在句子中间会让那一段的摘要变得莫名其妙。 */
