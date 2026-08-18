@@ -5579,7 +5579,9 @@ window.VIEWS = window.VIEWS || {};
       <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" data-act="ai-read-cast">✨ 让 AI 从书里读出主要人物</button>
         <button class="btn btn-sm" data-act="add-blank-char">＋ 自己加一个人物</button>
-        ${list.length ? `<button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
+        ${list.length ? `<button class="btn btn-sm" data-act="auto-voice-all"
+          title="照每个人物的性别重新配一次声音">♪ 重新配声音</button>
+        <button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
       </div>
       <div id="ai-cast-status"></div>
       <div class="hint">AI 会优先抓男主角、女主角这类核心人物；非虚构的书没有故事人物时，会抓书里出现的真实人物、案例主角，
@@ -6255,6 +6257,7 @@ window.TOUR = (function () {
             <a href="${esc(u)}" target="_blank" rel="noopener">在新分页开启</a>（可以另存下载）。
             图片网址由生成服务托管，可能会过期，要留就先存下来。</div>`);
       }
+      case 'auto-voice-all': return autoVoiceAll();
       case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
       case 'pub-register': return pubRegisterModal(el.dataset.id);
       case 'pub-manual': return pubManualModal();
@@ -10298,6 +10301,78 @@ ${hookLibBlock()}
   /* 读出这本书的主要人物。跟「创意分镜 · 书中角色」共用同一份名单，
    * 差别是这里会多要一个「角色定位」——男主角、女主角还是配角，
    * 决定的是使用者先做谁，不是给模型的技术栏位。 */
+  /* ---- 按人物特徵自动配声音 ----
+   *
+   * 以前每个人物都套「数位人／声音」那一页选的同一个声音。实测七十一岁
+   * 的男主角配到 Xiaocheng（女声），而且要等影片做出来（一支 US$1-3）
+   * 才听得出来。
+   *
+   * 人物的性别在 cast（男主角／女主角）和 look（「七十岁左右的男性」）
+   * 里写得很清楚，声音清单本来就带 gender——两边对起来是一句话的事，
+   * 没有理由让人自己去挑。
+   *
+   * 只做性别与腔调的配对。年龄配不了：声音清单没有年龄这个栏位，
+   * 硬要从名字猜「哪个听起来比较老」就是瞎掰。所以配完还是要试听，
+   * 介面上也这样写。 */
+  function guessGender(c) {
+    const t = [c.cast, c.look, c.role, c.name].filter(Boolean).join(' ');
+    if (/男主角|男配角/.test(c.cast || '')) return 'male';
+    if (/女主角|女配角/.test(c.cast || '')) return 'female';
+    /* look 里通常会写「…岁左右的男性」「二十多岁的女性」。 */
+    if (/女性|女子|女孩|女士|太太|妈妈|母亲|奶奶|阿姨|小姐/.test(t)) return 'female';
+    if (/男性|男子|男孩|先生|爸爸|父亲|爷爷|叔叔|大叔|老先生/.test(t)) return 'male';
+    return null;
+  }
+
+  /* 腔调优先序：台湾腔 → 语气自然 → 其他中文 → 大陆腔。粤语一律排除，
+   * 选到了整支影片都会变粤语。 */
+  const VOICE_RANK = { tw: 0, multi: 1, other: 2, cn: 3 };
+
+  function pickVoiceFor(c, used) {
+    const want = guessGender(c);
+    const pool = (HG.voices || []).filter(v => v.accent !== 'yue');
+    if (!pool.length) return null;
+    const scored = pool
+      .filter(v => !want || !v.gender || v.gender === 'unknown' || v.gender === want)
+      .map(v => ({
+        v,
+        /* 性别对得上排最前（差 100，绝对压过其他条件）；再来是腔调（每档
+         * 差 10）；最后是「有没有被别人用过」。
+         * 用过的扣 25 是刻意大于一档腔调：宁可换一个腔调稍差但不重复的，
+         * 也不要三个人物配到同一个声音——几支影片放在一起会像同一个人
+         * 在讲话，这一页的意义就没了。 */
+        s: (want && v.gender === want ? 0 : 1) * 100
+          + (VOICE_RANK[v.accent] == null ? 4 : VOICE_RANK[v.accent]) * 10
+          + ((used && used.indexOf(v.id) >= 0) ? 25 : 0)
+      }))
+      .sort((a, b) => a.s - b.s);
+    return scored.length ? scored[0].v : null;
+  }
+
+  function autoVoiceForChars(list) {
+    const used = [];
+    let n = 0;
+    list.forEach(c => {
+      const v = pickVoiceFor(c, used);
+      if (!v) return;
+      c.voiceId = v.id; c.voiceName = v.name;
+      used.push(v.id); n++;
+    });
+    return n;
+  }
+
+  /* 已经建好的人物也要能重配一次——功能是后来才加的，之前读出来的
+   * 那几个还挂著旧的预设声音。 */
+  function autoVoiceAll() {
+    const p = STORE.current;
+    const list = (p && p.characters) || [];
+    if (!list.length) return toast('还没有人物', 'warn');
+    if (!(HG.voices || []).length) return toast('声音清单还没读到，先去「数位人 / 声音 / 克隆」那一页走一趟', 'warn');
+    const n = autoVoiceForChars(list);
+    STORE.update(); render();
+    toast(n ? '照人物性别配好了 ' + n + ' 个声音，记得各自试听一下' : '没有可以配的声音', n ? 'ok' : 'warn');
+  }
+
   async function aiReadCast() {
     const p = STORE.current;
     if (!p) return;
@@ -10421,9 +10496,13 @@ ${excerpt}
           ? '模型给的人物（' + dropped.join('、') + '）在书里都找不到，全部挡下了。换一个模型再试一次'
           : '模型没有读出人物');
       }
+      /* 读出来的当下就照性别配声音。等使用者自己发现「老先生配到女声」
+       * 的时候，通常已经花了 US$1-3 做出一支影片了。 */
+      const voiced = autoVoiceForChars(list);
       p.characters = (p.characters || []).concat(list);
       STORE.update(); render();
       toast(`AI 从书里读出 ${list.length} 个人物，接下来生成定妆照与自述稿`, 'ok');
+      if (voiced) toast('已照人物性别各配一个声音，生成影片前记得先试听', 'ok');
       if (dropped.length) {
         toast('挡掉 ' + dropped.length + ' 个书里查无此人的：' + dropped.join('、'), 'warn');
       }
