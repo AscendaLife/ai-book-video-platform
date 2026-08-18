@@ -5615,7 +5615,9 @@ window.VIEWS = window.VIEWS || {};
       </div>
 
       <div class="char-portrait" data-for="${i}">${c.portraitUrl
-        ? `<img src="${esc(c.portraitUrl)}" style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;margin-bottom:10px">`
+        ? `<img src="${esc(c.portraitUrl)}" data-act="view-portrait" data-url="${esc(c.portraitUrl)}" title="点一下看完整大图"
+             style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:zoom-in">
+           <div class="hint" style="margin:-4px 0 10px">卡片上这张是裁过的，<b>点图片看完整大图</b>——影片里用的是完整那张，构图要在大图上看。</div>`
         : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
              padding:26px 10px;text-align:center;margin-bottom:10px">还没有定妆照。这张脸就是影片里会出现的脸，先生成一张。</div>`}</div>
 
@@ -5624,6 +5626,7 @@ window.VIEWS = window.VIEWS || {};
         <span class="hint" style="margin-left:6px;font-weight:400">点一下换回那张</span></div>
       <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
         ${c.portraitHistory.map(u => `<img src="${esc(u)}" data-act="pick-portrait" data-i="${i}" data-url="${esc(u)}"
+          title="点一下换回这张"
           style="flex:0 0 52px;width:52px;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;
                  border:2px solid ${u === c.portraitUrl ? 'var(--violet)' : 'var(--line)'}">`).join('')}
       </div>` : ''}
@@ -6229,6 +6232,18 @@ window.TOUR = (function () {
           <div class="label">书里的原文</div>
           <div style="font-size:15px;line-height:1.9;color:var(--txt-2);white-space:pre-wrap">${esc(sc.sourceText || '（没有留下原文）')}</div>
           <div class="hint" style="margin-top:12px">对不上就代表模型改写过或写错了，那一句不要用。</div>`);
+      }
+      /* 卡片上那张是 object-fit:cover 裁过的，点开才看得到完整构图。
+       * 影片用的是完整那张——只看裁过的版本，根本判断不出人在画面
+       * 哪个位置、背景有没有入镜。 */
+      case 'view-portrait': {
+        const u = el.dataset.url;
+        if (!u) return;
+        return modal('定妆照原图', `
+          <img src="${esc(u)}" style="width:100%;max-height:72vh;object-fit:contain;border-radius:12px;background:var(--panel)">
+          <div class="hint" style="margin-top:10px">这就是影片里会用的那张。
+            <a href="${esc(u)}" target="_blank" rel="noopener">在新分页开启</a>（可以另存下载）。
+            图片网址由生成服务托管，可能会过期，要留就先存下来。</div>`);
       }
       case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
       case 'pub-register': return pubRegisterModal(el.dataset.id);
