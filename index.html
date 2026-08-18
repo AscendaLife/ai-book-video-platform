@@ -5693,11 +5693,21 @@ window.VIEWS = window.VIEWS || {};
           placeholder="第一人称，从头到尾都是这个人物自己在讲话">${esc(c.introScript || '')}</textarea>
       </div>
 
-      <div class="field" style="margin-bottom:10px"><div class="label">用哪个声音</div>
+      ${/* 这一页每个人物各自一个声音——男主角配到女声、老人配到少女音，
+           不试听根本发现不了。以前只有一个下拉，选完要等影片做出来
+           （一支 US$1-3）才听得到，太贵了。 */''}
+      <div class="field" style="margin-bottom:10px"><div class="label">用哪个声音
+          <span class="hint" style="margin-left:8px;font-weight:400">选完先按播放听一下，别让老先生配到少女音</span></div>
         ${voices.length
           ? `<select class="input" data-act="char-voice" data-i="${i}">
               ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(v.name)}${v.gender ? ' · ' + esc(v.gender) : ''}${v.language ? ' · ' + esc(v.language) : ''}</option>`).join('')}
-            </select>`
+            </select>
+            ${(() => {
+              const cur = voices.find(v => v.id === voiceId);
+              return cur && cur.preview
+                ? `<audio src="${esc(cur.preview)}" controls preload="none" style="width:100%;height:32px;margin-top:8px"></audio>`
+                : '<div class="hint" style="margin-top:6px">这个声音没有试听档。到「数位人 / 声音 / 克隆」那一页可以听完整清单。</div>';
+            })()}`
           : `<div class="hint">${voiceId ? '目前用「数字人 / 声音」那边选好的声音。' : '声音清单还没读到；先去「数字人 / 声音 / 克隆」选一个。'}</div>`}
       </div>
 
@@ -10336,6 +10346,7 @@ ${excerpt}
 - 名字、身份、外貌，全部只能从上面的内文里找。内文里没有写到的人，一个都不准生。
 - 名字必须跟内文里出现的字一模一样，不要改写、不要音译、不要取一个「比较像小说人物」的名字。
 - 内文里没有提到长相的，look 就从他的年龄、职业、处境去推，但不要发明书里没有的物件或场景。
+- 章节标题不是人。像「会等的人」「最后一夜」这种是章名，不要当成角色列出来。
 
 其他要求：
 - 书里有男女主角就抓，没有就不要硬凑——非虚构、散文、群像的书本来就没有主角。
@@ -10375,9 +10386,23 @@ ${excerpt}
       const SCHEMA_WORDS = ['名字', '角色定位', '外貌描述', '代表场景', '他在书里是谁', 'name', 'role', 'look', 'scene'];
       const echoed = raw.some(x => SCHEMA_WORDS.indexOf(String(x.name || '').trim()) >= 0);
 
-      const kept = [], dropped = [];
+      /* 章节标题会被当成人物。实测《旧书店的最后一夜》读出一个叫
+       * 「会等的人」的角色——那是第五章的标题。只验「名字在不在原文里」
+       * 挡不掉这种：章节标题当然在原文里。
+       * 把章节标题另外收一份来比对，前面的「第X章」去掉再比。 */
+      const heads = [];
+      ((p.bookIndex && p.bookIndex.chapters) || []).forEach(ch => {
+        const t = String(ch.t || '').trim();
+        if (!t) return;
+        heads.push(t);
+        const bare = t.replace(/^第\s*[0-9０-９一二三四五六七八九十百千]+\s*[章回节篇卷]\s*/, '').trim();
+        if (bare && bare !== t) heads.push(bare);
+      });
+
+      const kept = [], dropped = [], heading = [];
       raw.forEach(x => {
         const nm = String(x.name || '').trim();
+        if (nm && heads.indexOf(nm) >= 0) { heading.push(nm); return; }
         if (nm && bookText.indexOf(nm) < 0) { dropped.push(nm); return; }
         kept.push(x);
       });
@@ -10401,6 +10426,9 @@ ${excerpt}
       toast(`AI 从书里读出 ${list.length} 个人物，接下来生成定妆照与自述稿`, 'ok');
       if (dropped.length) {
         toast('挡掉 ' + dropped.length + ' 个书里查无此人的：' + dropped.join('、'), 'warn');
+      }
+      if (heading.length) {
+        toast('挡掉 ' + heading.length + ' 个其实是章节标题、不是人的：' + heading.join('、'), 'warn');
       }
       const note = mpServedNote(pick, r.model);
       if (note) toast(note, 'warn');
