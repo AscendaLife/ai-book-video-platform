@@ -1622,6 +1622,143 @@ window.PARSE = (function () {
 })();
 
 
+/* ===== booklib.js ===== */
+/* ============================================================
+ * booklib.js — 原文片段库
+ *
+ * 解决的问题：以前解析完只留下「一坨文字 + 一份模型写的全书摘要」，
+ * 写稿的时候手上没有原文，只能凭那份摘要去发挥。结果就是：
+ *   - 讲得出大方向，讲不出书里的具体细节
+ *   - 想换一个例子？没有依据，只能编——而这是对外发布的内容，
+ *     讲错别人的书是最不能犯的错
+ *
+ * 做法是建一份「位置索引」：章节在第几个字、每一段在第几个字。
+ * 只存数字，不复制文字——原文本来就存着了，再存一份会把浏览器的
+ * 空间撑爆。要用的时候按位置从原文切出来就好。
+ * ========================================================== */
+(function () {
+  'use strict';
+
+  /* 章节标题：markdown 的 #、中文的「第X章/回/节/篇」、英文 Chapter。
+   * 抓不到也没关系——抓不到就整本当一章，段落索引照样能用。 */
+  const HEAD_RE = /^[ \t]*(#{1,3}[ \t]*\S.*|第[ \t]*[0-9０-９一二三四五六七八九十百千]+[ \t]*[章回节篇卷].*|Chapter[ \t]+\d+.*)$/gim;
+
+  /* 一段太短读不出意思，太长又占满提示词。落在这个区间最好用。 */
+
+  /* 光靠上面的样式会误判：书里常有「第二章讲的是…」这种以章号开头的
+   * 普通句子，整段会被当成一个章节标题，后面的段落全部归错章。
+   * 标题的共同特徵是「短、而且不是一句话」——用这两点把它们筛掉。 */
+  function looksLikeHeading(line) {
+    const t = String(line).trim();
+    if (!t) return false;
+    if (/^#{1,3}\s/.test(t)) return t.length <= 80;      // markdown 标题本来就明确
+    if (t.length > 40) return false;                      // 太长的是内文不是标题
+    if (/[。！？；，、]$/.test(t)) return false;            // 以标点收尾的是句子
+    if (/[。！？]/.test(t)) return false;                  // 中间就有句号＝一段话
+    return true;
+  }
+
+  const SEG_MIN = 120;
+  const SEG_MAX = 420;
+
+  function buildIndex(text) {
+    if (!text) return null;
+    const chapters = [];
+    HEAD_RE.lastIndex = 0;
+    let m;
+    while ((m = HEAD_RE.exec(text)) !== null) {
+      if (!looksLikeHeading(m[1])) continue;
+      chapters.push({ t: m[1].replace(/^#+\s*/, '').trim().slice(0, 60), start: m.index });
+      if (chapters.length >= 400) break;     // 防呆：格式怪异的档案可能满页都是「标题」
+    }
+    if (!chapters.length) chapters.push({ t: '全文', start: 0 });
+    chapters.forEach((c, i) => { c.end = i + 1 < chapters.length ? chapters[i + 1].start : text.length; });
+
+    /* 段落：以空行切，太短的往后并，太长的硬切。全部只记 [start, end)。 */
+    const segs = [];
+    chapters.forEach((c, ci) => {
+      let i = c.start;
+      let bufStart = -1;
+      const push = (s, e) => {
+        while (e - s > SEG_MAX) {
+          /* 硬切也尽量断在句号，不要把一句话剖两半。 */
+          let cut = s + SEG_MAX;
+          const tail = text.slice(cut - 120, cut);
+          const br = Math.max(tail.lastIndexOf('。'), tail.lastIndexOf('\n'), tail.lastIndexOf('！'), tail.lastIndexOf('？'));
+          if (br > 0) cut = cut - 120 + br + 1;
+          segs.push({ s, e: cut, c: ci });
+          s = cut;
+        }
+        if (e > s) segs.push({ s, e, c: ci });
+      };
+      while (i < c.end) {
+        let nl = text.indexOf('\n\n', i);
+        if (nl < 0 || nl > c.end) nl = c.end;
+        if (bufStart < 0) bufStart = i;
+        if (nl - bufStart >= SEG_MIN || nl >= c.end) { push(bufStart, nl); bufStart = -1; }
+        i = nl + 2;
+      }
+      if (bufStart >= 0 && bufStart < c.end) push(bufStart, c.end);
+    });
+
+    return { chapters, segs, len: text.length, at: Date.now(), v: 1 };
+  }
+
+  function segText(text, seg) {
+    return text.slice(seg.s, seg.e).replace(/\s*\n\s*/g, ' ').trim();
+  }
+
+  /* 给人看的出处。位置用百分比而不是页码——原文是纯文字，没有页的概念，
+   * 写「第 42 页」是编的，写「全书 37% 处」至少是真的。 */
+  function label(index, seg) {
+    const ch = index.chapters[seg.c];
+    const pct = Math.round((seg.s / Math.max(1, index.len)) * 100);
+    const n = index.segs.filter(x => x.c === seg.c).indexOf(seg) + 1;
+    return `${ch && ch.t ? ch.t : '全文'} · 第 ${n} 段 · 全书 ${pct}% 处`;
+  }
+
+  /* 关键词检索。刻意不用向量检索：那要嵌入模型、要花钱、要另外存一份
+   * 向量，对「一本书几百段」这个量级来说，关键词加权就够用了。 */
+  function search(text, index, query, limit) {
+    if (!index || !query) return [];
+    const terms = String(query).split(/[\s,，、;；]+/).map(s => s.trim()).filter(s => s.length >= 2);
+    if (!terms.length) return [];
+    const out = [];
+    index.segs.forEach(seg => {
+      const body = text.slice(seg.s, seg.e);
+      let score = 0;
+      terms.forEach(t => {
+        let at = 0, hits = 0;
+        while ((at = body.indexOf(t, at)) >= 0) { hits++; at += t.length; }
+        /* 长的词命中更有意义：「化妆品」比「的」有资讯量。 */
+        if (hits) score += hits * Math.min(t.length, 6);
+      });
+      /* 命中越多不同的词，越可能是真正相关那一段，不是刚好重复某个字。 */
+      const covered = terms.filter(t => body.indexOf(t) >= 0).length;
+      if (score) out.push({ seg, score: score * (1 + covered * 0.5), text: segText(text, seg) });
+    });
+    out.sort((a, b) => b.score - a.score);
+    return out.slice(0, limit || 8).map(x => Object.assign(x, { label: label(index, x.seg) }));
+  }
+
+  /* 写稿时用：一次抓一批分散在全书各处的段落当素材。
+   * 只取前面几段会让 14 篇稿全在讲第一章。 */
+  function spread(text, index, n) {
+    if (!index || !index.segs.length) return [];
+    const step = Math.max(1, Math.floor(index.segs.length / (n || 8)));
+    const out = [];
+    for (let i = 0; i < index.segs.length && out.length < (n || 8); i += step) {
+      const seg = index.segs[i];
+      const t = segText(text, seg);
+      if (t.length >= SEG_MIN) out.push({ seg, text: t, label: label(index, seg) });
+    }
+    return out;
+  }
+
+  window.BOOKLIB = { buildIndex, segText, label, search, spread, SEG_MIN, SEG_MAX };
+})();
+
+
 /* ===== data.js ===== */
 /* ============================================================
  * data.js — 数据层 / 内容生成引擎（模拟）
@@ -4110,7 +4247,8 @@ window.VIEWS = window.VIEWS || {};
     const p = STORE.current;
     const tab = (q && q.t) || 'video';
     const tabs = [['video', '成片视频', (p.videos || []).length], ['script', '脚本', (p.scripts || []).length],
-      ['title', '标题', (p.titles || []).length], ['hook', 'Hook', (p.hooks || []).length], ['open', '开场白', (p.opens || []).length]];
+      ['title', '标题', (p.titles || []).length], ['hook', 'Hook', (p.hooks || []).length], ['open', '开场白', (p.opens || []).length],
+      ['source', '原文片段', (p.bookIndex && p.bookIndex.segs.length) || 0]];
 
     let body = '';
     if (tab === 'video') {
@@ -4130,7 +4268,36 @@ window.VIEWS = window.VIEWS || {};
           <div style="font-size:14.5px;color:var(--txt-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(s.hook)}</div>
           <div style="display:flex;gap:12px;margin-top:9px;font-size:13px;color:var(--txt-3)">
             <span>${s.duration}s</span><span>${s.words} 字</span><span>评分 ${s.score}</span></div>
+          ${/* 有出处才显示。出处是「这篇稿引用的原话来自书的哪一段」——
+               没有它，稿子里讲的书中细节没人查得了，对外发布就是在赌。 */''}
+          ${s.source ? `<div class="hint" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
+            引自原文 · ${esc(s.source)}
+            <button class="btn btn-sm" style="margin-left:6px" data-act="view-source" data-id="${s.id}">看原文</button></div>` : ''}
         </div>`).join('')}</div>` : `<div class="empty"><div class="big">▤</div>暂无脚本</div>`;
+    } else if (tab === 'source') {
+      /* 原文片段库。做这个是因为写稿时手上没有原文，想换一个例子只能
+       * 凭空编——而这是要对外发布的内容，讲错别人的书是最不能犯的错。
+       * 这里可以直接搜书里写过什么，搜到的每一段都带出处。 */
+      const text = (window.STORE && STORE.getBookText(p.id)) || (p.parsed && p.parsed.raw) || '';
+      /* 索引是后来才加的，之前上传的书没有。有原文就当场补建一次，
+       * 不要叫使用者重新上传一遍。 */
+      let idx = p.bookIndex;
+      if (!idx && text && window.BOOKLIB) {
+        try { idx = p.bookIndex = BOOKLIB.buildIndex(text); STORE.update(); } catch (e) { idx = null; }
+      }
+      if (!idx || !text) {
+        body = `<div class="empty"><div class="big">▧</div>还没有原文可以检索。<br>
+          上传书籍档案（PDF / Word / EPUB / TXT）之后，这里会自动建好索引。</div>`;
+      } else {
+        body = `
+        <div class="card">
+          <div class="card-h"><div><div class="card-t">在书里搜</div>
+            <div class="card-s">全书切成 ${idx.segs.length} 段、${idx.chapters.length} 个章节。搜到的每一段都带出处，可以直接复制进稿子</div></div></div>
+          <input class="input" id="bl-q" placeholder="输入关键词，空格分隔，例如：私生女 红包">
+          <div class="hint" style="margin-top:6px">这是纯文字比对，不花钱、不呼叫模型。</div>
+          <div id="bl-r" style="margin-top:14px"></div>
+        </div>`;
+      }
     } else {
       const key = { title: 'titles', hook: 'hooks', open: 'opens' }[tab];
       const items = p[key] || [];
@@ -5919,6 +6086,18 @@ window.TOUR = (function () {
         hgSaveChoice(); hgRenderVoiceList(); hgRenderGenerate(); hgRenderChoiceSummary();
         toast('已选定这个声音', 'ok'); return;
       }
+      case 'view-source': {
+        const p = STORE.current;
+        const sc = p && (p.scripts || []).find(x => x.id === el.dataset.id);
+        if (!sc) return;
+        return modal('这一段的出处', `
+          <div class="hint" style="margin-bottom:10px">${esc(sc.source || '（没有记录出处）')}</div>
+          ${sc.quote ? `<div class="label">稿子里引用的那句</div>
+            <div style="font-size:15.5px;line-height:1.9;margin-bottom:14px">「${esc(sc.quote)}」</div>` : ''}
+          <div class="label">书里的原文</div>
+          <div style="font-size:15px;line-height:1.9;color:var(--txt-2);white-space:pre-wrap">${esc(sc.sourceText || '（没有留下原文）')}</div>
+          <div class="hint" style="margin-top:12px">对不上就代表模型改写过或写错了，那一句不要用。</div>`);
+      }
       case 'hg-recover': return hgRecover();
       case 'hg-voice-filter': {
         HG.voiceFilter = el.dataset.k || 'all';
@@ -6165,6 +6344,23 @@ window.TOUR = (function () {
   $('#view').addEventListener('input', e => {
     /* 声音搜寻：只重画清单那一块，搜寻框本身不动，不然每打一个字
      * 焦点就掉回去，一百个声音里根本搜不到东西。 */
+    /* 原文检索：纯本地比对，边打边搜，不呼叫任何模型、不花钱。
+     * 只重画结果区，搜寻框不动，否则每打一个字焦点就掉。 */
+    if (e.target.id === 'bl-q') {
+      const p = STORE.current;
+      const box = document.getElementById('bl-r');
+      if (!p || !box || !window.BOOKLIB) return;
+      const text = STORE.getBookText(p.id) || (p.parsed && p.parsed.raw) || '';
+      const hits = BOOKLIB.search(text, p.bookIndex, e.target.value, 10);
+      box.innerHTML = hits.length
+        ? hits.map(h => `<div style="padding:12px 0;border-top:1px solid var(--line)">
+            <div class="hint" style="margin-bottom:6px">${esc(h.label)}
+              <button class="btn btn-sm" style="margin-left:8px" data-act="copy" data-t="${esc(h.text)}">复制</button></div>
+            <div style="font-size:15px;line-height:1.9;color:var(--txt-2)">${esc(h.text)}</div>
+          </div>`).join('')
+        : (e.target.value.trim() ? '<div class="hint">书里没有这几个词。换个说法试试。</div>' : '');
+      return;
+    }
     if (e.target.id === 'hg-text') {
       HG.text = e.target.value;
       const est = $('#hg-est');
@@ -8400,9 +8596,16 @@ window.TOUR = (function () {
     const r = DATA.parseText(full);
     p.parsed = r;
     if (!p.source) p.source = { kind: 'text', label: kindLabel + '本地解析' };
+    /* 建位置索引。只存数字（章节在第几个字、每段在第几个字），不复制
+     * 文字——原文本来就存着了，再存一份会把浏览器空间撑爆。
+     * 有了它，写稿才有原文可依据，也才回溯得到出处。 */
+    try {
+      p.bookIndex = window.BOOKLIB ? BOOKLIB.buildIndex(full) : null;
+    } catch (e) { p.bookIndex = null; }
 
     item.type = kindLabel; item.status = '已解析';
     item.note = `${r.chars.toLocaleString()} 字 · ${r.chapters.length} 个章节标题 · 候选金句 ${r.quotes.length} 条`;
+    if (p.bookIndex) item.note += ` · 原文片段 ${p.bookIndex.segs.length} 段（可检索）`;
     if (saved === false) item.note += ' · ⚠ 浏览器空间不足，整本原文没能留住，AI 只会读到开头那一段';
     else if (typeof saved === 'number') item.note += ` · ⚠ 浏览器空间不足，只留住前 ${saved.toLocaleString()} 字`;
   }
@@ -9278,6 +9481,17 @@ ${JSON.stringify(payload)}
 【金句】${(p.quotes || []).slice(0, 6).join('；') || '（未提供）'}
 【读者痛点】${(p.pains || []).slice(0, 4).join('；') || '（未提供）'}`;
 
+      /* 原文片段。以前这一步只给模型看「摘要 + 主题 + 金句」——那三样
+       * 全是模型自己先前写出来的东西，等于让它照着自己的印象再编一次，
+       * 讲得出大方向、讲不出书里的细节，想举例只能凭空生。
+       * 现在按位置从原文切段送进去，并要求每篇都标出处，写出来的内容
+       * 才回溯得到书的哪一章、哪一段。 */
+      const bookText = (window.STORE && STORE.getBookText(p.id)) || (p.parsed && p.parsed.raw) || '';
+      const idx = p.bookIndex;
+      /* 取样要摊开在全书。只拿前面几段的话，14 篇稿会全在讲第一章。 */
+      const allPas = (idx && bookText && window.BOOKLIB)
+        ? BOOKLIB.spread(bookText, idx, Math.min(3 * rounds, 30)) : [];
+
       const call = (prompt, maxTokens) => hgFetchSlow('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.assign({
@@ -9317,11 +9531,19 @@ ${ctx}
         const from = ri * batch;
         const want = Math.min(batch, total - from);
         const use = angles.slice(from, from + want).join('、') || angles[ri % angles.length];
+        const pas = allPas.slice(ri * 3, ri * 3 + 3);
+        const pasLines = pas.map((x, k) => `[${k + 1}] 出处：${x.label}` + NL + `原文：${x.text.slice(0, 380)}`);
+        const pasBlock = pas.length
+          ? NL + '【这几篇可以用的原文片段】（下面是书里的原话，不是摘要）' + NL
+            + pasLines.join(NL + NL) + NL + NL
+            + '引用规则：要引用就从上面这几段里挑，一字不差地抄，不要改写、不要润色。'
+            + '没有列在上面的书中情节、人名、数字，一律不准写——宁可不举例，也不要编。' + NL
+          : '';
         try {
           const r = await call(`帮这本书写 ${want} 篇 ${duration} 秒短视频口播稿，这是第 ${from + 1}-${from + want} 篇。
 
 ${ctx}
-
+${pasBlock}
 【这几篇的切入角度】${use}（每篇角度都不一样，也不要跟一般书评的开场雷同）
 
 形式：**一个人对着镜头讲**，全程只有一个说话的人，不要写成两个人对谈、不要有主持人问答。
@@ -9331,12 +9553,20 @@ ${ctx}
 - 开头 3 秒就要让人停下来，别铺陈、别说「大家好」
 - 讲人话，短句，像跟朋友说话，不要书面语和排比句
 - 中间要有一次自问自答（预设观众的反驳，然后回应）
-- 要引用书里的一句原话，并留一个停顿
+- ${pas.length ? '要从上面的原文片段里引用一句原话（一字不差），并留一个停顿' : '可以引用书里的话，但不确定的就不要写'}
 - 结尾给一个今天就能做的具体动作，再自然带出引导语
 - 每篇 8-10 句，全篇加起来 ${minWords}-${maxWords} 字（${duration} 秒念得完）
 
-只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3000);
+只输出：{"scripts":[{"title":"标题","hook":"前3秒开场","quote":"你引用的那句原话，没引用就留空","source":"引用的是第几个片段，填数字，没引用就留空","dialogue":[{"t":"0.0-4.0s","speaker":"${speaker}","cue":"语气与节奏提示","text":"台词"}],"cta":"结尾引导语"}]}`, 3000);
           const list = (aiJson(r.content).scripts || []).filter(x => x && x.dialogue && x.dialogue.length);
+          /* 模型回的 source 是「第几个片段」，把它换成人看得懂的出处，
+           * 并留下原文——之后要查证「这句到底是不是书里写的」才有依据。 */
+          list.forEach(sc => {
+            const k = parseInt(sc.source, 10);
+            const hit = k >= 1 && pas[k - 1];
+            if (hit) { sc.source = hit.label; sc.sourceText = hit.text; }
+            else { delete sc.source; }
+          });
           wrote += list.length;
           say(`口播稿 ${wrote}/${total} 篇`);
           return list;
@@ -9354,6 +9584,8 @@ ${ctx}
       };
     }
   };
+
+  const NL = String.fromCharCode(10);
 
   /* 把整本书切成模型吃得下的段落。优先断在段落与句号，不要把一句话
    * 从中间剖开——切在句子中间会让那一段的摘要变得莫名其妙。 */
