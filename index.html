@@ -4698,7 +4698,8 @@ window.VIEWS = window.VIEWS || {};
     <div class="card" style="margin-bottom:18px;border-color:var(--violet-2)">
       <div class="card-h"><div><div class="card-t">我真的发出去的（${log.length} 支）</div>
           <div class="card-s">平台的数据拿不回来，得自己填。发完先登记，过几天回来补播放量</div></div>
-        <div class="right"><span class="tag g">这一块是真数据</span></div></div>
+        <div class="right"><span class="tag g">这一块是真数据</span>
+          <button class="btn btn-sm btn-primary" data-act="pub-manual">＋ 手动登记一笔</button></div></div>
 
       ${log.length ? `
       <div style="overflow-x:auto">
@@ -4726,7 +4727,8 @@ window.VIEWS = window.VIEWS || {};
       <div class="hint" style="margin-top:10px">已填数据 ${filled}/${log.length} 支。
         ${filled < 10 ? `再累积 ${10 - filled} 支填好数字的，下面这张对照表才开始有参考价值。` : ''}</div>
       ` : `<div class="empty" style="padding:26px"><div class="big">▤</div>
-        还没有登记过。去「内容资产库 → 成片影片」，在做好的影片上按「登记发布」。</div>`}
+        还没有登记过。<br>做好的影片可以去「内容资产库 → 成片影片」按「登记发布」；
+        在别处剪好、已经发出去的，按右上角「手动登记一笔」。</div>`}
 
       ${byType.length ? `
       <div class="label" style="margin-top:18px">按选题类型的平均表现
@@ -6230,6 +6232,7 @@ window.TOUR = (function () {
       }
       case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
       case 'pub-register': return pubRegisterModal(el.dataset.id);
+      case 'pub-manual': return pubManualModal();
       case 'pub-del': return pubDel(el.dataset.id);
       case 'hg-recover': return hgRecover();
       case 'hg-voice-filter': {
@@ -6642,6 +6645,7 @@ window.TOUR = (function () {
     if (a === 'new-proj-from-del') { closeModal(); return newProjectModal(); }
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'pub-save') { return pubSave(el.dataset.id); }
+    if (a === 'pm-save') { return pubManualSave(); }
     if (a === 'confirm-prompt-video') {
       const i = +el.dataset.i;
       /* 一定要在 closeModal 之前读——关掉弹窗 DOM 就没了，读到的会是 null。 */
@@ -9803,6 +9807,63 @@ ${hookLibBlock()}
     v.status = '已发布';
     STORE.update(); closeModal(); render();
     toast('登记好了。过几天回「发布与数据」补上播放量', 'ok');
+  }
+
+  /* 手动登记一笔。
+   * 「登记发布」那颗按钮只长在真影片上，但真实情况是：影片可能在别处
+   * 剪好、已经发出去了，系统里根本没有对应的档案。发布记录的价值在于
+   * 累积够多笔才看得出规律，不该被「一定要从这里生成」卡住。 */
+  function pubManualModal() {
+    const types = (window.DATA && DATA.HOOK_TYPES) || [];
+    modal('手动登记一笔发布', `
+      <div class="explain" style="margin:0 0 14px">
+        <div class="ex-r"><span class="ex-k">什么时候用</span><span>
+          影片在别的地方剪好、已经发出去了，系统里没有对应档案的时候。
+          <b>选题类型一定要选</b>——那张对照表就是靠它分组的。</span></div>
+      </div>
+      <div class="row2">
+        <div class="field"><div class="label">影片标题 <span style="color:var(--red)">*</span></div>
+          <input class="input" id="pm-title" placeholder="例如：努力没有杠杆，选择才有"></div>
+        <div class="field"><div class="label">哪本书</div>
+          <input class="input" id="pm-book" value="${esc((STORE.current && STORE.current.title) || '')}"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><div class="label">发到哪个平台</div>
+          <select class="input" id="pm-plat">
+            ${DATA.PLATFORMS.map(x => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}
+          </select></div>
+        <div class="field"><div class="label">选题类型</div>
+          <select class="input" id="pm-type">
+            <option value="">（未分类）</option>
+            ${types.map(t => `<option value="${esc(t.key)}">${esc(t.name)}</option>`).join('')}
+          </select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><div class="label">发布日期</div>
+          <input class="input" type="date" id="pm-date" value="${pubToday()}"></div>
+        <div class="field"><div class="label">影片连结<span class="hint" style="margin-left:6px;font-weight:400">选填</span></div>
+          <input class="input" id="pm-url" placeholder="贴上发布后的网址"></div>
+      </div>`,
+      `<button class="btn" onclick="UI.closeModal()">取消</button>
+       <button class="btn btn-primary" data-modal-act="pm-save">登记</button>`);
+  }
+
+  function pubManualSave() {
+    const val = id => (($('#' + id) || {}).value || '').trim();
+    const title = val('pm-title');
+    if (!title) return toast('至少要填影片标题', 'warn');
+    const types = (window.DATA && DATA.HOOK_TYPES) || [];
+    const ty = types.find(t => t.key === val('pm-type'));
+    pubLog().unshift({
+      id: 'pb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      videoId: null, projectId: (STORE.current || {}).id || null,
+      book: val('pm-book'), title,
+      hookType: ty ? ty.key : null, hookTypeName: ty ? ty.name : '',
+      platform: val('pm-plat'), at: val('pm-date') || pubToday(), url: val('pm-url'),
+      views: null, likes: null, comments: null, manual: true
+    });
+    STORE.update(); closeModal(); render();
+    toast('登记好了。过几天回来补播放量', 'ok');
   }
 
   function pubSet(id, key, value) {
