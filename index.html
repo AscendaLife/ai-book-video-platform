@@ -620,6 +620,14 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
   #btn-tour{display:none}
 }
 
+/* 人物卡的四个步骤。用 details 是因为「一次只看当前该做的那一步」
+   本来就是展开／收合，不需要自己写一套状态。 */
+.step>summary{list-style:none;display:flex;align-items:center;gap:8px}
+.step>summary::-webkit-details-marker{display:none}
+.step>summary::after{content:"▸";margin-left:auto;color:var(--txt-3);transition:.16s}
+.step[open]>summary::after{transform:rotate(90deg)}
+.step>summary:hover{color:var(--violet-2)}
+
 </style>
 </head>
 <body>
@@ -5652,137 +5660,176 @@ window.VIEWS = window.VIEWS || {};
 `;
   };
 
+  /* 一张人物卡以前把十几个栏位全摊开在同一层：定妆照、补充说明、名字、
+   * 定位、身份、长相、影片长度、口吻、14 段自述、完整稿、声音、语速、
+   * 生成按钮。使用者的原话是「整个页面也很乱」「看不出先做哪个」——
+   * 说得对，那是一份表格，不是一个流程。
+   *
+   * 改成四步，一次只展开当前该做的那一步；做完的收起来只留一行结论。
+   * 步骤本身就是顺序：没有脸就没得写稿，没有稿就没得出片。 */
   function roleCard(c, i, p, pa) {
     const intro = c.intro || {};
     const voices = (window.HGINFO && HGINFO.voices()) || [];
     const voiceId = c.voiceId || pa.realVoiceId || '';
     const script = (c.introScript || '').trim();
+    const curVoice = voices.find(v => v.id === voiceId);
+    const AGE = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
+    const vLabel = v => v ? ((v.zh ? v.zh + '（' + v.name + '）' : v.name)
+      + (v.gender && v.gender !== 'unknown' ? ' · ' + (v.gender === 'male' ? '男' : '女') : '')
+      + (v.age ? ' · ' + AGE[v.age] : '')) : '';
+
+    /* 每一步做完没：这四个条件也是后面每一步的前提。 */
+    const st = [
+      { n: '①', t: '这个人是谁', ok: !!(c.name || '').trim() && !!(c.look || '').trim(),
+        sum: (c.name || '未命名') + (c.role ? ' · ' + c.role : '') },
+      { n: '②', t: '他的脸', ok: !!c.portraitUrl,
+        sum: c.portraitUrl ? '定妆照已生成' + ((c.portraitHistory || []).length > 1 ? '（共 ' + c.portraitHistory.length + ' 张可切换）' : '') : '还没有定妆照' },
+      { n: '③', t: '他要说什么', ok: !!script,
+        sum: script ? '约 ' + script.length + ' 字 · 念起来约 ' + Math.max(1, Math.round(script.length / 4.5)) + ' 秒' : '还没有稿子' },
+      { n: '④', t: '怎么念、做成影片', ok: !!c.videoUrl,
+        sum: c.videoUrl ? '影片已生成' : (curVoice ? vLabel(curVoice) + ' · ' + (c.voiceSpeed == null ? 1 : c.voiceSpeed) + '×' : '还没选声音') }
+    ];
+    const cur = st.findIndex(x => !x.ok);          // -1 代表四步都完成了
+    const open = k => (cur === -1 ? k === 3 : k === cur) ? 'open' : '';
+    const head = (k) => `<summary style="cursor:pointer;padding:9px 0;font-weight:650">
+        <span style="color:${st[k].ok ? 'var(--green)' : (k === cur ? 'var(--violet-2)' : 'var(--txt-3)')}">${st[k].ok ? '✓' : st[k].n}</span>
+        ${st[k].t}
+        <span class="hint" style="font-weight:400;margin-left:8px">${esc(st[k].sum)}</span></summary>`;
 
     return `
     <div class="card" style="background:var(--panel-2);margin:0">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span class="tag v">${String(i + 1).padStart(2, '0')}</span>
         <b style="font-size:16px;flex:1">${esc(c.name || '未命名人物')}</b>
         ${c.cast ? `<span class="tag c">${esc(c.cast)}</span>` : ''}
-        <b data-act="del-char" title="删掉整个人物（会先问一次）" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px" title="删掉这个人物">✕</b>
+        <b data-act="del-char" data-i="${i}" title="删掉整个人物（会先问一次）"
+           style="cursor:pointer;opacity:.4;padding:2px 8px;margin-left:4px">✕</b>
+      </div>
+      ${/* 进度条：一眼看出走到哪、还差什么，不用把整张卡卷完 */''}
+      <div style="display:flex;gap:4px;margin-bottom:12px">
+        ${st.map((x, k) => `<div title="${esc(x.t)}" style="flex:1;height:4px;border-radius:2px;background:${
+          x.ok ? 'var(--green)' : (k === cur ? 'var(--violet-2)' : 'var(--line-2)')}"></div>`).join('')}
       </div>
 
-      <div class="char-portrait" data-for="${i}">${c.portraitUrl
-        ? `<img src="${esc(c.portraitUrl)}" data-act="view-portrait" data-url="${esc(c.portraitUrl)}" title="点一下看完整大图"
-             style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;margin-bottom:10px;cursor:zoom-in">
-           <div class="hint" style="margin:-4px 0 10px">卡片上这张是裁过的，<b>点图片看完整大图</b>——影片里用的是完整那张，构图要在大图上看。</div>`
-        : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
-             padding:26px 10px;text-align:center;margin-bottom:10px">还没有定妆照。这张脸就是影片里会出现的脸，先生成一张。</div>`}</div>
-
-      ${(c.portraitHistory || []).length > 1 ? `
-      <div class="label" style="margin-top:2px">生成过的定妆照
-        <span class="hint" style="margin-left:6px;font-weight:400">点一下换回那张</span></div>
-      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
-        ${c.portraitHistory.map(u => `<img src="${esc(u)}" data-act="pick-portrait" data-i="${i}" data-url="${esc(u)}"
-          title="点一下换回这张"
-          style="flex:0 0 52px;width:52px;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;
-                 border:2px solid ${u === c.portraitUrl ? 'var(--violet)' : 'var(--line)'}">`).join('')}
-      </div>` : ''}
-
-      <div class="field" style="margin-bottom:8px">
-        <div class="label">定妆照补充说明<span class="hint" style="margin-left:6px;font-weight:400">想调整长相或氛围就写在这，会加进生成条件</span></div>
-        <input class="input" value="${esc(c.portraitNote || '')}" data-act="edit-char" data-i="${i}" data-k="portraitNote"
-          placeholder="例如：年纪再大一点、表情更疲惫、光线暗一些">
-      </div>
-
-      <div class="row2" style="margin-bottom:8px">
-        <div class="field"><div class="label">名字</div>
-          <input class="input" data-act="edit-char" data-i="${i}" data-k="name" value="${esc(c.name || '')}" placeholder="人物的名字"></div>
-        <div class="field"><div class="label">角色定位</div>
-          <select class="input" data-act="char-cast" data-i="${i}">
-            <option value="">未标注</option>
-            ${CASTS.map(x => `<option value="${esc(x)}" ${c.cast === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
-          </select></div>
-      </div>
-      <div class="field" style="margin-bottom:8px"><div class="label">在书里是谁</div>
-        <input class="input" data-act="edit-char" data-i="${i}" data-k="role" value="${esc(c.role || '')}" placeholder="例如：故事的男主角、书中的年轻工程师、作者本人"></div>
-      <div class="field" style="margin-bottom:10px"><div class="label">长什么样<span class="hint" style="margin-left:8px;font-weight:400">脸不对就改这里再生成一次</span></div>
-        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="look" rows="3"
-          placeholder="年龄、性别、脸型、发型、穿着、神情、时代感…越具体越像">${esc(c.look || '')}</textarea></div>
-
-      <!-- 这两个设定不会被念出来，但都得在写稿前决定：
-           长度决定 AI 写多少字，也就决定这支影片多贵；口吻决定他怎么讲话，
-           男主角跟女主角用同一个语气，几支影片放在一起会像同一个人。 -->
-      <div class="row2" style="margin-bottom:10px">
-        <div class="field"><div class="label">影片长度<span class="hint" style="margin-left:6px;font-weight:400">越长越贵</span></div>
-          <select class="input" data-act="char-len" data-i="${i}">
-            ${INTRO_LENGTHS.map(x => `<option value="${x.id}" ${String(c.introLength || '60') === x.id ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}
-          </select></div>
-        <div class="field"><div class="label">念的口吻</div>
-          <input class="input" data-act="edit-char" data-i="${i}" data-k="introTone" value="${esc(c.introTone || '')}"
-            placeholder="低沉、压着火／轻快带笑／疲惫但温柔"></div>
-      </div>
-
-      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-sm" data-act="gen-char-portrait" data-i="${i}">${c.portraitUrl ? '重生成定妆照' : '✨ 生成定妆照'}</button>
-        <button class="btn btn-sm btn-primary" data-act="ai-char-intro" data-i="${i}">✨ 写自述稿</button>
-      </div>
-
-      <!-- 分段折叠起来：一张卡上十几个输入框会把整张卡拉得很长，
-           平常看的是下面那篇组好的稿子，要逐段改的时候才展开。
-           已经写过内容的就预设展开，不然 AI 写完看不到东西。 -->
-      <details class="adv" style="margin-bottom:12px" ${INTRO_PARTS.some(x => (intro[x.k] || '').trim()) ? 'open' : ''}>
-        <summary>自述稿的 ${INTRO_PARTS.length} 段<span class="hint" style="font-weight:400">钩子／他是谁、在哪里／他心里的事／收尾——留空的段落不会念到</span></summary>
-        <div class="adv-b">
-          <div class="char-intro-parts" data-for="${i}">${INTRO_GROUPS.map(group => `
-            <div class="label" style="margin:14px 0 8px;color:var(--violet-2)">${group.g}</div>
-            ${group.parts.map(part => `
-              <div class="field" style="margin-bottom:8px"><div class="label">${part.t}</div>
-                <textarea class="input" data-act="edit-char-intro" data-i="${i}" data-k="${part.k}" rows="2"
-                  placeholder="${esc(part.ph)}">${esc(intro[part.k] || '')}</textarea></div>`).join('')}`).join('')}</div>
-          <button class="btn btn-sm" data-act="compose-intro" data-i="${i}">用这几段重新组稿</button>
+      <details class="step" ${open(0)} style="border-bottom:1px solid var(--line)">
+        ${head(0)}
+        <div style="padding-bottom:12px">
+          <div class="row2" style="margin-bottom:8px">
+            <div class="field"><div class="label">名字</div>
+              <input class="input" data-act="edit-char" data-i="${i}" data-k="name" value="${esc(c.name || '')}" placeholder="人物的名字"></div>
+            <div class="field"><div class="label">角色定位</div>
+              <select class="input" data-act="char-cast" data-i="${i}">
+                <option value="">未标注</option>
+                ${CASTS.map(x => `<option value="${esc(x)}" ${c.cast === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+              </select></div>
+          </div>
+          <div class="field" style="margin-bottom:8px"><div class="label">在书里是谁</div>
+            <input class="input" data-act="edit-char" data-i="${i}" data-k="role" value="${esc(c.role || '')}" placeholder="例如：故事的男主角、书中的年轻工程师、作者本人"></div>
+          <div class="field" style="margin-bottom:0"><div class="label">长什么样
+              <span class="hint" style="margin-left:8px;font-weight:400">这段就是画定妆照的依据，脸不对先改这里</span></div>
+            <textarea class="input" data-act="edit-char" data-i="${i}" data-k="look" rows="3"
+              placeholder="年龄、性别、脸型、发型、穿着、神情、时代感…越具体越像">${esc(c.look || '')}</textarea></div>
         </div>
       </details>
-      <div class="char-intro-status" data-for="${i}"></div>
 
-      <div class="field" style="margin-bottom:10px">
-        <div class="label">他要念的自述稿<span class="hint" style="margin-left:8px;font-weight:400">${script ? '约 ' + script.length + ' 字，念起来约 ' + Math.max(1, Math.round(script.length / 4.5)) + ' 秒' : '还没有稿子'}</span></div>
-        <textarea class="input" data-act="edit-char" data-i="${i}" data-k="introScript" rows="6"
-          placeholder="第一人称，从头到尾都是这个人物自己在讲话">${esc(c.introScript || '')}</textarea>
-      </div>
+      <details class="step" ${open(1)} style="border-bottom:1px solid var(--line)">
+        ${head(1)}
+        <div style="padding-bottom:12px">
+          <div class="char-portrait" data-for="${i}">${c.portraitUrl
+            ? `<img src="${esc(c.portraitUrl)}" data-act="view-portrait" data-url="${esc(c.portraitUrl)}" title="点一下看完整大图"
+                 style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;margin-bottom:8px;cursor:zoom-in">
+               <div class="hint" style="margin-bottom:10px">卡片上这张是裁过的，<b>点图片看完整大图</b>——影片用的是完整那张。</div>`
+            : `<div class="hint" style="background:var(--panel);border:1px dashed var(--line);border-radius:10px;
+                 padding:26px 10px;text-align:center;margin-bottom:10px">还没有定妆照。这张脸就是影片里会出现的脸。</div>`}</div>
 
-      ${/* 这一页每个人物各自一个声音——男主角配到女声、老人配到少女音，
-           不试听根本发现不了。以前只有一个下拉，选完要等影片做出来
-           （一支 US$1-3）才听得到，太贵了。 */''}
-      <div class="field" style="margin-bottom:10px"><div class="label">用哪个声音
-          <span class="hint" style="margin-left:8px;font-weight:400">选完先按播放听一下，别让老先生配到少女音</span></div>
-        ${voices.length
-          ? `<select class="input" data-act="char-voice" data-i="${i}">
-              ${voices.map(v => {
-                const AGE = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
-                const label = (v.zh ? v.zh + '（' + v.name + '）' : v.name)
-                  + (v.gender && v.gender !== 'unknown' ? ' · ' + (v.gender === 'male' ? '男' : '女') : '')
-                  + (v.age ? ' · ' + AGE[v.age] : '')
-                  + (v.note ? ' · ' + v.note : '');
-                return `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(label)}</option>`;
-              }).join('')}
-            </select>
-            ${(() => {
-              const cur = voices.find(v => v.id === voiceId);
-              return cur && cur.preview
-                ? `<audio src="${esc(cur.preview)}" controls preload="none" style="width:100%;height:32px;margin-top:8px"></audio>`
-                : '<div class="hint" style="margin-top:6px">这个声音没有试听档。到「数位人 / 声音 / 克隆」那一页可以听完整清单。</div>';
-            })()}
-            ${/* 声音清单只有性别没有年龄，老角色配到的男声听起来还是三十几岁。
-                 语速是唯一真的能压低年龄感的旋钮，而且一本书里的人物年纪
-                 差很多，一定要各自设。 */''}
-            <div class="field" style="margin-top:10px;margin-bottom:0"><div class="label">语速
-                <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(c.voiceSpeed == null ? 1 : c.voiceSpeed)}×</span></div>
-              <input type="range" min="0.8" max="1.15" step="0.05" value="${c.voiceSpeed == null ? 1 : c.voiceSpeed}"
-                data-act="char-speed" data-i="${i}">
-              <div class="hint" style="margin-top:4px">年纪大的角色调到 <b>0.85-0.9</b> 会明显变沉、变老；
-                年轻角色可以拉到 1.05 以上。试听那个播放器听不出差别——<b>语速要生成影片才听得到</b>。</div></div>`
-          : `<div class="hint">${voiceId ? '目前用「数字人 / 声音」那边选好的声音。' : '声音清单还没读到；先去「数字人 / 声音 / 克隆」选一个。'}</div>`}
-      </div>
+          ${(c.portraitHistory || []).length > 1 ? `
+          <div class="label" style="margin-top:2px">生成过的<span class="hint" style="margin-left:6px;font-weight:400">点一下换回那张</span></div>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">
+            ${c.portraitHistory.map(u => `<img src="${esc(u)}" data-act="pick-portrait" data-i="${i}" data-url="${esc(u)}"
+              title="点一下换回这张"
+              style="flex:0 0 52px;width:52px;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;
+                     border:2px solid ${u === c.portraitUrl ? 'var(--violet)' : 'var(--line)'}">`).join('')}
+          </div>` : ''}
 
-      <button class="btn btn-primary btn-sm" data-act="gen-char-video" data-i="${i}" style="width:100%">🎬 生成这个人物的自述短片（会扣额度）</button>
-      <div class="char-video" data-for="${i}">${charVideoHtml(c)}</div>
-      <div class="hint" style="margin-top:8px">一支约 US$1-3、占一支月额度。定妆照与自述稿都很便宜，先在上面调到满意再按这里。</div>
+          <div class="field" style="margin-bottom:10px">
+            <div class="label">想调整什么<span class="hint" style="margin-left:6px;font-weight:400">写在这会加进生成条件</span></div>
+            <input class="input" value="${esc(c.portraitNote || '')}" data-act="edit-char" data-i="${i}" data-k="portraitNote"
+              placeholder="例如：年纪再大一点、表情更疲惫、光线暗一些">
+          </div>
+          <button class="btn btn-sm ${c.portraitUrl ? '' : 'btn-primary'}" data-act="gen-char-portrait" data-i="${i}">
+            ${c.portraitUrl ? '重生成定妆照' : '✨ 生成定妆照'}</button>
+          <span class="hint" style="margin-left:8px">一张约 US$0.03-0.07，可以一直重生成</span>
+        </div>
+      </details>
+
+      <details class="step" ${open(2)} style="border-bottom:1px solid var(--line)">
+        ${head(2)}
+        <div style="padding-bottom:12px">
+          <div class="row2" style="margin-bottom:10px">
+            <div class="field"><div class="label">影片长度<span class="hint" style="margin-left:6px;font-weight:400">直接决定这支多贵</span></div>
+              <select class="input" data-act="char-len" data-i="${i}">
+                ${INTRO_LENGTHS.map(x => `<option value="${x.id}" ${String(c.introLength || '60') === x.id ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}
+              </select></div>
+            <div class="field"><div class="label">念的口吻</div>
+              <input class="input" data-act="edit-char" data-i="${i}" data-k="introTone" value="${esc(c.introTone || '')}"
+                placeholder="低沉、压着火／轻快带笑／疲惫但温柔"></div>
+          </div>
+          <button class="btn btn-sm btn-primary" data-act="ai-char-intro" data-i="${i}">✨ 写自述稿</button>
+          <span class="hint" style="margin-left:8px">几分钱，可以一直重写</span>
+          <div class="char-intro-status" data-for="${i}"></div>
+
+          <div class="field" style="margin:12px 0 8px">
+            <div class="label">他要念的自述稿
+              <span class="hint" style="margin-left:8px;font-weight:400">${script ? '约 ' + script.length + ' 字，念起来约 ' + Math.max(1, Math.round(script.length / 4.5)) + ' 秒' : '还没有稿子'}</span></div>
+            <textarea class="input" data-act="edit-char" data-i="${i}" data-k="introScript" rows="6"
+              placeholder="第一人称，从头到尾都是这个人物自己在讲话">${esc(c.introScript || '')}</textarea>
+          </div>
+
+          ${/* 逐段改是进阶用法，平常看的是上面那篇组好的稿子 */''}
+          <details class="adv">
+            <summary>逐段改（${INTRO_PARTS.length} 段）<span class="hint" style="font-weight:400">钩子／他是谁、在哪里／他心里的事／收尾——留空的不会念到</span></summary>
+            <div class="adv-b">
+              <div class="char-intro-parts" data-for="${i}">${INTRO_GROUPS.map(group => `
+                <div class="label" style="margin:14px 0 8px;color:var(--violet-2)">${group.g}</div>
+                ${group.parts.map(part => `
+                  <div class="field" style="margin-bottom:8px"><div class="label">${part.t}</div>
+                    <textarea class="input" data-act="edit-char-intro" data-i="${i}" data-k="${part.k}" rows="2"
+                      placeholder="${esc(part.ph)}">${esc(intro[part.k] || '')}</textarea></div>`).join('')}`).join('')}</div>
+              <button class="btn btn-sm" data-act="compose-intro" data-i="${i}">用这几段重新组稿</button>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <details class="step" ${open(3)}>
+        ${head(3)}
+        <div style="padding-bottom:4px">
+          <div class="field" style="margin-bottom:10px"><div class="label">用哪个声音
+              <span class="hint" style="margin-left:8px;font-weight:400">按播放听一下，别让老先生配到少女音</span></div>
+            ${voices.length
+              ? `<select class="input" data-act="char-voice" data-i="${i}">
+                  ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(vLabel(v) + (v.note ? ' · ' + v.note : ''))}</option>`).join('')}
+                </select>
+                ${curVoice && curVoice.preview
+                  ? `<audio src="${esc(curVoice.preview)}" controls preload="none" style="width:100%;height:32px;margin-top:8px"></audio>`
+                  : '<div class="hint" style="margin-top:6px">这个声音没有试听档。</div>'}
+                <div class="field" style="margin-top:10px;margin-bottom:0"><div class="label">语速
+                    <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(c.voiceSpeed == null ? 1 : c.voiceSpeed)}×</span></div>
+                  <input type="range" min="0.8" max="1.15" step="0.05" value="${c.voiceSpeed == null ? 1 : c.voiceSpeed}"
+                    data-act="char-speed" data-i="${i}">
+                  <div class="hint" style="margin-top:4px">年长角色 <b>0.85-0.9</b> 会明显变沉；
+                    <b>语速要生成影片才听得到</b>，试听那个播放器听不出差别。</div></div>`
+              : `<div class="hint">${voiceId ? '目前用「数字人 / 声音」那边选好的声音。' : '声音清单还没读到；先去「数字人 / 声音 / 克隆」选一个。'}</div>`}
+          </div>
+
+          <button class="btn btn-primary btn-sm" data-act="gen-char-video" data-i="${i}" style="width:100%">🎬 生成这个人物的自述短片（会扣额度）</button>
+          <div class="hint" style="margin-top:8px">${script
+            ? '这一支约 <b>' + Math.max(1, Math.round(script.length / 4.5)) + ' 秒</b>、估约 <b>US$'
+              + (script.length / 4.5 * 0.05).toFixed(2) + '</b>，并占一支月额度。稿子越短越便宜。'
+            : '还没有稿子，先回上一步写一篇。'}</div>
+          <div class="char-video" data-for="${i}">${charVideoHtml(c)}</div>
+        </div>
+      </details>
     </div>`;
   }
 
