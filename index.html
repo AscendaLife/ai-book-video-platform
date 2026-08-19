@@ -4639,7 +4639,14 @@ window.VIEWS = window.VIEWS || {};
       <div id="hg-gen-panel"><div class="hint">读取中…</div></div>
     </div>
 
-    ${interviewCard(p)}
+    ${/* 影片形式本来是主流程里的第三张卡，跟形象、声音平起平坐。
+         但「访谈式对谈」到今天为止一次都没有真的跑成功过——把一个没验证过
+         的东西放在那里当平级选择，等于叫人去踩没铺好的路。收进进阶，
+         而且在标题就写明它还没跑通。 */''}
+    <details class="adv" style="margin-bottom:12px">
+      <summary>影片形式：单人口播 / 访谈式对谈<span class="hint" style="font-weight:400">目前用单人口播；对谈还没实测成功过</span></summary>
+      <div class="adv-b">${interviewCard(p)}</div>
+    </details>
 
     ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
          默认收起来，免得把真正要做的两件事淹没掉。 */''}
