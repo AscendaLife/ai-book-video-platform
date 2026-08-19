@@ -7669,8 +7669,28 @@ window.TOUR = (function () {
     } finally { GA.busy = false; }
   }
 
+  /* 上传走的是 serverless function，请求体上限约 4.5MB——超过的话，
+   * 平台会在请求到我们的程式之前就挡掉，而那个回应没有跨域标头，浏览器
+   * 只会丢一个笼统的网络错误，画面上显示「连不上服务器」。使用者完全
+   * 不知道是档案太大。
+   *
+   * 所以在送出之前先量一次，把话讲清楚。留 0.5MB 余裕给 multipart 的
+   * 封装开销。 */
+  const UPLOAD_MAX = 4 * 1024 * 1024;
+
+  function tooBig(file, what) {
+    if (!file || file.size <= UPLOAD_MAX) return false;
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    toast(what + '太大了（' + mb + 'MB），上限 4MB。'
+      + (/录音|音/.test(what)
+        ? '用手机的语音备忘录录 30-60 秒、导出 m4a 通常不到 1MB；WAV 档会大很多，先转成 m4a 或 mp3。'
+        : '用手机相簿的「缩小尺寸」或线上工具压一下再传。'), 'err');
+    return true;
+  }
+
   async function hgUploadPhoto(file) {
     if (!file) return;
+    if (tooBig(file, '这张照片')) return;
     const localPreview = URL.createObjectURL(file);
     HG.assetPreview = localPreview; HG.mode = 'image'; hgRenderAvatars();
     try {
@@ -7792,21 +7812,29 @@ window.TOUR = (function () {
           <div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:14px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
         </div>
       </div>
-      <div class="hint" style="margin-top:10px">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音可以克隆自己的声音，
+      <div class="hint" style="margin-top:10px">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音可以克隆自己的声音。
+        <b>档案要小于 4MB</b>——手机语音备忘录录 30-60 秒导出 m4a 通常不到 1MB，WAV 会大很多，先转档。
         上传免费，<b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
   }
 
   async function hgUploadAudio(file) {
     if (!file) return;
+    if (tooBig(file, '这段录音')) return;
     let assetId;
+    const _busy = busy('正在上传录音…');
     try {
       const buf = await file.arrayBuffer();
-      // 同上：一定要走 hgFetch，原生 fetch 不会带凭证
-      const j = await hgFetch(
+      /* 一定要走 hgFetch，原生 fetch 不会带凭证。
+       * 用 hgFetchSlow：几 MB 的档案在一般网络上传常常超过 15 秒，
+       * 预设逾时会在还传得好好的时候把它砍掉。 */
+      const j = await hgFetchSlow(
         `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'audio/mpeg')}&name=${encodeURIComponent(file.name || 'voice')}`,
         { method: 'POST', body: buf });
       assetId = j.assetId;
-    } catch (e) { return toast('上传失败：' + e.message, 'err'); }
+    } catch (e) {
+      return toast('上传失败：' + e.message
+        + (/连不上|Failed to fetch/i.test(e.message) ? '（多半是档案太大被平台挡掉，试试转成 m4a 或录短一点）' : ''), 'err');
+    } finally { _busy(); }
 
     modal('确定要克隆这段声音吗？',
       '<div style="font-size:15.5px">录音已经上传好了。按下面「确认克隆」会真的送去训练一个新声音，从你的额度扣一点钱，无法撤销。</div>',
