@@ -6122,8 +6122,58 @@ window.TOUR = (function () {
     // 人物自述页要给每个人物挑声音，声音清单得先拿到（只抓一次）
     if (route === 'roles') rolesLoadVoices();
     if (window.I18N) { I18N.apply($('#view')); I18N.apply($('#crumb')); }
+    tidyExplains();
   }
   window.render = render;
+
+  /* ---- 说明区块自动收合 ----
+   *
+   * 每一页都配了大段的「这一步在做什么 / 你需要做什么 / 这一步产出」。
+   * 当初写那些是因为客户第一次看根本不知道在干嘛；但每天在用的人每次
+   * 进来都要先卷过它们才看得到能按的东西。使用者的原话：「写的太多，
+   * 占据了太多的位置」。
+   *
+   * 不逐一改十九个模板——那既慢又容易改坏。改成渲染完统一处理一次：
+   * 超过两条的说明只留第一条，其余收起来。
+   *
+   * 两种不收：
+   *   - 警告色（琥珀 / 红）：那些是「这是假数据」「这一步真的会扣钱」，
+   *     收起来就等于把风险藏起来
+   *   - 使用者已经手动展开过的：同一次浏览里不要一直弹回去
+   */
+  const explainOpened = {};      // 这一次浏览里被展开过的，重画后维持展开
+
+  function tidyExplains() {
+    const box = $('#view');
+    if (!box) return;
+    $$('#view .explain').forEach((el, n) => {
+      if (el.dataset.tidied) return;
+      const style = el.getAttribute('style') || '';
+      if (/amber|red/.test(style)) return;              // 警告不收
+      const rows = Array.prototype.slice.call(el.querySelectorAll('.ex-r'));
+      if (rows.length < 3) return;
+
+      /* 用「第一条的文字」当识别，比用序号稳——同一页重画后顺序不变，
+       * 但换一页序号就会撞在一起。 */
+      const key = (rows[0].textContent || '').replace(/\s+/g, '').slice(0, 24) + '|' + rows.length;
+      el.dataset.tidied = '1';
+      const open = !!explainOpened[key];
+
+      const more = document.createElement('div');
+      more.className = 'hint';
+      more.style.cssText = 'cursor:pointer;padding:6px 0 0;color:var(--violet-2);font-weight:600';
+      const apply = () => {
+        rows.forEach((r, i) => { if (i > 0) r.style.display = explainOpened[key] ? '' : 'none'; });
+        more.textContent = explainOpened[key]
+          ? '收起说明 ▴'
+          : '还有 ' + (rows.length - 1) + ' 条说明 · 展开 ▾';
+      };
+      explainOpened[key] = open;
+      more.addEventListener('click', () => { explainOpened[key] = !explainOpened[key]; apply(); });
+      el.appendChild(more);
+      apply();
+    });
+  }
 
   function go(r, q) { route = r; query = q || {}; $('#sidebar').classList.remove('open'); render(); }
   window.go = go;
