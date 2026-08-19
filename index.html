@@ -5642,7 +5642,7 @@ window.VIEWS = window.VIEWS || {};
         ${list.length ? `<button class="btn btn-sm" data-act="auto-voice-all"
           title="照每个人物的性别与年龄重新配一次声音">♪ 重新配声音</button>` : ''}
         ${window.CHARX && CHARX.canRestore() ? `<button class="btn btn-sm" data-act="restore-char"
-          style="border-color:var(--violet-2);color:var(--violet-2)">↺ 复原刚删掉的</button>` : ''}
+          style="border-color:var(--violet-2);color:var(--violet-2)">↺ 复原删掉的（${CHARX.trash().length}）</button>` : ''}
         ${list.length ? `<button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
       </div>
       <div id="ai-cast-status"></div>
@@ -6499,14 +6499,23 @@ window.TOUR = (function () {
            <button class="btn btn-primary" data-modal-act="confirm-del-char" data-i="${idx}">确定删掉</button>`);
       }
       case 'restore-char': {
-        const p = STORE.current;
-        if (!p || !lastDeletedChar || lastDeletedChar.pid !== p.id) return toast('没有可以复原的人物', 'warn');
-        const at = Math.min(lastDeletedChar.idx, (p.characters || []).length);
-        (p.characters = p.characters || []).splice(at, 0, lastDeletedChar.c);
-        const nm = lastDeletedChar.c.name || '人物';
-        lastDeletedChar = null;
-        STORE.update(); render();
-        return toast('已复原「' + nm + '」', 'ok');
+        const t = charTrashFor();
+        if (!t.length) return toast('这本书没有删掉过人物', 'warn');
+        return modal('复原删掉的人物', `
+          <div class="hint" style="margin-bottom:12px">这本书最近删掉的，点一下救回来。定妆照的图片网址可能已经过期，
+            救回来之后重生成一张就好，其余栏位都在。</div>
+          ${t.map(x => {
+            const c = x.c || {};
+            const has = [c.portraitUrl ? '定妆照' : '', (c.introScript || '').trim() ? '自述稿' : '', c.videoUrl ? '影片' : '']
+              .filter(Boolean).join(' · ') || '只有基本资料';
+            return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+              <div style="flex:1">
+                <div style="font-weight:650">${esc(c.name || '未命名人物')}${c.cast ? ' · ' + esc(c.cast) : ''}</div>
+                <div class="hint">${esc(c.role || '')}${c.role ? ' · ' : ''}${esc(has)} · 删于 ${new Date(x.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+              <button class="btn btn-sm btn-primary" data-modal-act="do-restore-char" data-at="${x.at}">救回来</button>
+            </div>`;
+          }).join('')}`);
       }
       case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
       case 'pick-portrait': {
@@ -6874,13 +6883,24 @@ window.TOUR = (function () {
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'pub-save') { return pubSave(el.dataset.id); }
     if (a === 'pm-save') { return pubManualSave(); }
+    if (a === 'do-restore-char') {
+      const p = STORE.current; if (!p) return;
+      const at = Number(el.dataset.at);
+      const hit = charTrash().find(x => x.at === at && x.pid === p.id);
+      if (!hit) return toast('找不到这一笔', 'err');
+      const pos = Math.min(hit.idx, (p.characters || []).length);
+      (p.characters = p.characters || []).splice(pos, 0, hit.c);
+      STORE.s.trashChars = charTrash().filter(x => x !== hit);
+      STORE.update(); closeModal(); render();
+      return toast('已复原「' + (hit.c.name || '人物') + '」', 'ok');
+    }
     if (a === 'confirm-del-char') {
       const p = STORE.current; if (!p) return;
       const idx = +el.dataset.i;
       const gone = (p.characters || []).splice(idx, 1)[0];
-      if (gone) lastDeletedChar = { pid: p.id, idx, c: gone };
+      if (gone) charTrashAdd(p.id, idx, gone);
       STORE.update(); closeModal(); render();
-      return toast('已删掉。按人物名单那排的「↺ 复原刚删掉的」可以救回来', 'warn');
+      return toast('已删掉。按人物名单那排的「↺ 复原删掉的」可以救回来，重新整理也还在', 'warn');
     }
     if (a === 'confirm-prompt-video') {
       const i = +el.dataset.i;
@@ -10565,12 +10585,36 @@ ${hookLibBlock()}
 
   const AGE_NAME = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
 
-  /* 只留最后删掉的那一个。做成完整的资源回收桶是另一件事，
-   * 这里要解的是「手滑按到叉」这个具体情况。 */
-  let lastDeletedChar = null;
-  /* views-roles.js 是另一个 IIFE，读不到这里的变数。 */
+  /* 删掉的人物存进 STORE，不是记忆体。
+   *
+   * 第一版只用一个模块变数存最后删掉的那个——使用者重新整理一次页面，
+   * 那份暂存就没了，「复原」形同虚设。花钱产出来的东西，复原一定要撑得过
+   * 关页面、撑得过隔天再来。
+   *
+   * 留最近 10 个，够救回手滑，也不会把浏览器空间塞爆。 */
+  const TRASH_MAX = 10;
+
+  function charTrash() {
+    if (!Array.isArray(STORE.s.trashChars)) STORE.s.trashChars = [];
+    return STORE.s.trashChars;
+  }
+
+  function charTrashAdd(pid, idx, c) {
+    const t = charTrash();
+    t.unshift({ pid, idx, at: Date.now(), c });
+    if (t.length > TRASH_MAX) t.length = TRASH_MAX;
+    STORE.update();
+  }
+
+  /* 只列出当前这本书删掉的——跨书列出来只会让人以为救错人。 */
+  function charTrashFor() {
+    const p = STORE.current;
+    return p ? charTrash().filter(x => x.pid === p.id) : [];
+  }
+
   window.CHARX = {
-    canRestore: () => !!(lastDeletedChar && STORE.current && lastDeletedChar.pid === STORE.current.id)
+    canRestore: () => charTrashFor().length > 0,
+    trash: charTrashFor
   };
 
   /* ---- 按人物特徵自动配声音 ----
