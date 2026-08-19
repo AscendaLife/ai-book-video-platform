@@ -5629,8 +5629,10 @@ window.VIEWS = window.VIEWS || {};
         <button class="btn btn-primary btn-sm" data-act="ai-read-cast">✨ 让 AI 从书里读出主要人物</button>
         <button class="btn btn-sm" data-act="add-blank-char">＋ 自己加一个人物</button>
         ${list.length ? `<button class="btn btn-sm" data-act="auto-voice-all"
-          title="照每个人物的性别重新配一次声音">♪ 重新配声音</button>
-        <button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
+          title="照每个人物的性别与年龄重新配一次声音">♪ 重新配声音</button>` : ''}
+        ${window.CHARX && CHARX.canRestore() ? `<button class="btn btn-sm" data-act="restore-char"
+          style="border-color:var(--violet-2);color:var(--violet-2)">↺ 复原刚删掉的</button>` : ''}
+        ${list.length ? `<button class="btn btn-sm" data-act="clear-chars">清空全部人物</button>` : ''}
       </div>
       <div id="ai-cast-status"></div>
       <div class="hint">AI 会优先抓男主角、女主角这类核心人物；非虚构的书没有故事人物时，会抓书里出现的真实人物、案例主角，
@@ -5662,7 +5664,7 @@ window.VIEWS = window.VIEWS || {};
         <span class="tag v">${String(i + 1).padStart(2, '0')}</span>
         <b style="font-size:16px;flex:1">${esc(c.name || '未命名人物')}</b>
         ${c.cast ? `<span class="tag c">${esc(c.cast)}</span>` : ''}
-        <b data-act="del-char" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px" title="删掉这个人物">✕</b>
+        <b data-act="del-char" title="删掉整个人物（会先问一次）" data-i="${i}" style="cursor:pointer;opacity:.55;padding:0 6px" title="删掉这个人物">✕</b>
       </div>
 
       <div class="char-portrait" data-for="${i}">${c.portraitUrl
@@ -6374,10 +6376,37 @@ window.TOUR = (function () {
         const p = STORE.current; if (!p) return;
         p.characters = []; STORE.update(); render(); return;
       }
+      /* 以前这颗叉是按下去就删，没有确认也没有复原。使用者点开定妆照
+       * 想看大图、手滑按到旁边的叉，一个花钱生成过定妆照、写好自述稿的
+       * 人物就这样消失了。花过钱的东西不该一键蒸发。 */
       case 'del-char': {
         const p = STORE.current; if (!p) return;
-        (p.characters || []).splice(+el.dataset.i, 1);
-        STORE.update(); render(); return;
+        const idx = +el.dataset.i;
+        const c = (p.characters || [])[idx];
+        if (!c) return;
+        const has = [];
+        if (c.portraitUrl) has.push('定妆照');
+        if ((c.introScript || '').trim()) has.push('自述稿');
+        if (c.videoUrl) has.push('已生成的影片');
+        return modal('要删掉这个人物吗？', `
+          <div style="font-size:16px;font-weight:700;margin-bottom:10px">${esc(c.name || '未命名人物')}</div>
+          <div style="font-size:15.5px;line-height:1.8">
+            ${has.length
+              ? '这个人物的 <b>' + has.join('、') + '</b> 会一起消失。定妆照和影片都是花钱产出来的。'
+              : '这个人物还没有产出任何东西。'}
+            <br>删掉之后可以按人物名单那排的「↺ 复原刚删掉的」救回来，但只限这一次。</div>`,
+          `<button class="btn" onclick="UI.closeModal()">取消</button>
+           <button class="btn btn-primary" data-modal-act="confirm-del-char" data-i="${idx}">确定删掉</button>`);
+      }
+      case 'restore-char': {
+        const p = STORE.current;
+        if (!p || !lastDeletedChar || lastDeletedChar.pid !== p.id) return toast('没有可以复原的人物', 'warn');
+        const at = Math.min(lastDeletedChar.idx, (p.characters || []).length);
+        (p.characters = p.characters || []).splice(at, 0, lastDeletedChar.c);
+        const nm = lastDeletedChar.c.name || '人物';
+        lastDeletedChar = null;
+        STORE.update(); render();
+        return toast('已复原「' + nm + '」', 'ok');
       }
       case 'gen-char-portrait': return aiCharPortrait(+el.dataset.i);
       case 'pick-portrait': {
@@ -6745,6 +6774,14 @@ window.TOUR = (function () {
     if (a === 'confirm-hg-clone') { const assetId = el.dataset.asset; closeModal(); return hgDoCloneVoice(assetId); }
     if (a === 'pub-save') { return pubSave(el.dataset.id); }
     if (a === 'pm-save') { return pubManualSave(); }
+    if (a === 'confirm-del-char') {
+      const p = STORE.current; if (!p) return;
+      const idx = +el.dataset.i;
+      const gone = (p.characters || []).splice(idx, 1)[0];
+      if (gone) lastDeletedChar = { pid: p.id, idx, c: gone };
+      STORE.update(); closeModal(); render();
+      return toast('已删掉。按人物名单那排的「↺ 复原刚删掉的」可以救回来', 'warn');
+    }
     if (a === 'confirm-prompt-video') {
       const i = +el.dataset.i;
       /* 一定要在 closeModal 之前读——关掉弹窗 DOM 就没了，读到的会是 null。 */
@@ -10256,15 +10293,25 @@ ${hookLibBlock()}
   async function aiCharPortrait(i) {
     const p = STORE.current;
     const c = p && (p.characters || [])[i];
-    const slot = $(`.char-portrait[data-for="${i}"]`);
-    if (!c || !slot) return;
+    if (!c) return;
     if (!hgCanWrite()) return hgDemoNotice();
     if (!(c.look || '').trim() && !(c.name || '').trim()) return toast('先写下这个角色的名字或长相', 'warn');
 
     const pick = await askModel('portrait');
     if (!pick) return toast('已取消，没有生成定妆照', 'warn');
 
-    slot.innerHTML = '<div class="hint" style="color:var(--violet-2);margin-bottom:10px">✨ 生成中，约 20-30 秒…</div>';
+    /* 节点一定要在选完模型之后才抓。
+     * 选模型是一个弹窗，关掉的时候整页会重画——在那之前抓到的节点
+     * 已经从画面上被换掉了，往上面写字什么都不会发生。使用者按了
+     * 「重生成定妆照」完全没有反应、也看不到进度，就是这个原因。 */
+    const slot = $(`.char-portrait[data-for="${i}"]`);
+    if (slot) {
+      slot.innerHTML = '<div class="hint" style="color:var(--violet-2);border:1px dashed var(--violet-2);'
+        + 'border-radius:10px;padding:22px 10px;text-align:center;margin-bottom:10px">'
+        + '✨ 正在生成定妆照，约 20-30 秒…<br><span style="opacity:.75">这段时间可以先去改别的，做好会自己出现</span></div>';
+      slot.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    toast('开始生成「' + (c.name || '这个人物') + '」的定妆照，约 20-30 秒', 'ok');
 
     /* 提示词沿用形象生成那边调过的摄影语言。
      * 「真实人像摄影风格」六个字模型没有依据，出来就是磨皮塑胶脸；
@@ -10417,6 +10464,14 @@ ${hookLibBlock()}
   }
 
   const AGE_NAME = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
+
+  /* 只留最后删掉的那一个。做成完整的资源回收桶是另一件事，
+   * 这里要解的是「手滑按到叉」这个具体情况。 */
+  let lastDeletedChar = null;
+  /* views-roles.js 是另一个 IIFE，读不到这里的变数。 */
+  window.CHARX = {
+    canRestore: () => !!(lastDeletedChar && STORE.current && lastDeletedChar.pid === STORE.current.id)
+  };
 
   /* ---- 按人物特徵自动配声音 ----
    *
