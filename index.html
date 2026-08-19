@@ -628,6 +628,19 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
 .step[open]>summary::after{transform:rotate(90deg)}
 .step>summary:hover{color:var(--violet-2)}
 
+/* 全站「正在跑」提示。固定在底部中央，z-index 要盖过弹窗——
+   使用者按下生成之后弹窗常常还开着，提示藏在后面等于没有。 */
+#busy-bar{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);
+  display:none;align-items:center;gap:10px;z-index:9999;
+  background:var(--panel);border:1px solid var(--violet-2);border-radius:999px;
+  padding:11px 20px;font-size:15px;font-weight:600;color:var(--txt);
+  box-shadow:0 10px 32px rgba(0,0,0,.28);opacity:0;transition:opacity .18s,transform .18s}
+#busy-bar.show{display:flex;opacity:1;transform:translateX(-50%) translateY(0)}
+#busy-bar .busy-dot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;
+  border:2px solid var(--violet-2);border-top-color:transparent;animation:busy-spin .7s linear infinite}
+#busy-bar .busy-n{color:var(--txt-3);font-weight:400;font-size:13px}
+@keyframes busy-spin{to{transform:rotate(360deg)}}
+
 </style>
 </head>
 <body>
@@ -2942,7 +2955,57 @@ window.UI = (function () {
       <div class="bar" style="width:56px"><i style="width:${v}%"></i></div>
       <span style="font-size:13px;color:var(--txt-3);font-weight:600">${v}</span></div>`;
 
-  return { $, $$, esc, nf, toast, modal, closeModal, onClose, copy, download, statusTag, scoreBar };
+  /* ---- 全站共用的「正在跑」提示 ----
+   *
+   * 以前每个会等的步骤各自在自己那一格写一行小字（「正在生成，约 10-30
+   * 秒…」）。使用者的原话：「正在生成的提示太小了，很容易看不见，别的
+   * 步骤也有这个问题」。确实——那行字可能在卷动范围外、可能被弹窗盖住、
+   * 可能跟旁边的说明文字长得一模一样。
+   *
+   * 改成固定在画面底部中央的一条，卷到哪都看得到，而且盖在弹窗之上。
+   * 用计数而不是布林：同时跑两件事时，先结束的那件不该把提示关掉。
+   */
+  let busyN = 0;
+  const busyMsgs = [];
+
+  function busyBox() {
+    let el = document.getElementById('busy-bar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'busy-bar';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function busyPaint() {
+    const el = busyBox();
+    if (!busyN) { el.classList.remove('show'); return; }
+    const msg = busyMsgs[busyMsgs.length - 1] || '处理中…';
+    el.innerHTML = '<span class="busy-dot"></span><span>' + esc(msg) + '</span>'
+      + (busyN > 1 ? '<span class="busy-n">同时 ' + busyN + ' 件</span>' : '');
+    el.classList.add('show');
+  }
+
+  /* 回传一个结束函式，呼叫端不用自己记 token——忘了关的话提示会一直挂着，
+   * 比没有提示还糟。 */
+  function busy(msg) {
+    busyN++; busyMsgs.push(msg || '处理中…');
+    busyPaint();
+    let done = false;
+    return function () {
+      if (done) return;                 // 防重复呼叫把计数扣成负的
+      done = true;
+      busyN = Math.max(0, busyN - 1);
+      const i = busyMsgs.indexOf(msg);
+      if (i >= 0) busyMsgs.splice(i, 1);
+      busyPaint();
+    };
+  }
+
+  return { $, $$, esc, nf, toast, modal, closeModal, onClose, copy, download, statusTag, scoreBar, busy };
 })();
 
 
@@ -5977,7 +6040,7 @@ window.TOUR = (function () {
  * app.js — 路由、事件绑定、交互逻辑
  * ========================================================== */
 (function () {
-  const { $, $$, esc, nf, toast, modal, closeModal, copy, download } = UI;
+  const { $, $$, esc, nf, toast, modal, closeModal, copy, download, busy } = UI;
 
   const TITLES = {
     dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
@@ -7550,6 +7613,7 @@ window.TOUR = (function () {
     const useBtn = $('#ga-use');
     if (useBtn) { useBtn.disabled = true; useBtn.style.opacity = '.45'; useBtn.style.pointerEvents = 'none'; }
     gaRender('<div class="hint">正在生成，约需 10–30 秒…</div>');
+    const _busy = busy('正在生成形象照，约 10-30 秒…');
     try {
       const scene = ($('#ga-scene') && $('#ga-scene').value) || 'study';
       const j = await hgFetchSlow('/api/ai/image', {
@@ -7576,7 +7640,7 @@ window.TOUR = (function () {
       if (useBtn) { useBtn.disabled = false; useBtn.style.opacity = '1'; useBtn.style.pointerEvents = 'auto'; }
     } catch (e) {
       gaRender(`<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`);
-    } finally { GA.busy = false; }
+    } finally { GA.busy = false; _busy(); }
   }
 
   async function hgGenAvatarUse() {
@@ -7952,6 +8016,7 @@ window.TOUR = (function () {
   async function hgRecover() {
     if (!hgCanWrite()) return hgDemoNotice();
     toast('正在从服务端找…', 'ok');
+    const _busy = busy('正在从服务端找回影片…');
     try {
       const j = await hgFetch('/api/status?service=heygen-recent&limit=20');
       const list = j.videos || [];
@@ -7978,6 +8043,7 @@ window.TOUR = (function () {
     } catch (e) {
       toast('找不回来：' + e.message, 'err');
     }
+    _busy();
   }
 
   async function hgDoGenerate() {
@@ -7985,6 +8051,7 @@ window.TOUR = (function () {
     if (!result) return;
     result.innerHTML = '<div class="hint">送出中…</div>';
     HG.busy = true;
+    const _busy = busy('正在送出影片，之后会自动追踪进度…');
     try {
       const r = await hgFetch('/api/heygen/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -8013,6 +8080,7 @@ window.TOUR = (function () {
       HG.busy = false;
       result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`;
     }
+    _busy();
   }
 
   /* result 可以是 null：从生成记录续追时没有那个容器，状态只写回记录。
@@ -10397,6 +10465,7 @@ ${hookLibBlock()}
       slot.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
     toast('开始生成「' + (c.name || '这个人物') + '」的定妆照，约 20-30 秒', 'ok');
+    const _busy = busy('正在生成定妆照，约 20-30 秒…');
 
     /* 提示词沿用形象生成那边调过的摄影语言。
      * 「真实人像摄影风格」六个字模型没有依据，出来就是磨皮塑胶脸；
@@ -10446,8 +10515,13 @@ ${hookLibBlock()}
       }
       toast('定妆照好了。不满意可以改「长什么样」或补充说明再生成一次', 'ok');
     } catch (e) {
-      slot.innerHTML = `<div class="hint" style="color:var(--amber);margin-bottom:10px">生成失败：${esc(e.message)}</div>`;
+      /* slot 可能已经不在画面上了（中途重画过），所以两条路都要给：
+       * 有格子就写在格子里，没有就至少跳一个 toast，不要静默失败。 */
+      const box = $(`.char-portrait[data-for="${i}"]`);
+      if (box) box.innerHTML = `<div class="hint" style="color:var(--amber);margin-bottom:10px">生成失败：${esc(e.message)}</div>`;
+      toast('定妆照生成失败：' + e.message, 'err');
     }
+    _busy();
   }
 
   /* 角色 → 影片提示词。写完落到下面那张卡，使用者可以再改，
@@ -10763,6 +10837,7 @@ ${excerpt}
 
 只输出 JSON，不要任何解释文字。`;
 
+    const _busy = busy('正在读这本书找人物，约 10-30 秒…');
     try {
       const r = await hgFetchSlow('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -10835,6 +10910,7 @@ ${excerpt}
     } catch (e) {
       setMsg('AI 读人物失败：' + e.message, 'var(--red)');
     }
+    _busy();
   }
 
   /* 自述稿：段落的定义、顺序与给模型的写作指示都在 views-roles.js 的
@@ -10916,6 +10992,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
 只输出这个 JSON（每个栏位都要有内容）：
 {${parts.map(x => `"${x.k}":""`).join(',')},"script":""}`;
 
+    const _busy = busy('正在写自述稿，约 20-40 秒…');
     try {
       const r = await hgFetchSlow('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -10937,6 +11014,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     } catch (e) {
       setMsg('AI 写自述稿失败：' + e.message, 'var(--red)');
     }
+    _busy();
   }
 
   /* ============================================================
@@ -11084,6 +11162,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     c.videoStatus = '生成中'; c.videoError = null; c.videoUrl = null; c.realDuration = null;
     STORE.update(); render();
 
+    const _busy = busy('正在送出影片，之后会自动追踪进度…');
     try {
       /* 定妆照是一个网址，数字人服务只认它自己的 asset。同一张脸只换一次，
        * 换过就记住是哪一张换的——重生成定妆照之后会自动重换，不会拿旧脸去合成。 */
@@ -11130,6 +11209,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
       STORE.update(); render();
       toast('送出失败：' + msg, 'err');
     }
+    _busy();
   }
 
   function pollCharVideo(pid, cid) {
@@ -11272,6 +11352,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     if (!pr || !slot) return;
 
     slot.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--violet-2)">✨ 送出中…</div>';
+    const _busy = busy('正在送出场景短片…');
     try {
       const r = await hgFetch('/api/deevid/video', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -11283,6 +11364,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
     } catch (e) {
       slot.innerHTML = `<div class="hint" style="margin-top:8px;color:var(--amber)">生成失败：${esc(e.message)}</div>`;
     }
+    _busy();
   }
 
   function pollPromptVideo(taskId, slot, i) {
