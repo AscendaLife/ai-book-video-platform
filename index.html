@@ -6403,7 +6403,8 @@ window.TOUR = (function () {
       }
       case 'hg-pick-voice': {
         HG.voiceId = el.dataset.id;
-        hgSaveChoice(); hgRenderVoiceList(); hgRenderGenerate(); hgRenderChoiceSummary();
+        HG.voiceOpen = false;   // 挑好了就收起来，没有理由继续摊着一百张卡
+        hgSaveChoice(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
         toast('已选定这个声音', 'ok'); return;
       }
       case 'view-source': {
@@ -6436,6 +6437,8 @@ window.TOUR = (function () {
       case 'pub-manual': return pubManualModal();
       case 'pub-del': return pubDel(el.dataset.id);
       case 'hg-recover': return hgRecover();
+      case 'hg-voice-open': { HG.voiceOpen = true; hgRenderVoices(); return; }
+      case 'hg-voice-close': { HG.voiceOpen = false; hgRenderVoices(); return; }
       case 'hg-voice-filter': {
         HG.voiceFilter = el.dataset.k || 'all';
         hgRenderVoices(); return;
@@ -7759,7 +7762,38 @@ window.TOUR = (function () {
     if (!HG.voiceFilter) HG.voiceFilter = 'all';
     const n = k => HG.voices.filter(v => v.accent === k).length;
     const cur = VOICE_GROUPS.find(g => g[0] === HG.voiceFilter);
+    const picked = HG.voices.find(v => v.id === HG.voiceId);
+
+    /* 一百个声音的卡片墙预设摊开，会把整页吃掉。使用者的原话：「这个
+     * 配音库收起来一些，占据页面太多了」。
+     * 这一块本来就是「设定一次」的东西——挑好之后每天来只需要确认它没
+     * 变，不需要每次都看到一百张卡。所以预设只显示目前选的那一个，要换
+     * 才展开。 */
+    if (!HG.voiceOpen) {
+      panel.innerHTML = `
+        ${picked ? `
+        <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--violet-2);border-radius:12px;padding:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:700">${esc(voiceLabel(picked))}</div>
+            <div class="hint" style="margin-top:2px">${esc(accentName(picked))}${picked.gender && picked.gender !== 'unknown' ? ' · ' + (picked.gender === 'male' ? '男' : '女') : ''}${picked.age ? ' · ' + AGE_NAME[picked.age] : ''}${picked.note ? ' · ' + esc(picked.note) : ''}</div>
+            ${picked.preview ? `<audio src="${esc(picked.preview)}" controls preload="none" style="width:100%;height:30px;margin-top:8px"></audio>` : ''}
+          </div>
+          <button class="btn btn-sm" data-act="hg-voice-open">换一个</button>
+        </div>`
+        : `<div class="hint" style="border:1px dashed var(--line);border-radius:12px;padding:16px;text-align:center">
+             还没选声音。<button class="btn btn-sm btn-primary" style="margin-left:8px" data-act="hg-voice-open">挑一个（共 ${HG.voices.length} 个）</button>
+           </div>`}
+        <div class="hint" style="margin-top:10px">共 <b>${HG.voices.length}</b> 个中文声音，含台湾腔 ${n('tw')} 个。
+          换声音要重新生成影片才听得到差别，已经做好的不会变。</div>`;
+      return;
+    }
+
     panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <b style="font-size:15px">挑一个声音</b>
+        <span class="hint">试听免费，多听几个再决定</span>
+        <button class="btn btn-sm" style="margin-left:auto" data-act="hg-voice-close">收起来</button>
+      </div>
       <div class="chip-list" style="margin-bottom:8px">
         <span class="tag ${HG.voiceFilter === 'all' ? 'v' : ''}" style="cursor:pointer"
           data-act="hg-voice-filter" data-k="all">全部 ${HG.voices.length}</span>
@@ -7767,18 +7801,17 @@ window.TOUR = (function () {
           style="cursor:pointer" data-act="hg-voice-filter" data-k="${g[0]}">${g[1]} ${n(g[0])}</span>`).join('')}
       </div>
       ${cur ? `<div class="hint" style="margin-bottom:8px">${esc(cur[2])}</div>` : ''}
-      <input class="input" id="hg-voice-search" placeholder="搜声音名字…"
+      <input class="input" id="hg-voice-search" placeholder="搜声音名字，中文英文都可以…"
         value="${esc(HG.voiceQuery || '')}" style="margin-bottom:10px">
-      <div id="hg-voice-list" style="max-height:430px;overflow-y:auto;padding-right:4px">${hgVoiceListHtml()}</div>
+      <div id="hg-voice-list" style="max-height:330px;overflow-y:auto;padding-right:4px">${hgVoiceListHtml()}</div>
       <div class="grid g3" style="margin-top:10px">
         <div class="hg-avatar" data-act="hg-upload-audio-btn"
-            style="border:1px dashed var(--line-2);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90px">
-          <div style="font-size:24px;color:var(--txt-3)">＋</div><div style="font-size:14px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
+            style="border:1px dashed var(--line-2);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80px">
+          <div style="font-size:22px;color:var(--txt-3)">＋</div><div style="font-size:14px;color:var(--txt-2);margin-top:4px">上传录音克隆</div>
         </div>
       </div>
-      <div class="hint" style="margin-top:10px">试听是免费的，多听几个再决定——声音换了要重新生成影片才听得到差别，已经做好的不会变。
-        上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音可以克隆自己的声音，上传免费，
-        <b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
+      <div class="hint" style="margin-top:10px">上传一段 <b>30 秒以上、安静环境、正常语速</b>的清晰朗读录音可以克隆自己的声音，
+        上传免费，<b>克隆这一步会花一点钱</b>（比生成影片便宜），送出前会再跟你确认一次。</div>`;
   }
 
   async function hgUploadAudio(file) {
@@ -10590,6 +10623,7 @@ ${hookLibBlock()}
   }
 
   const AGE_NAME = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
+  const accentName = v => (VOICE_GROUPS.find(g => g[0] === (v && v.accent)) || [])[1] || (v && v.language) || '';
 
   /* 删掉的人物存进 STORE，不是记忆体。
    *
