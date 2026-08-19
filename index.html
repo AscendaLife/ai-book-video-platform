@@ -10296,7 +10296,22 @@ ${hookLibBlock()}
       portraitHistoryAdd(c, c.portraitUrl);   // 旧的先收进历史，再换新的
       c.portraitUrl = r.url;
       portraitHistoryAdd(c, r.url);
+      c.assetId = null; c.assetFor = null;    // 换脸了，旧的 asset 作废
       STORE.update(); render();
+
+      /* 立刻把图存进数位人服务（这一步免费）。
+       * 生成服务的图片网址只托管一段时间，过期之后再去抓就是 404——
+       * 使用者按「生成影片」才发现「取图失败」，而那通常是几小时后，
+       * 定妆照早就调满意了，等于要重来一遍。存过之后影片那一步用的是
+       * asset id，跟原网址过不过期无关。 */
+      try {
+        const up = await hgFetchSlow(
+          `/api/heygen/upload?url=${encodeURIComponent(r.url)}&name=${encodeURIComponent('portrait.png')}`,
+          { method: 'POST' });
+        if (up.assetId) { c.assetId = up.assetId; c.assetFor = r.url; STORE.update(); }
+      } catch (e) {
+        /* 存不进去不影响看图，之后生成影片时还会再试一次。 */
+      }
       toast('定妆照好了。不满意可以改「长什么样」或补充说明再生成一次', 'ok');
     } catch (e) {
       slot.innerHTML = `<div class="hint" style="color:var(--amber);margin-bottom:10px">生成失败：${esc(e.message)}</div>`;
@@ -10910,7 +10925,16 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
       if (!c.assetId || c.assetFor !== c.portraitUrl) {
         const up = await hgFetchSlow(
           `/api/heygen/upload?url=${encodeURIComponent(c.portraitUrl)}&name=${encodeURIComponent('role-' + cid + '.png')}`,
-          { method: 'POST' });
+          { method: 'POST' }
+        ).catch(e => {
+          /* 图片网址过期就是这里 404。原讯息是「取图失败（HTTP 404）」，
+           * 没有人看得懂那是什么意思，更不知道该怎么办。 */
+          if (/404/.test(e.message)) {
+            throw new Error('定妆照的图片网址已经过期（生成服务只托管一段时间）。'
+              + '按上面的「重生成定妆照」再产一张就好，那一张会立刻存起来，之后不会再过期');
+          }
+          throw e;
+        });
         if (!up.assetId) throw new Error('定妆照没有换到 asset id');
         c.assetId = up.assetId; c.assetFor = c.portraitUrl;
         STORE.update();
