@@ -1806,6 +1806,55 @@ window.DATA = (function () {
     { key: 'author', name: '作者故事版', desc: '讲作者其人其事，建立信任', color: '#ff5d8f' }
   ];
 
+  /* ---------- 声音的中文名与音色标注 ----------
+   *
+   * 平台回来的声音清单只有英文代号（HsiaoChen、YunJhe、Yunye…）和性别，
+   * 没有中文名、没有年龄感。使用者要替一个七十一岁的书店老板选声音，
+   * 看着一排英文名根本无从下手，配出来自然不对。
+   *
+   * 这张表把微软 Azure 那一批的中文名与音色特徵补回来。这几个是有官方
+   * 中文名的（曉臻、雲哲、雲野…），不是我们自己取的。
+   *
+   * age 这一栏尤其重要——「老年」这个维度平台完全没给，但它决定了
+   * 一个角色配起来对不对：
+   *   雲野 是这批里唯一标示成熟／老年的男声
+   *   曉睿 是唯一标示老年的女声
+   *   曉双 是儿童声
+   * 标注依供应商说明整理，我们没有逐一试听，所以介面上仍然要人自己听过
+   * 再决定——标注是用来缩小范围的，不是用来代替耳朵的。 */
+  const VOICE_ZH = {
+    // ---- 台湾腔（Azure zh-TW）----
+    HsiaoChen: { zh: '曉臻', age: 'mid', note: '台湾腔女声，语气亲切' },
+    HsiaoYu:   { zh: '曉雨', age: 'young', note: '台湾腔女声，偏年轻清亮' },
+    YunJhe:    { zh: '雲哲', age: 'mid', note: '台湾腔男声，青壮年' },
+
+    // ---- 粤语（Azure zh-HK）----
+    HiuMaan:   { zh: '曉曼', age: 'mid', note: '⚠ 粤语女声，不是国语' },
+    HiuGaai:   { zh: '曉佳', age: 'mid', note: '⚠ 粤语女声，不是国语' },
+
+    // ---- 大陆腔（Azure zh-CN）----
+    Yunye:     { zh: '雲野', age: 'old', note: '成熟男声，这批里最接近老年男性的一个' },
+    Xiaorui:   { zh: '曉睿', age: 'old', note: '成熟女声，供应商标示为老年女性' },
+    Xiaoshuang:{ zh: '曉雙', age: 'child', note: '儿童声' },
+    Yunxi:     { zh: '雲希', age: 'young', note: '男声，偏年轻活泼' },
+    Yunyang:   { zh: '雲揚', age: 'mid', note: '男声，播报腔，专业稳重' },
+    Xiaoxin:   { zh: '曉辛', age: 'mid', note: '女声，专业沉稳' },
+    Xiaoxuan:  { zh: '曉萱', age: 'mid', note: '女声，偏冷静严肃' },
+    Xiaohan:   { zh: '曉涵', age: 'mid', note: '女声，温和平静' },
+    Xiaomeng:  { zh: '曉夢', age: 'young', note: '女声，温暖' },
+    Xiaomo:    { zh: '曉墨', age: 'mid', note: '女声，情绪变化多' },
+    Xiaowen:   { zh: '曉文', age: 'young', note: '女声，轻快' },
+    Xiaoyan:   { zh: '曉顏', age: 'mid', note: '女声，新闻播报腔' },
+    Xiaocheng: { zh: '曉辰', age: 'mid', note: '女声，自然口语' }
+  };
+
+  /* 名字长得像「HsiaoChen - Friendly」，前面那一段才是声音本体，
+   * 后面是情绪版本。 */
+  function voiceZh(name) {
+    const base = String(name || '').split('-')[0].trim();
+    return VOICE_ZH[base] || null;
+  }
+
   /* ---------- 五类选题框架 ----------
    *
    * 以前写稿是把「全书摘要」丢给模型，说「写 14 篇短影音稿」，角度只给
@@ -2602,7 +2651,7 @@ window.DATA = (function () {
   ];
 
   return {
-    PLATFORMS, ANGLES, HOOK_TYPES, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
+    PLATFORMS, ANGLES, HOOK_TYPES, VOICE_ZH, voiceZh, STAGES, INTERVIEW_FORMATS, interviewFormat, COVERS, SEED_BOOKS, PERSONA, VOICES, PEOPLE, BILLING_PLANS,
     importProfile, parseText,
     seedAll, buildProject, genTitles, genHooks, genOpens, genScripts, genScriptBody,
     applyPersona, genShots, genVideos, genPendingVideos, genAnalytics, sceneTemplateLibrary, uid, rand
@@ -5702,14 +5751,30 @@ window.VIEWS = window.VIEWS || {};
           <span class="hint" style="margin-left:8px;font-weight:400">选完先按播放听一下，别让老先生配到少女音</span></div>
         ${voices.length
           ? `<select class="input" data-act="char-voice" data-i="${i}">
-              ${voices.map(v => `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(v.name)}${v.gender ? ' · ' + esc(v.gender) : ''}${v.language ? ' · ' + esc(v.language) : ''}</option>`).join('')}
+              ${voices.map(v => {
+                const AGE = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
+                const label = (v.zh ? v.zh + '（' + v.name + '）' : v.name)
+                  + (v.gender && v.gender !== 'unknown' ? ' · ' + (v.gender === 'male' ? '男' : '女') : '')
+                  + (v.age ? ' · ' + AGE[v.age] : '')
+                  + (v.note ? ' · ' + v.note : '');
+                return `<option value="${esc(v.id)}" ${v.id === voiceId ? 'selected' : ''}>${esc(label)}</option>`;
+              }).join('')}
             </select>
             ${(() => {
               const cur = voices.find(v => v.id === voiceId);
               return cur && cur.preview
                 ? `<audio src="${esc(cur.preview)}" controls preload="none" style="width:100%;height:32px;margin-top:8px"></audio>`
                 : '<div class="hint" style="margin-top:6px">这个声音没有试听档。到「数位人 / 声音 / 克隆」那一页可以听完整清单。</div>';
-            })()}`
+            })()}
+            ${/* 声音清单只有性别没有年龄，老角色配到的男声听起来还是三十几岁。
+                 语速是唯一真的能压低年龄感的旋钮，而且一本书里的人物年纪
+                 差很多，一定要各自设。 */''}
+            <div class="field" style="margin-top:10px;margin-bottom:0"><div class="label">语速
+                <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(c.voiceSpeed == null ? 1 : c.voiceSpeed)}×</span></div>
+              <input type="range" min="0.8" max="1.15" step="0.05" value="${c.voiceSpeed == null ? 1 : c.voiceSpeed}"
+                data-act="char-speed" data-i="${i}">
+              <div class="hint" style="margin-top:4px">年纪大的角色调到 <b>0.85-0.9</b> 会明显变沉、变老；
+                年轻角色可以拉到 1.05 以上。试听那个播放器听不出差别——<b>语速要生成影片才听得到</b>。</div></div>`
           : `<div class="hint">${voiceId ? '目前用「数字人 / 声音」那边选好的声音。' : '声音清单还没读到；先去「数字人 / 声音 / 克隆」选一个。'}</div>`}
       </div>
 
@@ -6482,6 +6547,12 @@ window.TOUR = (function () {
       setVideoFormat(el.dataset.id, el.value, true);
     }
     /* 人物自述：角色定位、影片长度与声音都是选完就存，不用另外按储存 */
+    if (el.dataset.act === 'char-speed') {
+      const p = STORE.current;
+      const c = p && (p.characters || [])[+el.dataset.i];
+      if (c) { c.voiceSpeed = Number(el.value); STORE.update(); render(); }
+      return;
+    }
     if (el.dataset.act === 'char-cast' || el.dataset.act === 'char-voice' || el.dataset.act === 'char-len') {
       const p = STORE.current;
       const c = p && (p.characters || [])[+el.dataset.i];
@@ -7049,7 +7120,7 @@ window.TOUR = (function () {
       }
       const [av, vo] = await Promise.all([hgFetch('/api/heygen/avatars'), hgFetch('/api/heygen/voices')]);
       HG.avatars = (av.avatars || []).map(a => Object.assign({ own: true }, a));
-      HG.voices = vo.voices || [];
+      HG.voices = (vo.voices || []).map(decorateVoice);
       hgRestoreChoice();   // 先放回上次存的选择，再决定要不要给预设值
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
@@ -7493,7 +7564,7 @@ window.TOUR = (function () {
   function hgVoiceMatch(v) {
     if (HG.voiceFilter && HG.voiceFilter !== 'all' && v.accent !== HG.voiceFilter) return false;
     const q = (HG.voiceQuery || '').trim().toLowerCase();
-    return !q || (v.name || '').toLowerCase().indexOf(q) >= 0;
+    return !q || (v.name || '').toLowerCase().indexOf(q) >= 0 || (v.zh || '').indexOf(q) >= 0 || (v.note || '').indexOf(q) >= 0;
   }
 
   function hgVoiceListHtml() {
@@ -7504,8 +7575,9 @@ window.TOUR = (function () {
       const on = v.id === HG.voiceId;
       return `<div class="hg-avatar ${on ? 'on' : ''}" data-act="hg-pick-voice" data-id="${esc(v.id)}"
           style="border:1px solid ${on ? 'var(--violet-2)' : 'var(--line)'};border-radius:12px;padding:10px;cursor:pointer">
-        <div style="font-size:15px;font-weight:700">${esc(v.name)}</div>
-        <div class="hint" style="margin-top:3px">${esc(g ? g[1] : (v.language || ''))}${v.gender && v.gender !== 'unknown' ? ' · ' + esc(v.gender) : ''}</div>
+        <div style="font-size:15px;font-weight:700">${esc(voiceLabel(v))}</div>
+        <div class="hint" style="margin-top:3px">${esc(g ? g[1] : (v.language || ''))}${v.gender && v.gender !== 'unknown' ? ' · ' + esc(v.gender === 'male' ? '男' : '女') : ''}${v.age ? ' · ' + AGE_NAME[v.age] : ''}</div>
+        ${v.note ? `<div class="hint" style="margin-top:2px;opacity:.85">${esc(v.note)}</div>` : ''}
         ${v.preview ? `<audio src="${esc(v.preview)}" preload="none" controls
             style="width:100%;height:28px;margin-top:6px" onclick="event.stopPropagation()"></audio>` : ''}
       </div>`;
@@ -7578,7 +7650,7 @@ window.TOUR = (function () {
         try {
           const s = await hgFetch('/api/status?service=heygen-voice&id=' + encodeURIComponent(r.voiceCloneId));
           if (s.status === 'complete') {
-            HG.voices.unshift({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview });
+            HG.voices.unshift(decorateVoice({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview, accent: 'other' }));
             HG.voiceId = s.voiceId;
             hgSaveChoice();
             toast('声音克隆完成，已自动选用这个新声音', 'ok'); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
@@ -8198,8 +8270,20 @@ window.TOUR = (function () {
   /* 声音设定：内建 TTS 预设念起来偏平，这三个值能拉回来一些。
    * 预设不是平台预设值，而是实测比较不像机器的组合——
    * 稳定度调低会有起伏，情绪强度拉高一点会有语气。 */
-  function voiceSettings() {
+  /* c 传进来时用这个人物自己的语速。
+   * 为什么需要：声音清单只有性别、没有年龄，七十一岁的角色配到的
+   * 「台湾腔男声」听起来还是三十几岁。语速是我们唯一真的能压低年龄感
+   * 的旋钮——放慢到 0.85-0.9 会明显变沉、变老。一本书里的人物年龄
+   * 差很多，这个一定要能各自设，不能共用同一个。 */
+  function voiceSettings(c) {
     const p = STORE.s.persona;
+    if (c && c.voiceSpeed != null) {
+      return {
+        speed: Number(c.voiceSpeed),
+        stability: p.voiceStability == null ? 0.4 : Number(p.voiceStability),
+        style: p.voiceStyle == null ? 0.35 : Number(p.voiceStyle)
+      };
+    }
     return {
       speed: p.voiceSpeed == null ? 1 : Number(p.voiceSpeed),
       stability: p.voiceStability == null ? 0.4 : Number(p.voiceStability),
@@ -10275,7 +10359,7 @@ ${hookLibBlock()}
     rolesVoiceTried = true;
     try {
       const vo = await hgFetch('/api/heygen/voices');
-      HG.voices = vo.voices || [];
+      HG.voices = (vo.voices || []).map(decorateVoice);
       hgRestoreChoice();
       if (!HG.voiceId && HG.voices[0]) { HG.voiceId = HG.voices[0].id; hgSaveChoice(); }
       if (route === 'roles' && HG.voices.length) render();
@@ -10301,6 +10385,24 @@ ${hookLibBlock()}
   /* 读出这本书的主要人物。跟「创意分镜 · 书中角色」共用同一份名单，
    * 差别是这里会多要一个「角色定位」——男主角、女主角还是配角，
    * 决定的是使用者先做谁，不是给模型的技术栏位。 */
+  /* 平台只给英文代号和性别。中文名与年龄感是我们自己补的对照表，
+   * 补完之后清单才看得懂，自动配对也才有「年龄」这个维度可以配。 */
+  function decorateVoice(v) {
+    const z = window.DATA && DATA.voiceZh ? DATA.voiceZh(v.name) : null;
+    if (z) { v.zh = z.zh; v.age = z.age; v.note = z.note; }
+    else if (v.accent === 'multi') { v.zh = ''; v.age = null; v.note = '多语声音，腔调不保证，先试听'; }
+    else { v.zh = ''; v.age = null; v.note = ''; }
+    return v;
+  }
+
+  function voiceLabel(v) {
+    if (!v) return '';
+    /* 中文名摆前面，英文代号留着——之后要对帐、要回报问题都靠它。 */
+    return (v.zh ? v.zh + '（' + v.name + '）' : v.name);
+  }
+
+  const AGE_NAME = { old: '年长', mid: '中年', young: '年轻', child: '儿童' };
+
   /* ---- 按人物特徵自动配声音 ----
    *
    * 以前每个人物都套「数位人／声音」那一页选的同一个声音。实测七十一岁
@@ -10328,8 +10430,18 @@ ${hookLibBlock()}
    * 选到了整支影片都会变粤语。 */
   const VOICE_RANK = { tw: 0, multi: 1, other: 2, cn: 3 };
 
+  /* 把人物的实际年龄折成声音清单用的四档。 */
+  function ageBucket(age) {
+    if (age == null) return null;
+    if (age >= 60) return 'old';
+    if (age >= 30) return 'mid';
+    if (age >= 13) return 'young';
+    return 'child';
+  }
+
   function pickVoiceFor(c, used) {
     const want = guessGender(c);
+    const wantAge = ageBucket(guessAge(c));
     const pool = (HG.voices || []).filter(v => v.accent !== 'yue');
     if (!pool.length) return null;
     const scored = pool
@@ -10342,11 +10454,40 @@ ${hookLibBlock()}
          * 也不要三个人物配到同一个声音——几支影片放在一起会像同一个人
          * 在讲话，这一页的意义就没了。 */
         s: (want && v.gender === want ? 0 : 1) * 100
-          + (VOICE_RANK[v.accent] == null ? 4 : VOICE_RANK[v.accent]) * 10
+          /* 年龄摆在腔调前面：七十一岁的老板宁可配一个大陆腔的成熟男声，
+           * 也不要一个听起来三十岁的台湾腔男声——年龄不对，一开口就出戏，
+           * 腔调不对顶多是口音。 */
+          + (wantAge && v.age ? (v.age === wantAge ? 0 : 4) : 2) * 10
+          + (VOICE_RANK[v.accent] == null ? 4 : VOICE_RANK[v.accent])
           + ((used && used.indexOf(v.id) >= 0) ? 25 : 0)
       }))
       .sort((a, b) => a.s - b.s);
     return scored.length ? scored[0].v : null;
+  }
+
+  /* 从人物描述里把年龄读出来。「七十一岁」「二十多岁」「五十多岁」
+   * 这几种写法 AI 都会用；中文数字也要认，不然「六十三岁」抓不到。 */
+  const CN_NUM = { 零: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  function guessAge(c) {
+    const t = [c.look, c.role, c.name].filter(Boolean).join(' ');
+    const m = t.match(/([0-9]{2})\s*[岁歲]/);
+    if (m) return Number(m[1]);
+    /* 中文：十位 + （可选）个位，例如「七十一岁」「六十岁」「二十多岁」 */
+    const cn = t.match(/([一二三四五六七八九])十([一二三四五六七八九])?\s*[多余幾几]?\s*[岁歲]/);
+    if (cn) return CN_NUM[cn[1]] * 10 + (cn[2] ? CN_NUM[cn[2]] : 0);
+    if (/老先生|老太太|老人|爷爷|奶奶/.test(t)) return 70;
+    return null;
+  }
+
+  /* 年纪越大念得越慢。这不是拟真，是补一个清单里没有的维度——
+   * 声音只有性别没有年龄，同一个男声念七十岁和念二十岁一模一样。 */
+  function speedForAge(age) {
+    if (age == null) return null;
+    if (age >= 65) return 0.85;
+    if (age >= 50) return 0.9;
+    if (age >= 35) return 0.95;
+    if (age <= 25) return 1.05;
+    return 1;
   }
 
   function autoVoiceForChars(list) {
@@ -10354,9 +10495,9 @@ ${hookLibBlock()}
     let n = 0;
     list.forEach(c => {
       const v = pickVoiceFor(c, used);
-      if (!v) return;
-      c.voiceId = v.id; c.voiceName = v.name;
-      used.push(v.id); n++;
+      if (v) { c.voiceId = v.id; c.voiceName = v.name; used.push(v.id); n++; }
+      const sp = speedForAge(guessAge(c));
+      if (sp != null) c.voiceSpeed = sp;
     });
     return n;
   }
@@ -10782,7 +10923,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
           assetId: c.assetId,
           voiceId: c.voiceId || STORE.s.persona.realVoiceId,
           text,
-          voiceSettings: voiceSettings()
+          voiceSettings: voiceSettings(c)
         })
       });
       if (!r.videoId) throw new Error('服务没有回传影片 ID');
