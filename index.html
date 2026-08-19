@@ -4617,18 +4617,17 @@ window.VIEWS = window.VIEWS || {};
       <div class="card-h"><div><div class="card-t">② 声音</div>
           <div class="card-s">影片里说话的那个声音</div></div></div>
       <div id="hg-voice-panel"><div class="hint">读取中…</div></div>
-    </div>
 
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">语速</div>
-          <div class="card-s">讲书稍微慢一点比较好听</div></div></div>
-      <div class="field"><div class="label">说话速度
-          <span style="margin-left:auto;color:var(--violet-2);font-weight:700">${(p.voiceSpeed == null ? 1 : p.voiceSpeed)}×</span></div>
-        <input type="range" min="0.8" max="1.2" step="0.05" value="${p.voiceSpeed == null ? 1 : p.voiceSpeed}"
-               data-act="voice-set" data-k="voiceSpeed">
-        <div class="hint" style="margin-top:4px">1 是原速。调完要<b>重新生成影片</b>才听得到差别，已经做好的不会变。</div></div>
-      <div class="hint" style="margin-top:10px">想让声音更有起伏、更有情绪？内建声音再怎么调都有机器味，这是它的天花板——
-        真的要像本人，用上面的<b>上传录音克隆</b>。</div>
+      ${/* 语速本来是一整张卡：标题、副标、滑杆、两段说明。使用者的原话
+           「这么大个框框专门调语速，太大了」——一个滑杆不需要一张卡。
+           并进声音那一区，一行搞定。 */''}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <span style="font-size:14.5px;white-space:nowrap">语速</span>
+        <input type="range" min="0.8" max="1.2" step="0.05" style="flex:1"
+               value="${p.voiceSpeed == null ? 1 : p.voiceSpeed}" data-act="voice-set" data-k="voiceSpeed">
+        <span style="color:var(--violet-2);font-weight:700;white-space:nowrap">${(p.voiceSpeed == null ? 1 : p.voiceSpeed)}×</span>
+      </div>
+      <div class="hint" style="margin-top:4px">讲书稍慢一点比较好听。调完要重新生成影片才听得到，已经做好的不会变。</div>
     </div>
 
     <div id="hg-choice-summary" style="margin-bottom:20px"></div>
