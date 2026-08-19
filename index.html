@@ -4476,115 +4476,8 @@ window.VIEWS = window.VIEWS || {};
   /* =======================================================
    * 数字人 / 声音 / 人格
    * ===================================================== */
-  /* ============================================================
-   * ③ 影片形式 —— 单人口播 / 访谈式对谈
-   *
-   * 「一个人对镜头讲」换成「两个人坐下来聊」：一问一答、有来有往、
-   * 机位在两人之间切换。对谈天然不像批量生产，也解决了 AI 念稿没人味。
-   * 三种形式差别只有一件事：对面坐的是谁。
-   *   AI 提问者 → 不用授权，现在就能开
-   *   作者      → 要作者本人授权与配合
-   *   书中主角  → 接「创意分镜 · 书中角色」已经做好的角色
-   * ========================================================== */
-  function interviewCard(p) {
-    const conv = p.videoMode === 'conversation';
-    const fmt = DATA.interviewFormat(p.interviewFormat);
-    const chars = [];
-    (STORE.s.projects || []).forEach(pr => (pr.characters || []).forEach(c => {
-      if (c.name && !chars.some(x => x.name === c.name)) chars.push({ name: c.name, book: pr.title, portrait: !!c.portraitUrl });
-    }));
-
-    return `
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><div><div class="card-t">③ 影片形式</div>
-          <div class="card-s">正式生成时决定是一个人对镜头讲，还是两个人坐下来聊这本书</div></div>
-        <div class="right"><span class="tag ${conv ? 'v' : 'g'}">${conv ? '访谈式对谈' : '单人口播'}</span></div></div>
-
-      <div class="field"><div class="label">默认影片形式</div>
-        <select class="input" data-act="persona-set" data-k="videoMode">
-          <option value="single" ${!conv ? 'selected' : ''}>单人口播：一个数字人 + 一个声音</option>
-          <option value="conversation" ${conv ? 'selected' : ''}>访谈式对谈：两个人一问一答</option>
-        </select></div>
-
-      ${conv ? `
-      <div class="label" style="margin-top:14px">对面坐的是谁</div>
-      <div class="grid g3" style="margin-bottom:14px">
-        ${DATA.INTERVIEW_FORMATS.map(f => `
-          <div class="card ${f.id === fmt.id ? '' : ''}" data-act="persona-set" data-k="interviewFormat" data-v="${esc(f.id)}"
-               style="margin:0;cursor:pointer;background:var(--panel-2);border-color:${f.id === fmt.id ? 'var(--violet)' : 'var(--line)'}">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <b style="font-size:15px;flex:1">${esc(f.name)}</b>
-              <span class="tag ${f.levelTag}">${esc(f.level)}</span>
-            </div>
-            <div class="hint" style="line-height:1.65">${esc(f.how)}</div>
-            <div class="hint" style="margin-top:8px;line-height:1.6;opacity:.85">前置：${esc(f.need)}</div>
-            ${f.id === fmt.id ? '<div class="tag v" style="margin-top:10px">目前用这个</div>' : ''}
-          </div>`).join('')}
-      </div>
-
-      <div class="explain" style="margin:0 0 14px;border-left-color:var(--violet)">
-        <div class="ex-r"><span class="ex-k">这个形式怎么演</span><span>
-          <b>${esc(fmt.hostAsks ? (STORE.s.account.name || '主理人') : (p.guestName || fmt.guestName))}</b> 负责问，
-          <b>${esc(fmt.hostAsks ? (p.guestName || fmt.guestName) : (STORE.s.account.name || '主理人'))}</b> 负责答，
-          固定 5 段：开场 → 回答 → 追问 → 补充 → 收尾 CTA。</span></div>
-        <div class="ex-r"><span class="ex-k">${fmt.hostAsks ? '你的形象用在' : '你的形象用在'}</span><span>
-          你在「①②」选的那张脸和那个声音，在这个形式里是<b>${fmt.hostAsks ? '提问的主持人' : '被访问、负责回答的人'}</b>。</span></div>
-      </div>
-
-      <div class="row2">
-        <div>
-          ${fmt.id === 'character' ? `
-          <div class="field"><div class="label">要访问哪个角色</div>
-            <select class="input" data-act="persona-set" data-k="guestCharacterName">
-              <option value="">${chars.length ? '用这本书的第一个角色' : '还没有任何角色'}</option>
-              ${chars.map(c => `<option value="${esc(c.name)}" ${p.guestCharacterName === c.name ? 'selected' : ''}>${esc(c.name)}（《${esc(c.book)}》${c.portrait ? '·有定妆照' : '·还没定妆照'}）</option>`).join('')}
-            </select>
-            <div class="hint" style="margin-top:6px">${chars.length
-              ? '角色来自「一键生成短视频 · 创意分镜 · 书中角色」。有定妆照的，对谈影片会直接用那张脸。'
-              : '还没有角色。先到「一键生成短视频 · 创意分镜 · 书中角色」让 AI 从书里读出角色并生成定妆照。'}</div>
-          </div>` : `
-          <div class="field"><div class="label">对方叫什么</div>
-            <input class="input" value="${esc(p.guestName || '')}" placeholder="${esc(fmt.guestName)}" data-act="persona-set" data-k="guestName">
-            <div class="hint" style="margin-top:6px">${fmt.id === 'author' ? '留空就用这本书的作者名字。' : '留空就叫「AI 提问者」。'}</div>
-          </div>`}
-          <div class="field"><div class="label">访谈场景</div>
-            <select class="input" data-act="persona-set" data-k="conversationScene">
-              ${[
-                ['professional_interview_room', '专业访谈室'],
-                ['street_interview', '马路街访'],
-                ['car_conversation', '车内聊天'],
-                ['bookstore_talk', '书店圆桌'],
-                ['podcast_studio', '播客录音室']
-              ].map(x => `<option value="${x[0]}" ${p.conversationScene === x[0] ? 'selected' : ''}>${x[1]}</option>`).join('')}
-            </select></div>
-        </div>
-        <div>
-          <div class="row2">
-            <div class="field"><div class="label">对方 Avatar ID</div>
-              <input class="input" value="${esc(p.guestAvatarId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestAvatarId"></div>
-            <div class="field"><div class="label">对方 Voice ID</div>
-              <input class="input" value="${esc(p.guestVoiceId || '')}" placeholder="可先空白，由 Model Router 自动配" data-act="persona-set" data-k="guestVoiceId"></div>
-          </div>
-          <div class="field"><div class="label">对谈模板 ID</div>
-            <input class="input" value="${esc(p.conversationTemplateId || '')}" placeholder="${esc(fmt.templateId)}" data-act="persona-set" data-k="conversationTemplateId">
-            <div class="hint" style="margin-top:6px">留空就用这个形式的预设模板：<b>${esc(fmt.templateId)}</b>。</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="explain" style="margin:12px 0 0;border-left-color:var(--violet)">
-        <div class="ex-r"><span class="ex-k">正式生成</span><span>会送到 Model Router 的 <b>task: "conversation_video"</b>，带上 <b>interview_format: "${esc(fmt.id)}"</b>，由后端负责分段生成、切机位与剪辑，前台只拿最终 MP4 URL。</span></div>
-        <div class="ex-r"><span class="ex-k">还卡在哪</span><span>对谈要按轮次切机位，靠的是 <b>STEP 7 自动剪辑</b>。剪辑模块没到位之前，成片的切换节奏会比较朴素。</span></div>
-      </div>
-      ` : `
-      <div class="explain" style="margin:12px 0 0;border-left-color:var(--amber)">
-        <div class="ex-r"><span class="ex-k">要不要换成对谈</span><span>目前是<b>单人口播</b>：一个人从头讲到尾。
-          换成<b>访谈式对谈</b>之后，两个人一问一答、机位来回切——同样是 AI 生成，但批量感低得多，也比较不会一听就出戏。</span></div>
-        <div class="ex-r"><span class="ex-k">三种可以马上落地的形式</span><span>${DATA.INTERVIEW_FORMATS.map(f => `<b>${esc(f.name)}</b>（${esc(f.level)}）`).join('、')}。改成对谈后就会出现在这里。</span></div>
-      </div>
-      `}
-    </div>`;
-  }
+  /* 「③ 影片形式」那张卡整段移除了：访谈式对谈一次都没跑成功过，
+   * 留着只是死码。要做的时候从 git 历史拿回来就好。 */
 
   VIEWS.persona = function () {
     const p = STORE.s.persona;
@@ -4639,15 +4532,10 @@ window.VIEWS = window.VIEWS || {};
       <div id="hg-gen-panel"><div class="hint">读取中…</div></div>
     </div>
 
-    ${/* 影片形式本来是主流程里的第三张卡，跟形象、声音平起平坐。
-         但「访谈式对谈」到今天为止一次都没有真的跑成功过——把一个没验证过
-         的东西放在那里当平级选择，等于叫人去踩没铺好的路。收进进阶，
-         而且在标题就写明它还没跑通。 */''}
-    <details class="adv" style="margin-bottom:12px">
-      <summary>影片形式：单人口播 / 访谈式对谈<span class="hint" style="font-weight:400">目前用单人口播；对谈还没实测成功过</span></summary>
-      <div class="adv-b">${interviewCard(p)}</div>
-    </details>
-
+    ${/* 影片形式（单人口播／访谈式对谈）整段拿掉了。
+         对谈一次都没跑成功过，而单人口播是预设值——一个实际上只有一个
+         可选项的选单，留着只是让人多按一次、多问一次「这是干嘛的」。
+         videoMode 保持预设 single，等对谈真的做出一支再把入口加回来。 */''}
     ${/* 以下都是次要的：要嘛只在特定情况才生效，要嘛根本还没实作。
          默认收起来，免得把真正要做的两件事淹没掉。 */''}
     <details class="adv" style="margin-bottom:12px">
@@ -4689,21 +4577,10 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </details>
 
-    <details class="adv">
-      <summary>价值观准则与禁语清单（目前只是列出来，还没有真的拦截）</summary>
-      <div class="adv-b">
-        <div class="explain" style="margin:0 0 14px;border-left-color:var(--amber)">
-          <div class="ex-r"><span class="ex-k">先讲清楚</span><span>下面两份清单<b>目前只是显示</b>，系统<b>不会</b>真的挡掉命中的内容。
-            要做成硬约束，得在写稿那一步加检查逻辑，还没做。</span></div>
-        </div>
-        <div class="row2">
-          <div><div class="label">价值观准则</div>
-            ${p.values.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--green)">✓</span>${esc(v)}</div>`).join('')}</div>
-          <div><div class="label">禁语清单</div>
-            ${p.forbid.map(v => `<div style="display:flex;gap:8px;padding:6px 0;font-size:15px"><span style="color:var(--red)">✕</span>${esc(v)}</div>`).join('')}</div>
-        </div>
-      </div>
-    </details>`;
+    ${/* 价值观准则与禁语清单拿掉了。它自己的说明就写着「目前只是显示，
+         系统不会真的挡掉命中的内容」——一份不会执行的规则清单摆在设定页，
+         只会让人以为已经生效。真要做成硬约束是写稿那一步的事，做出来再
+         谈显示。 */''}`;
   };
 
   /* =======================================================
