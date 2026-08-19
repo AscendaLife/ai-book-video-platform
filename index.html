@@ -5769,7 +5769,12 @@ window.VIEWS = window.VIEWS || {};
         ${head(2)}
         <div style="padding-bottom:12px">
           <div class="row2" style="margin-bottom:10px">
-            <div class="field"><div class="label">影片长度<span class="hint" style="margin-left:6px;font-weight:400">直接决定这支多贵</span></div>
+            ${/* 这一格只在「让 AI 写稿」时有用——它是告诉 AI 写多少字。
+                 使用者自己贴了稿子之后它完全不起作用，但标签原本写「直接
+                 决定这支多贵」，看起来像是这里在控制影片长度。实际长度永远
+                 以下面那篇稿子为准。 */''}
+            <div class="field"><div class="label">让 AI 写多长
+                <span class="hint" style="margin-left:6px;font-weight:400">只影响下面那颗「写自述稿」</span></div>
               <select class="input" data-act="char-len" data-i="${i}">
                 ${INTRO_LENGTHS.map(x => `<option value="${x.id}" ${String(c.introLength || '60') === x.id ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}
               </select></div>
@@ -5778,7 +5783,8 @@ window.VIEWS = window.VIEWS || {};
                 placeholder="低沉、压着火／轻快带笑／疲惫但温柔"></div>
           </div>
           <button class="btn btn-sm btn-primary" data-act="ai-char-intro" data-i="${i}">✨ 写自述稿</button>
-          <span class="hint" style="margin-left:8px">几分钱，可以一直重写</span>
+          <span class="hint" style="margin-left:8px">几分钱，可以一直重写${script
+            ? '。已经有稿子了——<b>实际长度以下面那篇为准</b>，上面那个下拉只在重写时才起作用' : ''}</span>
           <div class="char-intro-status" data-for="${i}"></div>
 
           <div class="field" style="margin:12px 0 8px">
