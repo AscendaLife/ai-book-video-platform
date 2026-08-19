@@ -6321,6 +6321,8 @@ window.TOUR = (function () {
       case 'pub-del': return pubDel(el.dataset.id);
       case 'hg-hist-toggle': { HG.histOpen = !HG.histOpen; hgRenderVideoHistory(); return; }
       case 'hg-recover': return hgRecover();
+      case 'hg-hide-avatar': return hgHideAvatar(el.dataset.id);
+      case 'hg-unhide-avatars': return hgUnhideAvatars();
       case 'hg-voice-open': { HG.voiceOpen = true; hgRenderVoices(); return; }
       case 'hg-voice-close': { HG.voiceOpen = false; hgRenderVoices(); return; }
       case 'hg-voice-filter': {
@@ -7212,6 +7214,32 @@ window.TOUR = (function () {
   }
 
   /* ---- 形象：挑现成的，或上传照片 ---- */
+  /* 帐号里那几个旧形象（名字就叫「1」「2」「3」的那种）是以前测试留下的，
+   * 每次进来都占版面又不会用到。服务端的清单不归我们管、也没有删除接口，
+   * 所以在这一端记一份「不想看到的」，把它们藏起来。
+   * 藏起来不是删掉——底下留一个入口可以再显示出来，免得手滑藏错。 */
+  function hiddenAvatars() {
+    const p = STORE.s.persona;
+    if (!Array.isArray(p.hiddenAvatars)) p.hiddenAvatars = [];
+    return p.hiddenAvatars;
+  }
+
+  function hgHideAvatar(id) {
+    if (!id) return;
+    const h = hiddenAvatars();
+    if (h.indexOf(id) < 0) h.push(id);
+    /* 藏掉的刚好是正在用的，就把选择清掉，不然会用一个看不见的形象生成。 */
+    if (HG.avatarId === id) { HG.avatarId = null; hgSaveChoice(); }
+    STORE.update(); hgRenderAvatars(); hgRenderGenerate(); hgRenderChoiceSummary();
+    toast('已收起来。要找回来按下面「显示收起的形象」', 'ok');
+  }
+
+  function hgUnhideAvatars() {
+    STORE.s.persona.hiddenAvatars = [];
+    STORE.update(); hgRenderAvatars();
+    toast('全部显示出来了', 'ok');
+  }
+
   function hgRenderAvatars() {
     const panel = $('#hg-avatar-panel');
     if (!panel) return;
@@ -7247,8 +7275,11 @@ window.TOUR = (function () {
             <div style="font-size:12.5px;color:var(--txt-3)">${it.source === 'prompt' ? '提示词生成' : '我上传的'}${on ? ' · 使用中' : ''}</div>
           </div>`;
         }).join('')}
-        ${HG.avatars.slice(0, 10).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
-            style="border:2px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center">
+        ${HG.avatars.filter(a => hiddenAvatars().indexOf(a.id) < 0).slice(0, 10).map(a => `<div class="hg-avatar ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'on' : ''}" data-act="hg-pick-avatar" data-id="${esc(a.id)}"
+            style="position:relative;border:2px solid ${HG.mode === 'avatar' && a.id === HG.avatarId ? 'var(--violet-2)' : 'var(--line)'};border-radius:14px;padding:8px;cursor:pointer;text-align:center">
+          <span data-act="hg-hide-avatar" data-id="${esc(a.id)}" title="用不到，收起来"
+            style="position:absolute;top:4px;right:6px;z-index:2;width:22px;height:22px;line-height:20px;border-radius:50%;
+                   background:rgba(0,0,0,.55);color:#fff;font-size:15px;cursor:pointer">×</span>
           ${a.preview ? `<img src="${esc(a.preview)}" style="width:100%;height:112px;object-fit:cover;border-radius:10px;margin-bottom:6px">` : ''}
           <div style="font-size:14px;font-weight:600">${esc(a.name || a.id)}</div>
           <div style="font-size:12.5px;color:var(--txt-3)">${a.own ? '你帐号里的' : '官方形象'}${a.gender ? ' · ' + esc(a.gender) : ''}</div>
@@ -7257,6 +7288,9 @@ window.TOUR = (function () {
       ${!HG.avatars.length
         ? `<div class="hint" style="color:var(--amber);margin-bottom:8px">现成形象清单目前是空的（服务连不上，或帐号里没有建好的形象）。
              <b>上传自己的照片</b>不受影响，直接点上面那一格就行。</div>` : ''}
+      ${hiddenAvatars().length ? `<div class="hint" style="margin-bottom:8px">
+        已收起 ${hiddenAvatars().length} 个用不到的形象。
+        <span style="cursor:pointer;color:var(--violet-2);font-weight:600" data-act="hg-unhide-avatars">显示收起的形象</span></div>` : ''}
       <div class="hint">照片要<b>正脸、五官完整、光线均匀</b>——太贴近局部（比如只有眼睛）的裁切照会被判定「没侦测到脸」。上传免费，花钱的是之后「生成影片」那一步。</div>`;
   }
 
