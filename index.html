@@ -6435,6 +6435,7 @@ window.TOUR = (function () {
       case 'pub-register': return pubRegisterModal(el.dataset.id);
       case 'pub-manual': return pubManualModal();
       case 'pub-del': return pubDel(el.dataset.id);
+      case 'hg-hist-toggle': { HG.histOpen = !HG.histOpen; hgRenderVideoHistory(); return; }
       case 'hg-recover': return hgRecover();
       case 'hg-voice-open': { HG.voiceOpen = true; hgRenderVoices(); return; }
       case 'hg-voice-close': { HG.voiceOpen = false; hgRenderVoices(); return; }
@@ -7975,11 +7976,17 @@ window.TOUR = (function () {
 
   function hgVideoHistoryHtml() {
     const h = hgVideos();
+    /* 十几支影片全部摊开、每一支都挂一个播放器，会把整页吃掉。
+     * 使用者的原话：「生成记录不要全部展开」。预设只显示最近两支，
+     * 其余收起来——记录的用途是「刚做的那支好了没」，不是每天回顾全部。 */
+    const SHOWN = 2;
+    const shown = HG.histOpen ? h : h.slice(0, SHOWN);
+    const rest = h.length - shown.length;
     return `<div class="label" style="margin-top:18px">生成记录
-        <span class="hint" style="margin-left:8px;font-weight:400">只留最近 ${HGV_MAX} 支。影片网址约 7 天后失效，要保留请自行下载</span>
+        <span class="hint" style="margin-left:8px;font-weight:400">共 ${h.length} 支。影片网址约 7 天后失效，要保留请自行下载</span>
         <button class="btn btn-sm" style="margin-left:auto" data-act="hg-recover">找回之前生成的</button></div>
       ${h.length ? '' : '<div class="hint" style="padding:10px 2px">还没有记录。这一版之前生成的影片没有存下来，按上面「找回之前生成的」可以从服务端拉回来。</div>'}
-      ${h.map(r => {
+      ${shown.map(r => {
         const when = new Date(r.at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         const money = r.duration ? ' · 约 US$' + (r.duration * USD_PER_SEC).toFixed(2) : '';
         const len = r.duration ? Math.round(r.duration) + ' 秒' : '';
@@ -8002,7 +8009,9 @@ window.TOUR = (function () {
                 : ''}
           </div>
         </div>`;
-      }).join('')}`;
+      }).join('')}
+      ${rest > 0 || HG.histOpen ? `<div class="hint" style="cursor:pointer;padding:10px 2px;color:var(--violet-2);font-weight:600"
+        data-act="hg-hist-toggle">${HG.histOpen ? '收起来 ▴' : '还有 ' + rest + ' 支 · 全部展开 ▾'}</div>` : ''}`;
   }
 
   function hgRenderVideoHistory() {
