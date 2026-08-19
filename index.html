@@ -7722,6 +7722,7 @@ window.TOUR = (function () {
    * 粤语那两个一定要单独标出来：名字叫 HiuMaan / HiuGaai，从名字完全
    * 看不出是粤语，选到了整支影片都会是粤语，钱就白花了。 */
   const VOICE_GROUPS = [
+    ['mine', '我克隆的', '你自己上传录音训练出来的声音，排在最前面。'],
     ['tw', '台湾腔', '微软官方 zh-TW。咬字最标准，但语气偏平，长句容易听起来僵。'],
     ['multi', '语气自然', '别家模型的声音，起伏和停顿明显自然得多，讲书最适合——但腔调不保证，一定要先试听。'],
     ['cn', '大陆腔', '微软官方 zh-CN。'],
@@ -7856,7 +7857,10 @@ window.TOUR = (function () {
         try {
           const s = await hgFetch('/api/status?service=heygen-voice&id=' + encodeURIComponent(r.voiceCloneId));
           if (s.status === 'complete') {
-            HG.voices.unshift(decorateVoice({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview, accent: 'other' }));
+            /* 服务端现在会一起回传私有声音，重新拉一次就好，不用自己伪造
+             * 一笔塞进清单——伪造的那笔重整之后就不见了，使用者会以为
+             * 克隆白花钱了。 */
+            HG.voices.unshift(decorateVoice({ id: s.voiceId, name: s.name, language: 'Chinese', preview: s.preview, accent: 'mine', own: true }));
             HG.voiceId = s.voiceId;
             hgSaveChoice();
             toast('声音克隆完成，已自动选用这个新声音', 'ok'); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
@@ -10710,6 +10714,8 @@ ${hookLibBlock()}
 
   /* 腔调优先序：台湾腔 → 语气自然 → 其他中文 → 大陆腔。粤语一律排除，
    * 选到了整支影片都会变粤语。 */
+  /* 没有列 mine：自己克隆的是「主理人本人」的声音，不该被自动配给书里的
+   * 人物——那会变成书中所有角色都用你的声音讲话。要用还是可以自己选。 */
   const VOICE_RANK = { tw: 0, multi: 1, other: 2, cn: 3 };
 
   /* 把人物的实际年龄折成声音清单用的四档。 */
@@ -10724,7 +10730,7 @@ ${hookLibBlock()}
   function pickVoiceFor(c, used) {
     const want = guessGender(c);
     const wantAge = ageBucket(guessAge(c));
-    const pool = (HG.voices || []).filter(v => v.accent !== 'yue');
+    const pool = (HG.voices || []).filter(v => v.accent !== 'yue' && v.accent !== 'mine');
     if (!pool.length) return null;
     const scored = pool
       .filter(v => !want || !v.gender || v.gender === 'unknown' || v.gender === want)
