@@ -5607,25 +5607,28 @@ window.VIEWS = window.VIEWS || {};
       </div>
     </div>
 
-    <div class="card" style="margin-bottom:18px;border-color:var(--violet)">
-      <div class="card-h"><div><div class="card-t">这一页在做什么</div>
-          <div class="card-s">书里的人物 → 有脸有声音的数字人 → 对着镜头自我介绍</div></div>
-        <div class="right"><span class="tag ${done ? 'g' : ''}">${done ? '已做出 ' + done + ' 支' : '还没做过'}</span></div></div>
-      <div class="explain" style="margin:0;border-left-color:var(--violet)">
-        <div class="ex-r"><span class="ex-k">跟流水线的差别</span><span>「一键生成短视频」是<b>主理人</b>用同一张脸讲三十支书评；
-          这一页是<b>书里的人</b>自己出来讲话，男主角、女主角、其他主要人物各是一个人、各一张脸、各一个声音。</span></div>
-        <div class="ex-r"><span class="ex-k">他会讲什么</span><span>照一支影片实际念出来的顺序分成四块：
-          <b>开场钩子</b> → <b>他是谁、在哪里</b>（我是谁 / 这本书的情景 / 周遭的环境 / 现在的行为）→
-          <b>他心里的事</b>（心态 / 怎么走到这一步 / 卡在哪里 / 身边的人 / 我的想法 / 后来明白了什么）→
-          <b>收尾</b>（接下来要做什么 / 最想说的一句话 / 给看到这里的你）。每一段都可以改，留空就不会念到。</span></div>
-        <div class="ex-r"><span class="ex-k">为什么不只讲此刻</span><span>只讲「现在在做什么、心里怎么想」的自述会很平，没有张力就没有人看完。
-          所以补上<b>前史</b>与<b>卡在哪里</b>撑起张力，<b>身边的人</b>让同一本书的几个人物互相提到对方、几支影片像同一个故事，
-          <b>后来明白了什么</b>把这本书的观点落在人身上，<b>最后一句</b>把人带回这本书。</span></div>
-        <div class="ex-r"><span class="ex-k">三步</span><span>①让 AI 从书里读出人物 → ②生成定妆照（这是他的脸）＋写自述稿 → ③生成自述短片。
-          写稿前先挑<b>影片长度</b>与<b>念的口吻</b>——长度直接决定这支影片多贵。</span></div>
-        <div class="ex-r"><span class="ex-k">花多少</span><span>读人物几乎不花钱；定妆照一张约 <b>US$0.03-0.07</b>；
-          真正贵的是最后生成影片那一步，一支约 <b>US$1-3</b>，而且会占掉一支月额度。前两步随便试，第三步才要想一下。</span></div>
-      </div>
+    ${/* 这一段本来是五列的说明表，占掉快一整屏。使用者的原话是「写的太多，
+         占据了太多的位置，一句话介绍清楚就行了」——对，说明是给第一次来的人
+         看的，不该每次进来都挡在最前面。留一句，其余收进「说明」。 */''}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:15px">让书里的人物自己出来，对着镜头讲一段话——<b>一人一张脸、一个声音</b>。</span>
+      <span class="tag ${done ? 'g' : ''}">${done ? '已做出 ' + done + ' 支' : '还没做过'}</span>
+      <details class="adv" style="flex:1 0 100%;margin-top:6px">
+        <summary>说明：跟流水线的差别、他会讲什么、花多少钱</summary>
+        <div class="adv-b">
+          <div class="explain" style="margin:0;border-left-color:var(--violet)">
+            <div class="ex-r"><span class="ex-k">跟流水线的差别</span><span>「一键生成短视频」是<b>主理人</b>用同一张脸讲三十支书评；
+              这一页是<b>书里的人</b>自己出来讲话。</span></div>
+            <div class="ex-r"><span class="ex-k">他会讲什么</span><span>照影片实际念出来的顺序分四块：
+              <b>开场钩子</b> → <b>他是谁、在哪里</b> → <b>他心里的事</b>（心态 / 前史 / 卡在哪里 / 身边的人 / 后来明白了什么）→
+              <b>收尾</b>。每一段都可以改，留空就不会念到。</span></div>
+            <div class="ex-r"><span class="ex-k">为什么不只讲此刻</span><span>只讲「现在在做什么」的自述很平，没有张力没人看完。
+              前史与卡在哪里撑张力，身边的人让几支影片像同一个故事，最后一句把人带回这本书。</span></div>
+            <div class="ex-r"><span class="ex-k">花多少</span><span>读人物几乎不花钱；定妆照一张约 <b>US$0.03-0.07</b>；
+              真正贵的是生成影片那一步，一支约 <b>US$1-3</b>。前两步随便试，第三步才要想一下。</span></div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="card" style="margin-bottom:18px">
