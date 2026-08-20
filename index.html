@@ -5950,6 +5950,13 @@ window.VIEWS = window.VIEWS || {};
     if (PP.opt.sub && !PP.segs) return toast('先按「① 抓字幕」，不然没有字幕可以烧', 'warn');
     if (PP.busy) return;
     PP.busy = true;
+    /* 合成靠 requestAnimationFrame 一格一格画。浏览器在分页被切到背景时
+     * 会把它降到几乎不跑——画面停住，录出来的影片就断在那里。
+     * 这是这个做法躲不掉的限制，只能讲清楚，并在中途被切走时明确提醒，
+     * 不要让人等半天拿到一支半截的影片。 */
+    let hidden = false;
+    const onHide = () => { if (document.hidden) hidden = true; };
+    document.addEventListener('visibilitychange', onHide);
     const done = busy('正在合成…这一步是即时的，影片多长就要等多久');
     try {
       const vid = document.createElement('video');
@@ -6035,11 +6042,18 @@ window.VIEWS = window.VIEWS || {};
       PP.outUrl = URL.createObjectURL(blob);
       PP.outName = (PP.video.name || 'video').replace(/\.[^.]+$/, '')
         + '_后制.' + (mime.indexOf('mp4') >= 0 ? 'mp4' : 'webm');
-      toast('做好了，大小 ' + (blob.size / 1024 / 1024).toFixed(1) + 'MB', 'ok');
+      if (hidden) {
+        toast('合成过程中这个分页被切到背景，画面可能会断。请重来一次，并让这一页保持在最前面', 'warn');
+      } else {
+        toast('做好了，大小 ' + (blob.size / 1024 / 1024).toFixed(1) + 'MB', 'ok');
+      }
       render();
     } catch (e) {
       toast('合成失败：' + e.message, 'err');
-    } finally { PP.busy = false; done(); }
+    } finally {
+      document.removeEventListener('visibilitychange', onHide);
+      PP.busy = false; done();
+    }
   }
 
   function srt() {
@@ -6124,6 +6138,11 @@ window.VIEWS = window.VIEWS || {};
     <div class="card" style="margin-bottom:16px">
       <div class="card-h"><div><div class="card-t">③ 合成</div>
         <div class="card-s">在你自己的电脑上算，不上传、不花钱。影片多长就要等多久</div></div></div>
+      <div class="explain" style="margin:0 0 12px;border-left-color:var(--amber)">
+        <div class="ex-r"><span class="ex-k">合成时别切走</span><span>合成是<b>一格一格画出来</b>的，
+          浏览器在分页切到背景时会把它停掉，影片会断在那里。<b>请让这一页保持在最前面，等它跑完</b>——
+          一支 30 秒的影片就等 30 秒。</span></div>
+      </div>
       <button class="btn btn-primary" data-act="pp-run" ${has ? '' : 'disabled style="opacity:.45"'}>▶ 开始合成</button>
       ${PP.outUrl ? `
         <div style="margin-top:14px">
