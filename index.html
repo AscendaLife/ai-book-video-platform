@@ -675,6 +675,7 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
            塞进流程里就等于逼人先跑完前面几步才能用。 -->
       <div class="nav-group" style="padding-top:12px;font-size:9.5px">单独功能</div>
       <a class="nav-item" data-route="roles"><span class="ni">✦</span>书影（书中人物）</a>
+      <a class="nav-item" data-route="postprod"><span class="ni">✂</span>成片后制</a>
 
 
       <details class="nav-more">
@@ -5813,6 +5814,340 @@ window.VIEWS = window.VIEWS || {};
 
 
 
+/* ===== postprod.js ===== */
+/* ============================================================
+ * postprod.js — 成片后制：自动字幕 + 背景音乐 + 书封开场
+ *
+ * 为什么不用 ffmpeg：
+ *   浏览器版的 ffmpeg 要先下载 32MB 的引擎（实测这条网络要 84 秒），
+ *   而且三种打包组合试下来初始化都卡死。改用浏览器原生的能力：
+ *   影片画到 canvas 上、字幕直接用系统字体画上去（中文不用另外塞字体
+ *   档）、声音走 WebAudio 混，最后用 MediaRecorder 录成 MP4。
+ *   零下载、零外部依赖，而且是即时的——影片多长就录多久。
+ *
+ * 为什么吃本机档案而不是线上网址：
+ *   生成服务的影片网址没有跨域标头，画到 canvas 上会被浏览器锁住
+ *   （captureStream 直接抛错）；代理又会撞到平台 4.5MB 的回应上限，
+ *   而一支 30 秒的影片就 15MB。反正影片本来就要下载下来发布，
+ *   直接让使用者选档案最省事，也没有大小限制。
+ *
+ * 这一支完全独立：不改动任何既有流程，出问题也只影响这一页。
+ * ========================================================== */
+window.VIEWS = window.VIEWS || {};
+(function () {
+  const { esc, toast, busy } = UI;
+
+  const PP = {
+    video: null,      // File
+    music: null,      // File
+    cover: null,      // File
+    segs: null,       // 转录结果
+    outUrl: null,     // 成品
+    outName: '',
+    busy: false,
+    opt: { sub: true, music: true, cover: false, musicVol: 12 }
+  };
+  window.PP = PP;
+
+  /* ---- 音轨抽出来转成 Whisper 吃得下的 WAV ----
+   * 直接把 15MB 的影片传上去会撞到平台的请求体上限。抽出音轨、降到
+   * 16kHz 单声道之后，三十秒大约 1MB——转录本来也只需要声音。 */
+  async function toWav(file) {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+    const rate = 16000;
+    const len = Math.ceil(buf.duration * rate);
+    const off = new OfflineAudioContext(1, len, rate);
+    const src = off.createBufferSource();
+    src.buffer = buf; src.connect(off.destination); src.start();
+    const out = await off.startRendering();
+    const d = out.getChannelData(0);
+    /* 手写 WAV 表头：只为了送去转录，不需要任何编码函式库。 */
+    const ab = new ArrayBuffer(44 + d.length * 2);
+    const v = new DataView(ab);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + d.length * 2, true); str(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, 'data'); v.setUint32(40, d.length * 2, true);
+    for (let i = 0; i < d.length; i++) {
+      const x = Math.max(-1, Math.min(1, d[i]));
+      v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
+    }
+    ctx.close();
+    return new Blob([ab], { type: 'audio/wav' });
+  }
+
+  async function transcribe() {
+    if (!PP.video) return toast('先选一支影片', 'warn');
+    const done = busy('正在听这支影片、抓字幕时间轴…');
+    try {
+      const wav = await toWav(PP.video);
+      const j = await HGX.fetchSlow('/api/ai/transcribe?raw=1&mime=audio/wav',
+        { method: 'POST', body: wav });
+      PP.segs = j.segments || [];
+      if (!PP.segs.length) throw new Error(j.note || '没有拿到字幕时间轴');
+      toast('抓到 ' + PP.segs.length + ' 句字幕，可以逐句修改', 'ok');
+      render();
+    } catch (e) {
+      toast('抓字幕失败：' + e.message, 'err');
+    } finally { done(); }
+  }
+
+  /* ---- 字幕画在画布上 ----
+   * 用系统字体画中文，所以不需要嵌字体档（ffmpeg 那条路最麻烦的就是
+   * 这个）。描边 + 阴影是短影音的标配，没有它白字压在浅色画面上会看不见。 */
+  function drawSub(g, text, W, H) {
+    if (!text) return;
+    const size = Math.round(W * 0.058);
+    g.font = '700 ' + size + 'px "PingFang TC","Microsoft JhengHei","Noto Sans CJK TC",sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'bottom';
+    /* 一行放不下就断行。中文没有空格，只能按字数切。 */
+    const per = Math.floor(W * 0.86 / size);
+    const lines = [];
+    for (let i = 0; i < text.length; i += per) lines.push(text.slice(i, i + per));
+    const lh = size * 1.35;
+    let y = H - Math.round(H * 0.12) - (lines.length - 1) * lh;
+    lines.forEach(ln => {
+      g.lineWidth = Math.max(4, size * 0.16);
+      g.strokeStyle = 'rgba(0,0,0,.82)';
+      g.lineJoin = 'round';
+      g.strokeText(ln, W / 2, y);
+      g.fillStyle = '#fff';
+      g.fillText(ln, W / 2, y);
+      y += lh;
+    });
+  }
+
+  function drawCover(g, img, W, H, title) {
+    g.fillStyle = '#0d0d10'; g.fillRect(0, 0, W, H);
+    if (img) {
+      const s = Math.min(W * 0.62 / img.width, H * 0.5 / img.height);
+      const w = img.width * s, h = img.height * s;
+      g.drawImage(img, (W - w) / 2, (H - h) / 2 - H * 0.04, w, h);
+    }
+    if (title) {
+      const size = Math.round(W * 0.07);
+      g.font = '700 ' + size + 'px "PingFang TC","Microsoft JhengHei",sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'top';
+      g.fillStyle = '#fff';
+      g.fillText(title, W / 2, H * 0.72);
+    }
+  }
+
+  function loadImg(file) {
+    return new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i); i.onerror = rej;
+      i.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function run() {
+    if (!PP.video) return toast('先选一支影片', 'warn');
+    if (PP.opt.sub && !PP.segs) return toast('先按「① 抓字幕」，不然没有字幕可以烧', 'warn');
+    if (PP.busy) return;
+    PP.busy = true;
+    const done = busy('正在合成…这一步是即时的，影片多长就要等多久');
+    try {
+      const vid = document.createElement('video');
+      vid.src = URL.createObjectURL(PP.video);
+      vid.playsInline = true;
+      await new Promise((res, rej) => { vid.onloadedmetadata = res; vid.onerror = () => rej(new Error('这个影片档读不进来')); });
+
+      const W = vid.videoWidth, H = vid.videoHeight;
+      const cvs = document.createElement('canvas');
+      cvs.width = W; cvs.height = H;
+      const g = cvs.getContext('2d');
+
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const dest = ac.createMediaStreamDestination();
+      const vSrc = ac.createMediaElementSource(vid);
+      const vGain = ac.createGain(); vGain.gain.value = 1;
+      vSrc.connect(vGain).connect(dest);
+
+      let mAudio = null;
+      if (PP.opt.music && PP.music) {
+        mAudio = document.createElement('audio');
+        mAudio.src = URL.createObjectURL(PP.music);
+        mAudio.loop = true;
+        const mSrc = ac.createMediaElementSource(mAudio);
+        const mGain = ac.createGain();
+        /* 人声之外的音乐音量。压到 0.12 左右是这类影片的常见做法——
+         * 再大就会盖过说话声，观众会先关掉。 */
+        mGain.gain.value = Math.max(0, Math.min(0.4, PP.opt.musicVol / 100));
+        mSrc.connect(mGain).connect(dest);
+      }
+
+      const coverImg = (PP.opt.cover && PP.cover) ? await loadImg(PP.cover) : null;
+
+      const stream = new MediaStream([
+        ...cvs.captureStream(30).getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+      const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus']
+        .find(t => MediaRecorder.isTypeSupported(t));
+      const chunks = [];
+      const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      const stopped = new Promise(r => { rec.onstop = r; });
+      rec.start(200);
+
+      if (mAudio) { try { await mAudio.play(); } catch (e) { /* 没声音也要继续 */ } }
+
+      /* 开场：书封停两秒。录影已经开始，所以这两秒会真的进到成品里。 */
+      if (coverImg) {
+        const t0 = performance.now();
+        await new Promise(res => {
+          const tick = () => {
+            drawCover(g, coverImg, W, H, PP.coverTitle || '');
+            if (performance.now() - t0 > 2000) return res();
+            requestAnimationFrame(tick);
+          };
+          tick();
+        });
+      }
+
+      await vid.play();
+      await new Promise(res => {
+        const tick = () => {
+          if (vid.ended || vid.paused) return res();
+          g.drawImage(vid, 0, 0, W, H);
+          if (PP.opt.sub && PP.segs) {
+            const t = vid.currentTime;
+            const s = PP.segs.find(x => t >= x.start && t <= x.end);
+            if (s) drawSub(g, s.text, W, H);
+          }
+          requestAnimationFrame(tick);
+        };
+        tick();
+      });
+
+      if (mAudio) mAudio.pause();
+      rec.stop();
+      await stopped;
+      ac.close();
+
+      const blob = new Blob(chunks, { type: mime.split(';')[0] });
+      if (PP.outUrl) URL.revokeObjectURL(PP.outUrl);
+      PP.outUrl = URL.createObjectURL(blob);
+      PP.outName = (PP.video.name || 'video').replace(/\.[^.]+$/, '')
+        + '_后制.' + (mime.indexOf('mp4') >= 0 ? 'mp4' : 'webm');
+      toast('做好了，大小 ' + (blob.size / 1024 / 1024).toFixed(1) + 'MB', 'ok');
+      render();
+    } catch (e) {
+      toast('合成失败：' + e.message, 'err');
+    } finally { PP.busy = false; done(); }
+  }
+
+  function srt() {
+    if (!PP.segs) return '';
+    const t = s => {
+      const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = Math.floor(s % 60),
+        ms = Math.round((s - Math.floor(s)) * 1000);
+      const p = (n, w) => String(n).padStart(w || 2, '0');
+      return p(h) + ':' + p(m) + ':' + p(x) + ',' + p(ms, 3);
+    };
+    return PP.segs.map((s, i) => (i + 1) + '\n' + t(s.start) + ' --> ' + t(s.end) + '\n' + s.text + '\n').join('\n');
+  }
+
+  window.PPX = {
+    pick: (k, file) => { PP[k] = file; if (k === 'video') { PP.segs = null; PP.outUrl = null; } render(); },
+    toggle: k => { PP.opt[k] = !PP.opt[k]; render(); },
+    setVol: v => { PP.opt.musicVol = +v; },
+    transcribe, run, srt,
+    editSeg: (i, text) => { if (PP.segs && PP.segs[i]) PP.segs[i].text = text; }
+  };
+
+  VIEWS.postprod = function () {
+    const has = !!PP.video;
+    const n = PP.segs ? PP.segs.length : 0;
+    return `
+    <div class="page-h">
+      <div><div class="page-t">成片后制</div>
+        <div class="page-d">给做好的影片自动上字幕、配背景音乐、加书封开场</div></div>
+      <div class="right"><span class="tag v">独立功能，不影响其他流程</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">① 选影片</div>
+        <div class="card-s">先把生成好的影片下载到电脑，再选进来。不限大小</div></div></div>
+      <input type="file" accept="video/*" id="pp-video" class="input" style="padding:10px">
+      ${has ? `<div class="hint" style="margin-top:8px">已选：<b>${esc(PP.video.name)}</b> · ${(PP.video.size / 1024 / 1024).toFixed(1)}MB</div>` : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">② 要加什么</div>
+        <div class="card-s">全部可选，只勾要的</div></div></div>
+
+      <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer">
+        <input type="checkbox" ${PP.opt.sub ? 'checked' : ''} data-act="pp-toggle" data-k="sub" style="margin-top:4px">
+        <div style="flex:1">
+          <div style="font-weight:650">烧字幕</div>
+          <div class="hint">时间轴从影片的声音里量出来，不是估的。转录一支 30 秒的约 US$0.005</div>
+          ${has ? `<div style="margin-top:8px">
+            <button class="btn btn-sm ${n ? '' : 'btn-primary'}" data-act="pp-transcribe">${n ? '重新抓字幕' : '① 抓字幕'}</button>
+            ${n ? `<span class="hint" style="margin-left:8px">已抓到 <b>${n}</b> 句
+              <button class="btn btn-sm" style="margin-left:6px" data-act="pp-srt">下载 .srt</button></span>` : ''}
+          </div>` : '<div class="hint" style="margin-top:6px;color:var(--amber)">先选影片</div>'}
+        </div>
+      </label>
+
+      <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer">
+        <input type="checkbox" ${PP.opt.music ? 'checked' : ''} data-act="pp-toggle" data-k="music" style="margin-top:4px">
+        <div style="flex:1">
+          <div style="font-weight:650">配背景音乐</div>
+          <div class="hint">用你自己的音乐档（买过授权的、或平台免版权曲库下载的）。我们不内建音乐，那是版权地雷</div>
+          <input type="file" accept="audio/*" id="pp-music" class="input" style="padding:8px;margin-top:8px">
+          ${PP.music ? `<div class="hint" style="margin-top:6px">已选：<b>${esc(PP.music.name)}</b></div>` : ''}
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <span class="hint">音量</span>
+            <input type="range" min="3" max="30" value="${PP.opt.musicVol}" data-act="pp-vol" style="flex:1;max-width:220px">
+            <span class="hint">${PP.opt.musicVol}%</span>
+          </div>
+        </div>
+      </label>
+
+      <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;cursor:pointer">
+        <input type="checkbox" ${PP.opt.cover ? 'checked' : ''} data-act="pp-toggle" data-k="cover" style="margin-top:4px">
+        <div style="flex:1">
+          <div style="font-weight:650">书封开场（2 秒）</div>
+          <div class="hint">影片最前面加两秒书封</div>
+          <input type="file" accept="image/*" id="pp-cover" class="input" style="padding:8px;margin-top:8px">
+          ${PP.cover ? `<div class="hint" style="margin-top:6px">已选：<b>${esc(PP.cover.name)}</b></div>` : ''}
+        </div>
+      </label>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><div><div class="card-t">③ 合成</div>
+        <div class="card-s">在你自己的电脑上算，不上传、不花钱。影片多长就要等多久</div></div></div>
+      <button class="btn btn-primary" data-act="pp-run" ${has ? '' : 'disabled style="opacity:.45"'}>▶ 开始合成</button>
+      ${PP.outUrl ? `
+        <div style="margin-top:14px">
+          <video src="${PP.outUrl}" controls style="width:100%;max-width:300px;border-radius:12px"></video>
+          <div style="margin-top:10px">
+            <a class="btn btn-primary" href="${PP.outUrl}" download="${esc(PP.outName)}">⬇ 下载成品</a>
+          </div>
+        </div>` : ''}
+    </div>
+
+    ${n ? `<div class="card">
+      <div class="card-h"><div><div class="card-t">字幕逐句校对</div>
+        <div class="card-s">听错的字在这里改，改完再合成</div></div></div>
+      <div style="max-height:320px;overflow-y:auto">
+        ${PP.segs.map((s, i) => `<div style="display:flex;gap:8px;align-items:center;padding:5px 0">
+          <span class="hint mono" style="flex:0 0 96px">${s.start.toFixed(1)}-${s.end.toFixed(1)}s</span>
+          <input class="input" value="${esc(s.text)}" data-act="pp-seg" data-i="${i}" style="padding:6px 8px">
+        </div>`).join('')}
+      </div>
+    </div>` : ''}`;
+  };
+})();
+
+
 /* ===== tour.js ===== */
 /* ============================================================
  * tour.js — 新手导览（聚光灯式分步引导）
@@ -6044,7 +6379,7 @@ window.TOUR = (function () {
 
   const TITLES = {
     dashboard: '工作台', projects: '书籍项目', pipeline: '生产流水线', creative: '创意分镜', library: '内容资产库', billing: '支付与方案',
-    roles: '书影（书中人物）',
+    roles: '书影（书中人物）', postprod: '成片后制',
     engine: '人物引擎',
     persona: '数字人 · 声音 · 人格', publish: '发布与数据', analytics: '数据分析',
     settings: '系统设置', docs: '文档中心'
@@ -6378,6 +6713,13 @@ window.TOUR = (function () {
             图片网址由生成服务托管，可能会过期，要留就先存下来。</div>`);
       }
       case 'auto-voice-all': return autoVoiceAll();
+      case 'pp-transcribe': return PPX.transcribe();
+      case 'pp-run': return PPX.run();
+      case 'pp-srt': {
+        const t = PPX.srt();
+        if (!t) return toast('还没有字幕', 'warn');
+        return download('字幕.srt', t);
+      }
       case 'hook-mark': return hookMark(el.dataset.t, el.dataset.v);
       case 'pub-register': return pubRegisterModal(el.dataset.id);
       case 'pub-manual': return pubManualModal();
@@ -6628,6 +6970,19 @@ window.TOUR = (function () {
     }
   });
 
+  /* 成片后制：档案选择与勾选框。这一页完全独立，事件也集中在这里，
+   * 之后要拆掉整个功能只要删这一段与 postprod.js。 */
+  $('#view').addEventListener('change', e => {
+    const t = e.target;
+    if (t.id === 'pp-video' || t.id === 'pp-music' || t.id === 'pp-cover') {
+      const f = t.files && t.files[0];
+      if (f) PPX.pick(t.id.slice(3), f);
+      return;
+    }
+    const cb = t.closest('[data-act="pp-toggle"]');
+    if (cb) { PPX.toggle(cb.dataset.k); return; }
+  });
+
   /* 下拉与滑块 */
   $('#view').addEventListener('change', e => {
     const el = e.target.closest('[data-act]');
@@ -6680,6 +7035,16 @@ window.TOUR = (function () {
     /* 播放量那几格边打边存，不重画——重画会把游标弹掉，填三十笔会疯掉。 */
     const pf = e.target.closest('[data-act="pub-num"]');
     if (pf) { pubSet(pf.dataset.id, pf.dataset.k, pf.value); return; }
+    if (e.target.dataset && e.target.dataset.act === 'pp-vol') {
+      PPX.setVol(e.target.value);
+      const lab = e.target.parentElement && e.target.parentElement.lastElementChild;
+      if (lab) lab.textContent = e.target.value + '%';
+      return;
+    }
+    if (e.target.dataset && e.target.dataset.act === 'pp-seg') {
+      PPX.editSeg(+e.target.dataset.i, e.target.value);
+      return;
+    }
     if (e.target.id === 'bl-q') {
       const p = STORE.current;
       const box = document.getElementById('bl-r');
@@ -10318,6 +10683,9 @@ ${hookLibBlock()}
 
   /* views-*.js 是另一个 IIFE，拿不到这里的区域函式。曝露读取用的两支
    * 就够——写入一律走 data-act，集中在一个地方好追。 */
+  /* postprod.js 是独立模块，拿不到这里的区域函式；只曝露它需要的那一支。 */
+  window.HGX = { fetchSlow: (p, o) => hgFetchSlow(p, o) };
+
   window.HOOKS = {
     verdict: hookVerdict,
     count: () => ({ good: hookLib().good.length, bad: hookLib().bad.length })
