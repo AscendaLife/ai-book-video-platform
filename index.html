@@ -5947,7 +5947,7 @@ window.VIEWS = window.VIEWS || {};
 
   async function run() {
     if (!PP.video) return toast('先选一支影片', 'warn');
-    if (PP.opt.sub && !PP.segs) return toast('先按「① 抓字幕」，不然没有字幕可以烧', 'warn');
+    if (PP.opt.sub && !PP.segs) return toast('先按「① 抓字幕」，不然没有字幕可以加', 'warn');
     if (PP.busy) return;
     PP.busy = true;
     /* 合成靠 requestAnimationFrame 一格一格画。浏览器在分页被切到背景时
@@ -6067,7 +6067,29 @@ window.VIEWS = window.VIEWS || {};
     return PP.segs.map((s, i) => (i + 1) + '\n' + t(s.start) + ' --> ' + t(s.end) + '\n' + s.text + '\n').join('\n');
   }
 
+  /* 从系统里已经做好的影片直接拿，不必先下载再选档。
+   * 影片来源没有跨域标头，直接 fetch 会被挡，所以走服务端那支只做
+   * 转送的接口；拿回来变成本机 blob 之后，后面的流程跟选档案完全一样。 */
+  async function useMade(url, label) {
+    const done = busy('正在把影片抓进来…');
+    try {
+      const r = await fetch(HGX.proxied(url));
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        throw new Error(t.slice(0, 120) || ('HTTP ' + r.status));
+      }
+      const blob = await r.blob();
+      PP.video = new File([blob], (label || 'video').replace(/[\/:*?"<>|]/g, '') + '.mp4', { type: blob.type || 'video/mp4' });
+      PP.segs = null; PP.outUrl = null;
+      toast('影片拿到了（' + (blob.size / 1024 / 1024).toFixed(1) + 'MB），可以往下做了', 'ok');
+      render();
+    } catch (e) {
+      toast('抓不到这支影片：' + e.message + '。影片网址通常只保留几天，过期就要重新生成', 'err');
+    } finally { done(); }
+  }
+
   window.PPX = {
+    useMade,
     pick: (k, file) => { PP[k] = file; if (k === 'video') { PP.segs = null; PP.outUrl = null; } render(); },
     toggle: k => { PP.opt[k] = !PP.opt[k]; render(); },
     setVol: v => { PP.opt.musicVol = +v; },
@@ -6087,9 +6109,23 @@ window.VIEWS = window.VIEWS || {};
 
     <div class="card" style="margin-bottom:16px">
       <div class="card-h"><div><div class="card-t">① 选影片</div>
-        <div class="card-s">先把生成好的影片下载到电脑，再选进来。不限大小</div></div></div>
+        <div class="card-s">系统里做好的直接点，不用先下载</div></div></div>
+      ${(() => {
+        const made = (window.HGX && HGX.madeVideos && HGX.madeVideos()) || [];
+        if (!made.length) return '<div class="hint" style="margin-bottom:10px">系统里还没有做好的影片。可以直接选电脑里的档案。</div>';
+        return `<div style="max-height:190px;overflow-y:auto;margin-bottom:12px">
+          ${made.map((m, i) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14.5px">${esc(m.label)}</div>
+              <div class="hint">${esc(m.from)}${m.at ? ' · ' + new Date(m.at).toLocaleDateString('zh-TW') : ''}</div>
+            </div>
+            <button class="btn btn-sm" data-act="pp-use" data-i="${i}">用这支</button>
+          </div>`).join('')}
+        </div>`;
+      })()}
+      <div class="label">或选电脑里的档案</div>
       <input type="file" accept="video/*" id="pp-video" class="input" style="padding:10px">
-      ${has ? `<div class="hint" style="margin-top:8px">已选：<b>${esc(PP.video.name)}</b> · ${(PP.video.size / 1024 / 1024).toFixed(1)}MB</div>` : ''}
+      ${has ? `<div class="hint" style="margin-top:8px;color:var(--green)">已选：<b>${esc(PP.video.name)}</b> · ${(PP.video.size / 1024 / 1024).toFixed(1)}MB</div>` : ''}
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -6099,7 +6135,7 @@ window.VIEWS = window.VIEWS || {};
       <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer">
         <input type="checkbox" ${PP.opt.sub ? 'checked' : ''} data-act="pp-toggle" data-k="sub" style="margin-top:4px">
         <div style="flex:1">
-          <div style="font-weight:650">烧字幕</div>
+          <div style="font-weight:650">自动加字幕</div>
           <div class="hint">时间轴从影片的声音里量出来，不是估的。转录一支 30 秒的约 US$0.005</div>
           ${has ? `<div style="margin-top:8px">
             <button class="btn btn-sm ${n ? '' : 'btn-primary'}" data-act="pp-transcribe">${n ? '重新抓字幕' : '① 抓字幕'}</button>
@@ -6732,6 +6768,12 @@ window.TOUR = (function () {
             图片网址由生成服务托管，可能会过期，要留就先存下来。</div>`);
       }
       case 'auto-voice-all': return autoVoiceAll();
+      case 'pp-use': {
+        const list = HGX.madeVideos();
+        const m = list[+el.dataset.i];
+        if (m) PPX.useMade(m.url, m.label);
+        return;
+      }
       case 'pp-transcribe': return PPX.transcribe();
       case 'pp-run': return PPX.run();
       case 'pp-srt': {
@@ -10703,7 +10745,28 @@ ${hookLibBlock()}
   /* views-*.js 是另一个 IIFE，拿不到这里的区域函式。曝露读取用的两支
    * 就够——写入一律走 data-act，集中在一个地方好追。 */
   /* postprod.js 是独立模块，拿不到这里的区域函式；只曝露它需要的那一支。 */
-  window.HGX = { fetchSlow: (p, o) => hgFetchSlow(p, o) };
+  window.HGX = {
+    fetchSlow: (p, o) => hgFetchSlow(p, o),
+    /* 后制要把影片抓进浏览器才能画到画布上。影片来源没有跨域标头，
+     * 所以一律绕服务端那支只做转送的接口。 */
+    proxied: u => HG_BASE + '/api/proxy?url=' + encodeURIComponent(u),
+    /* 系统里所有已经做好、还有网址的影片，摊平成一份清单给后制页选。 */
+    madeVideos: () => {
+      const out = [];
+      ((STORE.s.persona && STORE.s.persona.testVideos) || []).forEach(v => {
+        if (v.url) out.push({ url: v.url, at: v.at, label: (v.text || '试生成的一支').slice(0, 24), from: '数位人试生成' });
+      });
+      (STORE.s.projects || []).forEach(p => {
+        (p.characters || []).forEach(c => {
+          if (c.videoUrl) out.push({ url: c.videoUrl, at: 0, label: (c.name || '人物') + ' 的自述', from: '《' + p.title + '》书中人物' });
+        });
+        (p.videos || []).forEach(v => {
+          if (v.videoUrl && !v.demo) out.push({ url: v.videoUrl, at: 0, label: v.title || '影片', from: '《' + p.title + '》' });
+        });
+      });
+      return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+    }
+  };
 
   window.HOOKS = {
     verdict: hookVerdict,
