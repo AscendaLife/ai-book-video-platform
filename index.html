@@ -5921,19 +5921,44 @@ window.VIEWS = window.VIEWS || {};
     });
   }
 
+  /* 开场那两秒要填满整个画面。
+   * 第一版是按原比例缩在中间，四周一大片黑——书封通常是直式、影片也是
+   * 直式，缩起来之后上下留白比封面本身还大，看起来像出错。
+   *
+   * 改成两层：底层是同一张图放大到盖满、模糊掉当背景；上层是完整的封面
+   * 摆中间。画面填满了，封面也不会被裁掉。这是短影音放直式图的标准做法。 */
   function drawCover(g, img, W, H, title) {
     g.fillStyle = '#0d0d10'; g.fillRect(0, 0, W, H);
     if (img) {
-      const s = Math.min(W * 0.62 / img.width, H * 0.5 / img.height);
+      const fill = Math.max(W / img.width, H / img.height);
+      const fw = img.width * fill, fh = img.height * fill;
+      g.save();
+      g.filter = 'blur(' + Math.round(W * 0.05) + 'px) brightness(.55)';
+      g.drawImage(img, (W - fw) / 2, (H - fh) / 2, fw, fh);
+      g.restore();
+
+      /* 上层：完整封面，尽量大但不裁切、不压到标题。 */
+      const maxH = title ? H * 0.66 : H * 0.82;
+      const s = Math.min(W * 0.88 / img.width, maxH / img.height);
       const w = img.width * s, h = img.height * s;
-      g.drawImage(img, (W - w) / 2, (H - h) / 2 - H * 0.04, w, h);
+      const y = title ? (H * 0.5 - h / 2) - H * 0.05 : (H - h) / 2;
+      g.save();
+      g.shadowColor = 'rgba(0,0,0,.55)';
+      g.shadowBlur = Math.round(W * 0.06);
+      g.shadowOffsetY = Math.round(H * 0.01);
+      g.drawImage(img, (W - w) / 2, y, w, h);
+      g.restore();
     }
     if (title) {
-      const size = Math.round(W * 0.07);
+      const size = Math.round(W * 0.075);
       g.font = '700 ' + size + 'px "PingFang TC","Microsoft JhengHei",sans-serif';
-      g.textAlign = 'center'; g.textBaseline = 'top';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      const y = H * 0.84;
+      g.lineWidth = Math.max(4, size * 0.16);
+      g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineJoin = 'round';
+      g.strokeText(title, W / 2, y);
       g.fillStyle = '#fff';
-      g.fillText(title, W / 2, H * 0.72);
+      g.fillText(title, W / 2, y);
     }
   }
 
@@ -6093,6 +6118,7 @@ window.VIEWS = window.VIEWS || {};
     pick: (k, file) => { PP[k] = file; if (k === 'video') { PP.segs = null; PP.outUrl = null; } render(); },
     toggle: k => { PP.opt[k] = !PP.opt[k]; render(); },
     setVol: v => { PP.opt.musicVol = +v; },
+    setCoverTitle: v => { PP.coverTitle = v; },
     transcribe, run, srt,
     editSeg: (i, text) => { if (PP.segs && PP.segs[i]) PP.segs[i].text = text; }
   };
@@ -6164,9 +6190,11 @@ window.VIEWS = window.VIEWS || {};
         <input type="checkbox" ${PP.opt.cover ? 'checked' : ''} data-act="pp-toggle" data-k="cover" style="margin-top:4px">
         <div style="flex:1">
           <div style="font-weight:650">书封开场（2 秒）</div>
-          <div class="hint">影片最前面加两秒书封</div>
+          <div class="hint">影片最前面加两秒书封，填满画面（背景是同一张图放大模糊）</div>
           <input type="file" accept="image/*" id="pp-cover" class="input" style="padding:8px;margin-top:8px">
           ${PP.cover ? `<div class="hint" style="margin-top:6px">已选：<b>${esc(PP.cover.name)}</b></div>` : ''}
+          <input class="input" id="pp-covertitle" placeholder="开场要不要压一行字？例如：我与地坛 · 史铁生（留空就只有图）"
+            value="${esc(PP.coverTitle || '')}" style="padding:8px;margin-top:8px">
         </div>
       </label>
     </div>
@@ -7096,6 +7124,7 @@ window.TOUR = (function () {
     /* 播放量那几格边打边存，不重画——重画会把游标弹掉，填三十笔会疯掉。 */
     const pf = e.target.closest('[data-act="pub-num"]');
     if (pf) { pubSet(pf.dataset.id, pf.dataset.k, pf.value); return; }
+    if (e.target.id === 'pp-covertitle') { PPX.setCoverTitle(e.target.value); return; }
     if (e.target.dataset && e.target.dataset.act === 'pp-vol') {
       PPX.setVol(e.target.value);
       const lab = e.target.parentElement && e.target.parentElement.lastElementChild;
