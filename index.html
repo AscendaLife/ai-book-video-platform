@@ -6948,6 +6948,14 @@ window.TOUR = (function () {
         const hasSubject = HG.mode === 'image' ? HG.assetId : HG.avatarId;
         if (!hasSubject || !HG.voiceId || !textEl || !textEl.value.trim()) return toast('请先选好形象、声音，并填台词', 'warn');
         HG.text = textEl.value.trim();
+        /* 选中的形象可能已经不在服务端了（帐号里被删掉、或换了方案）。
+         * 我们存的是编号，画面上照样显示得出来，但送上去会回
+         * 「Avatar not found」——使用者只会看到一句英文，不知道要重选。
+         * 送出前先比对一次清单。 */
+        if (HG.mode !== 'image' && HG.avatars.length && !HG.avatars.some(a => a.id === HG.avatarId)) {
+          HG.avatarId = null; hgSaveChoice(); hgRenderAvatars(); hgRenderChoiceSummary();
+          return toast('刚才选的那个形象在服务端已经不存在了（可能被删或换过方案）。已经帮你清掉，请在上面重新选一个', 'err');
+        }
         /* 余额不够就先挡下来。送出去要等 1-3 分钟才被打回，讯息还是
          * 一句看不懂的英文——不如在这里讲清楚。 */
         const est = hgEstimate(HG.text);
@@ -8060,6 +8068,26 @@ window.TOUR = (function () {
 
   function gaRender(html) { const b = $('#ga-result'); if (b) b.innerHTML = html; }
 
+  /* 图像服务变慢之后，服务端等 40 秒还没好就把任务编号交回来，
+   * 由这里接着追。以前那种情况会直接算失败——但任务还在跑、钱照扣，
+   * 使用者却得再花一次钱重生成。
+   * 最多再追三分钟；期间画面上的进度提示会一直挂着。 */
+  async function waitImage(j, label) {
+    if (j && j.url) return j.url;
+    if (!j || !j.taskId) throw new Error('模型没有回传图片网址');
+    const until = Date.now() + 180000;
+    while (Date.now() < until) {
+      await new Promise(r => setTimeout(r, 4000));
+      const st = await hgFetch('/api/status?service=deevid-video&id=' + encodeURIComponent(j.taskId))
+        .catch(() => null);
+      if (st && st.videoUrl) return st.videoUrl;
+      if (st && String(st.status || '').toUpperCase() === 'FAILED') {
+        throw new Error((label || '图片') + '生成失败（服务回报 FAILED）');
+      }
+    }
+    throw new Error((label || '图片') + '等了三分钟还没好。任务可能还在跑，稍后重按一次通常就有了');
+  }
+
   async function hgGenAvatarRun() {
     const desc = ($('#ga-prompt') && $('#ga-prompt').value || '').trim();
     if (!desc) return toast('先描述一下想要什么样的形象', 'err');
@@ -8086,11 +8114,11 @@ window.TOUR = (function () {
        * 给到 90 秒，比服务端自己的 60 秒上限还宽，让服务端的错误讯息
        * 有机会回得来。 */
       });
-      if (!j.url) throw new Error('模型没有回传图片网址');
-      GA.url = j.url;
-      gaHistoryAdd(j.url, desc, scene);
+      const imgUrl = await waitImage(j, '形象照');
+      GA.url = imgUrl;
+      gaHistoryAdd(imgUrl, desc, scene);
       const hb = $('#ga-history'); if (hb) hb.innerHTML = gaHistoryHtml();
-      gaRender(`<img src="${esc(j.url)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
+      gaRender(`<img src="${esc(imgUrl)}" style="width:100%;max-height:340px;object-fit:contain;border-radius:12px;border:1px solid var(--line)">
         <div class="hint" style="margin-top:6px">不满意就改描述再按一次「生成形象」。</div>`);
       if (useBtn) { useBtn.disabled = false; useBtn.style.opacity = '1'; useBtn.style.pointerEvents = 'auto'; }
     } catch (e) {
@@ -8463,6 +8491,7 @@ window.TOUR = (function () {
           <div style="flex:0 0 96px">
             ${r.url
               ? `<video src="${esc(r.url)}" controls preload="none" ${r.thumb ? `poster="${esc(r.thumb)}"` : ''}
+                   onerror="this.outerHTML='<div style=&quot;width:96px;height:128px;border-radius:8px;border:1px dashed var(--line-2);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--txt-3);text-align:center;padding:6px&quot;>网址已过期<br>要留请自行下载</div>'"
                    style="width:96px;border-radius:8px;background:#000"></video>`
               : `<div style="width:96px;height:128px;border-radius:8px;border:1px dashed var(--line-2);
                    display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--txt-3);text-align:center">${
@@ -8565,7 +8594,14 @@ window.TOUR = (function () {
       hgPoll(r.videoId, result, r.via);
     } catch (e) {
       HG.busy = false;
-      result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(e.message)}</div>`;
+      let msg = e.message;
+      if (/Avatar not found/i.test(msg)) {
+        /* 服务端说这个形象不存在。留着它只会让人一直按、一直失败，
+         * 直接清掉并讲清楚下一步做什么。 */
+        HG.avatarId = null; hgSaveChoice(); hgRenderAvatars(); hgRenderChoiceSummary();
+        msg = '选的这个形象在服务端已经不存在了（可能被删掉或换过方案）。已经帮你清掉，请在「① 数位人形象」重新选一个，或上传自己的照片';
+      }
+      result.innerHTML = `<div class="hint" style="color:var(--red)">生成失败：${esc(msg)}</div>`;
     }
     _busy();
   }
@@ -11004,10 +11040,10 @@ ${hookLibBlock()}
           deevid: { resolution: '1K', size: 'NINE_BY_SIXTEEN' }
         }, pick))
       });
-      if (!r.url) throw new Error('平台没有回传图片网址');
+      const purl = await waitImage(r, '定妆照');
       portraitHistoryAdd(c, c.portraitUrl);   // 旧的先收进历史，再换新的
-      c.portraitUrl = r.url;
-      portraitHistoryAdd(c, r.url);
+      c.portraitUrl = purl;
+      portraitHistoryAdd(c, purl);
       c.assetId = null; c.assetFor = null;    // 换脸了，旧的 asset 作废
       STORE.update(); render();
 
@@ -11018,9 +11054,9 @@ ${hookLibBlock()}
        * asset id，跟原网址过不过期无关。 */
       try {
         const up = await hgFetchSlow(
-          `/api/heygen/upload?url=${encodeURIComponent(r.url)}&name=${encodeURIComponent('portrait.png')}`,
+          `/api/heygen/upload?url=${encodeURIComponent(purl)}&name=${encodeURIComponent('portrait.png')}`,
           { method: 'POST' });
-        if (up.assetId) { c.assetId = up.assetId; c.assetFor = r.url; STORE.update(); }
+        if (up.assetId) { c.assetId = up.assetId; c.assetFor = purl; STORE.update(); }
       } catch (e) {
         /* 存不进去不影响看图，之后生成影片时还会再试一次。 */
       }
