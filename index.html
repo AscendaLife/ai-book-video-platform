@@ -690,6 +690,7 @@ mark.hl{background:rgba(124,108,255,.28);color:var(--txt);border-radius:4px;padd
     <div class="sidebar-foot">
       <div class="quota">
         <div class="quota-head"><span>本月生成额度</span><span id="quota-num">—</span></div>
+        <div id="build-stamp" style="font-size:10.5px;color:var(--txt-3);margin-top:6px;letter-spacing:.3px"></div>
         <div class="bar"><i id="quota-bar" style="width:0%"></i></div>
       </div>
       <div class="user" id="user-block" title="点击设定显示名称与角色">
@@ -7508,6 +7509,14 @@ window.TOUR = (function () {
    * 直接显示得出来；「做」（上传 / 克隆 / 生成，会写入帐号或真的花钱）
    * 需要下面这把凭证，只有内部版建置时才会被 build.js 填进来。 */
   const HG_BASE = 'https://heygen-api-self.vercel.app';
+  /* 打包时间。用来一眼判断浏览器拿到的是不是最新版——
+   * 「你有没有硬刷」这件事问过太多次，与其猜，不如显示出来对一下。 */
+  const BUILD_AT = "09-04 11:04"; /* build-stamp */
+  (function () {
+    const el = document.getElementById('build-stamp');
+    if (el) el.textContent = BUILD_AT ? '版本 ' + BUILD_AT : '';
+  })();
+
   const HG_WRITE_TOKEN = "wSZNS0NgUyQGOSGmPC7xaJlCQe7ZaI_d"; /* build-token */
   const hgCanWrite = () => !!HG_WRITE_TOKEN;
 
