@@ -7511,7 +7511,7 @@ window.TOUR = (function () {
   const HG_BASE = 'https://heygen-api-self.vercel.app';
   /* 打包时间。用来一眼判断浏览器拿到的是不是最新版——
    * 「你有没有硬刷」这件事问过太多次，与其猜，不如显示出来对一下。 */
-  const BUILD_AT = "09-04 11:04"; /* build-stamp */
+  const BUILD_AT = "09-04 11:15"; /* build-stamp */
   (function () {
     const el = document.getElementById('build-stamp');
     if (el) el.textContent = BUILD_AT ? '版本 ' + BUILD_AT : '';
@@ -8625,6 +8625,7 @@ window.TOUR = (function () {
    * 影片其实照做照扣钱。 */
   function hgPoll(videoId, result, via) {
     hgPolling[videoId] = true;
+    let fails = 0;
     const paint = html => { if (result && document.body.contains(result)) result.innerHTML = html; };
     /* 两条路的任务编号是两套东西，拿错地方查只会得到「not found」。
      * via 是送出时服务端告诉我们的，记录里也存了一份，重整回来照样对。 */
@@ -8647,11 +8648,24 @@ window.TOUR = (function () {
           paint(`<div class="hint" style="color:var(--red)">生成失败：${esc(s.error || '未知原因')}</div>`);
           return;
         }
+        fails = 0;
         paint(`<div class="hint">生成中…（${esc(s.status || 'processing')}）</div>`);
         setTimeout(tick, 5000);
       } catch (e) {
+        /* 问一次没问到就把轮询停掉，是错的——影片还在做、钱也花了，
+         * 只是这一次网络不通。网络本来就会有瞬断，重试几次才合理。
+         * 连续失败十次（约两分钟）才真的放弃，而且放弃时讲清楚影片还在，
+         * 重新整理回来会继续追。 */
+        fails++;
+        if (fails < 10) {
+          paint(`<div class="hint" style="color:var(--amber)">查询暂时不通，重试中…（第 ${fails} 次）<br>
+            <span style="opacity:.8">影片还在做，这只是「问进度」这一下没连上</span></div>`);
+          setTimeout(tick, 8000);
+          return;
+        }
         delete hgPolling[videoId];
-        paint(`<div class="hint" style="color:var(--amber)">查询失败：${esc(e.message)}</div>`);
+        paint(`<div class="hint" style="color:var(--amber)">连续问不到进度（${esc(e.message)}）。
+          <br><b>影片应该还在做</b>——重新整理这一页，系统会接着追；或稍后到下面的生成记录看。</div>`);
       }
     };
     tick();
