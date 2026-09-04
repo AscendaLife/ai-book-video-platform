@@ -7513,7 +7513,7 @@ window.TOUR = (function () {
   const HG_BASE = 'https://heygen-api-self.vercel.app';
   /* 打包时间。用来一眼判断浏览器拿到的是不是最新版——
    * 「你有没有硬刷」这件事问过太多次，与其猜，不如显示出来对一下。 */
-  const BUILD_AT = "09-04 12:10"; /* build-stamp */
+  const BUILD_AT = "09-04 14:37"; /* build-stamp */
   (function () {
     const el = document.getElementById('build-stamp');
     if (el) el.textContent = BUILD_AT ? '版本 ' + BUILD_AT : '';
@@ -7784,7 +7784,7 @@ window.TOUR = (function () {
     if (!panel) return;
     /* 「上传自己的照片」放第一格而且做大：这是唯一不依赖外部清单、永远能用的路，
      * 也是多数人真正想要的东西（专属自己的数字人）。清单读不到时它照样能点。 */
-    panel.innerHTML = `
+    panel.innerHTML = `<div id="hg-upload-msg">${hgUploadMsgHtml()}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:11px;margin-bottom:12px">
         <div class="hg-avatar" data-act="hg-upload-photo-btn"
             style="border:2px dashed var(--violet);border-radius:14px;padding:8px;cursor:pointer;text-align:center;
@@ -8187,28 +8187,112 @@ window.TOUR = (function () {
     return true;
   }
 
+  /* ============================================================
+   * 照片先在浏览器里缩小再上传
+   *
+   * 上限 4MB 不是我们订的，是服务端那一层的硬限制。但手机现在随便
+   * 一张相片就是 5-8MB——使用者按了「上传我的照片」，只看到一句
+   * 「太大了，自己压一下再传」，等于把我们的技术限制丢回去给他解决。
+   * 而且那是个几秒就消失的小提示，很容易整个错过，画面上什么都没
+   * 多出来，看起来就像「上传的照片我看不到」。
+   *
+   * 数字人只需要看清楚一张脸，1600px 早就够用。所以送出前先缩一遍，
+   * 压完通常只剩几百 KB，使用者根本不用管这件事。
+   *
+   * HEIC（iPhone 预设格式）浏览器解不开，这种要讲清楚怎么办，
+   * 不能只回一句失败。
+   * ========================================================== */
+  const PHOTO_MAX_PX = 1600;
+
+  async function shrinkImage(file) {
+    /* 已经够小就原样送，不重新编码——重编一次就掉一次画质。 */
+    if (file.size <= 1.5 * 1024 * 1024) return file;
+
+    let bmp;
+    try {
+      bmp = await createImageBitmap(file);
+    } catch (err) {
+      if (/heic|heif/i.test((file.type || '') + ' ' + (file.name || ''))) {
+        throw new Error('这是 iPhone 的 HEIC 格式，浏览器打不开。'
+          + '手机上「设定 → 相机 → 格式」改成「最相容」再拍一张，'
+          + '或分享时选「拷贝并保留原始档」转成 JPG 再传。');
+      }
+      throw new Error('这个档案读不出图片（可能不是照片，或档案损坏）。换一张 JPG 或 PNG 试试。');
+    }
+
+    const scale = Math.min(1, PHOTO_MAX_PX / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
+
+    /* 画质从 0.92 往下试，直到进得了上限。一般第一轮就过了。 */
+    const QS = [0.92, 0.82, 0.7, 0.55];
+    for (let i = 0; i < QS.length; i++) {
+      const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', QS[i]));
+      if (blob && blob.size <= UPLOAD_MAX) {
+        const base = String(file.name || 'photo').replace(/\.[^.]+$/, '');
+        return new File([blob], base + '.jpg', { type: 'image/jpeg' });
+      }
+    }
+    throw new Error('这张照片压到最低画质还是超过 4MB，先用手机相簿裁切一下再传。');
+  }
+
+  /* 上传的结果要留在画面上，不能只靠会消失的小提示。
+   * 使用者回报过「按了没反应」「照片我看不到」——多半就是提示错过了。 */
+  function hgSetUploadMsg(kind, text) {
+    HG.uploadMsg = text ? { kind, text } : null;
+    const box = $('#hg-upload-msg');
+    if (box) box.innerHTML = hgUploadMsgHtml();
+  }
+
+  function hgUploadMsgHtml() {
+    const m = HG.uploadMsg;
+    if (!m) return '';
+    const color = m.kind === 'err' ? 'var(--red, #e5484d)'
+      : m.kind === 'ok' ? 'var(--green, #30a46c)' : 'var(--amber)';
+    return `<div class="hint" style="margin-bottom:10px;padding:10px 12px;border-radius:10px;
+        border:1px solid ${color};color:${color};line-height:1.7">${esc(m.text)}</div>`;
+  }
+
   async function hgUploadPhoto(file) {
     if (!file) return;
-    if (tooBig(file, '这张照片')) return;
-    const localPreview = URL.createObjectURL(file);
+    hgSetUploadMsg('warn', '正在处理「' + (file.name || '照片') + '」…太大的会自动缩小，请稍等。');
+    let use;
+    try {
+      use = await shrinkImage(file);
+    } catch (e) {
+      hgSetUploadMsg('err', '这张照片没能上传：' + e.message);
+      toast('照片没能上传，原因写在上传区里了', 'err');
+      return;
+    }
+    const localPreview = URL.createObjectURL(use);
     HG.assetPreview = localPreview; HG.mode = 'image'; hgRenderAvatars();
     try {
-      const buf = await file.arrayBuffer();
+      const buf = await use.arrayBuffer();
       // 走 hgFetch 而不是原生 fetch——它会自动带上写入凭证，
       // 少了这个标头服务端一律回「凭证不正确」。
       const j = await hgFetch(
-        `/api/heygen/upload?mime=${encodeURIComponent(file.type || 'image/jpeg')}&name=${encodeURIComponent(file.name || 'photo')}`,
+        `/api/heygen/upload?mime=${encodeURIComponent(use.type || 'image/jpeg')}&name=${encodeURIComponent(use.name || 'photo')}`,
         { method: 'POST', body: buf });
       HG.assetId = j.assetId; HG.avatarId = null;
       // 上传成功才存——服务端回传的网址才是长期有效的，本机预览网址
       // （blob:）一关页面就失效，存了下次读回来是破图
       HG.assetPreview = j.url || HG.assetPreview;
       hgLibAdd({ assetId: j.assetId, url: HG.assetPreview, source: 'upload',
-                 name: (file.name || '我的照片').replace(/\.[^.]+$/, '').slice(0, 12) });
+                 name: (use.name || '我的照片').replace(/\.[^.]+$/, '').slice(0, 12) });
       hgSaveChoice();
+      const shrunk = use !== file
+        ? '（原本 ' + (file.size / 1048576).toFixed(1) + 'MB，已自动缩到 '
+            + (use.size / 1048576).toFixed(1) + 'MB）'
+        : '';
+      hgSetUploadMsg('ok', '「' + (use.name || '照片') + '」已经在形象库里了' + shrunk
+        + '，就是下面那一格，紫色边框代表正在用。');
       toast('照片已上传，之后生成影片会用这张', 'ok'); hgRenderGenerate(); hgRenderChoiceSummary();
     } catch (e) {
-      toast('上传失败：' + e.message, 'err'); HG.mode = 'avatar'; hgRenderAvatars();
+      hgSetUploadMsg('err', '上传失败：' + e.message);
+      toast('上传失败，原因写在上传区里了', 'err'); HG.mode = 'avatar'; hgRenderAvatars();
     }
   }
 
