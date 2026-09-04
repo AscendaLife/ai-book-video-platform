@@ -7163,6 +7163,8 @@ window.TOUR = (function () {
       HG.text = e.target.value;
       const est = $('#hg-est');
       if (est) est.textContent = hgEstimateHtml(HG.text);
+      const say = $('#hg-say');
+      if (say) say.innerHTML = sayableNote(HG.text);
       return;
     }
     if (e.target.id === 'hg-voice-search') {
@@ -7511,7 +7513,7 @@ window.TOUR = (function () {
   const HG_BASE = 'https://heygen-api-self.vercel.app';
   /* 打包时间。用来一眼判断浏览器拿到的是不是最新版——
    * 「你有没有硬刷」这件事问过太多次，与其猜，不如显示出来对一下。 */
-  const BUILD_AT = "09-04 11:15"; /* build-stamp */
+  const BUILD_AT = "09-04 12:10"; /* build-stamp */
   (function () {
     const el = document.getElementById('build-stamp');
     if (el) el.textContent = BUILD_AT ? '版本 ' + BUILD_AT : '';
@@ -8382,6 +8384,82 @@ window.TOUR = (function () {
     return { n, sec, usd: sec * USD_PER_SEC };
   }
 
+
+  /* ============================================================
+   * sayable — 送去配音之前，把「写给眼睛看的」改成「念得出来的」
+   *
+   * 客户实测回报：稿子里写「9/2 外資又大賣」，念出来变成「九分之二」。
+   * 这不是配音引擎坏了——「9/2」本来就同时是日期和分数，它只能猜，
+   * 而在中文语境它猜了分数。同一类的还有 US$、波浪号、破折号、
+   * 从别处贴过来没清乾净的 Markdown 星号与井号。
+   *
+   * 这些如果要使用者自己回去改稿，等于每写一篇都要记一串规矩。
+   * 所以在送出前自动改写，并且把改了哪几处显示出来——
+   * 不能默默动使用者的稿子，他要知道机器会念成什么。
+   *
+   * 原则：只改「几乎不可能改错」的。像 3:1、IET-KY 这种就不碰，
+   * 宁可漏改，也不要把对的改成错的。
+   * ========================================================== */
+  function sayable(raw) {
+    let t = String(raw == null ? '' : raw);
+    const fixes = [];
+    const NL = String.fromCharCode(10);
+
+    function sub(re, fn, why) {
+      t = t.replace(re, function () {
+        const from = arguments[0];
+        const to = fn.apply(null, arguments);
+        if (to !== from && fixes.length < 12
+            && !fixes.some(f => f.from === from)) fixes.push({ from, to, why });
+        return to;
+      });
+    }
+
+    /* 1. 日期。会被念成分数的元凶。
+     *    2026/9/2 → 2026年9月2日；9/2 → 9月2日。
+     *    只在月份 1-12、日期 1-31 时才改，其余保持原样（可能真的是分数）。 */
+    sub(/(\d{4})\/(\d{1,2})\/(\d{1,2})(?![\d\/])/g, (m, y, mo, d) =>
+      (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) ? `${y}年${+mo}月${+d}日` : m, '日期');
+    sub(/(?<![\d.\/])(\d{1,2})\/(\d{1,2})(?![\d\/])/g, (m, mo, d) =>
+      (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) ? `${+mo}月${+d}日` : m, '日期');
+
+    /* 2. 钱。US$3.18 念成「US 美元三点一八」很怪，改成中文语序。
+     *    区间要先处理：US$0.03-0.07 得整段一起看，
+     *    否则先换掉前面那个数字，后面的 0.07 就变成没有单位的裸数。 */
+    sub(/US\$\s?([\d,]+(?:\.\d+)?)\s?[-~～–—]\s?([\d,]+(?:\.\d+)?)/g,
+      (m, a, b) => a + '到' + b + '美元', '金额区间');
+    sub(/US\$\s?([\d,]+(?:\.\d+)?)/g, (m, n) => n + '美元', '金额');
+    sub(/(?<![A-Za-z])\$\s?([\d,]+(?:\.\d+)?)/g, (m, n) => n + '美元', '金额');
+    sub(/NT\$\s?([\d,]+(?:\.\d+)?)/g, (m, n) => n + '元', '金额');
+
+    /* 3. 区间。0.03~0.07 / 8000－9000 的符号念不出来，换成「到」。 */
+    sub(/(\d(?:\.\d+)?)\s?[~～–—]\s?(\d)/g, (m, a, b) => a + '到' + b, '区间');
+
+    /* 4. 从文件或聊天贴过来的 Markdown。星号和井号会被照念。 */
+    sub(/\*\*([^*\n]+)\*\*/g, (m, s) => s, '粗体标记');
+    sub(/^#{1,6}\s+/gm, () => '', '标题井号');
+    sub(/^[-*+]\s+/gm, () => '', '项目符号');
+
+    /* 5. 全形空白与连续空行：不影响念，但会撑长估算的字数。 */
+    t = t.replace(/\u3000/g, ' ')
+         .replace(new RegExp(NL + '{3,}', 'g'), NL + NL)
+         .trim();
+
+    return { text: t, fixes };
+  }
+
+  /* 把改动写成一句人看得懂的话。没改就回空字串。 */
+  function sayableNote(raw) {
+    const r = sayable(raw);
+    if (!r.fixes.length) return '';
+    const list = r.fixes.slice(0, 4)
+      .map(f => `<code>${esc(f.from)}</code> 念成「${esc(f.to)}」`).join('、');
+    const more = r.fixes.length > 4 ? `，另外还有 ${r.fixes.length - 4} 处` : '';
+    return `<div class="hint" style="margin-top:6px;color:var(--amber)">
+      送去配音前会自动改写：${list}${more}。
+      <span style="opacity:.75">配音引擎看到「9/2」会念成九分之二，所以先换成念得对的写法。你的稿子本身不会被改。</span></div>`;
+  }
+
   function hgEstimateHtml(text) {
     const e = hgEstimate(text);
     if (!e.n) return '还没写字';
@@ -8407,6 +8485,7 @@ window.TOUR = (function () {
         <textarea class="input" id="hg-text" rows="7"
           placeholder="直接贴你自己写的稿子。写什么就念什么——不要写【】这种标注，会被一起念出来。"
         >${esc(HG.text || '')}</textarea>
+        <div id="hg-say">${sayableNote(HG.text)}</div>
         <div class="hint" style="margin-top:6px">影片按秒计费，稿子越长越贵。先用两三句话试一支，确认形象和声音搭起来满意，再写长的。</div></div>
       <button class="btn btn-primary btn-sm" style="margin-top:10px" data-act="hg-generate">生成这一支（真的花钱）</button>
       <div id="hg-wallet" style="margin-top:10px">${hgWalletHtml()}</div>
@@ -8585,7 +8664,7 @@ window.TOUR = (function () {
     try {
       const r = await hgFetch('/api/heygen/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: HG.mode, avatarId: HG.avatarId, assetId: HG.assetId, voiceId: HG.voiceId, text: HG.text })
+        body: JSON.stringify({ mode: HG.mode, avatarId: HG.avatarId, assetId: HG.assetId, voiceId: HG.voiceId, text: sayable(HG.text).text })
       });
       /* 记录在送出的当下就建立，不是等成功才建——失败的那几支同样
        * 要留着，不然使用者只会看到「又没了」，不知道失败过几次、为什么。 */
@@ -8983,7 +9062,7 @@ window.TOUR = (function () {
         body: JSON.stringify({
           mode: pa.realAvatarMode || 'avatar',
           avatarId: pa.realAvatarId, assetId: pa.realPhotoAssetId,
-          voiceId: pa.realVoiceId, text,
+          voiceId: pa.realVoiceId, text: sayable(text).text,
           voiceSettings: voiceSettings()
         })
       });
@@ -11767,7 +11846,7 @@ ${parts.map((x, n) => `${n + 1}. ${x.k}：${x.ask}`).join('\n')}
           mode: 'image',
           assetId: c.assetId,
           voiceId: c.voiceId || STORE.s.persona.realVoiceId,
-          text,
+          text: sayable(text).text,
           voiceSettings: voiceSettings(c)
         })
       });
