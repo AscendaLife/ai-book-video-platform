@@ -7700,6 +7700,10 @@ window.TOUR = (function () {
       HG.avatars = (av.avatars || []).map(a => Object.assign({ own: true }, a));
       HG.voices = (vo.voices || []).map(decorateVoice);
       hgRestoreChoice();   // 先放回上次存的选择，再决定要不要给预设值
+      /* 存着的可能是已经拿掉的公版形象。留着它，使用者按生成必定失败。 */
+      if (HG.mode !== 'image' && HG.avatarId && !HG.avatars.some(a => a.id === HG.avatarId)) {
+        HG.avatarId = null;
+      }
       if (!HG.avatarId && HG.avatars[0]) HG.avatarId = HG.avatars[0].id;
       if (!HG.voiceId && HG.voices[0]) HG.voiceId = HG.voices[0].id;
       hgSaveChoice();
@@ -7707,17 +7711,15 @@ window.TOUR = (function () {
       status.innerHTML = `<div class="hint" style="color:var(--green)">已连接</div>`;
       hgRenderAvatars(); hgRenderVoices(); hgRenderGenerate(); hgRenderChoiceSummary();
 
-      /* 再补上官方公版里的亚洲脸。这是额外的，拿不到也不影响上面已经能用的东西，
-       * 所以独立 try 住、失败静默。 */
-      try {
-        const pub = await hgFetch('/api/heygen/avatars?scope=public', null, 20000);
-        const have = new Set(HG.avatars.map(a => a.id));
-        const extra = pickAsian(pub.avatars || []).filter(a => !have.has(a.id));
-        if (extra.length) {
-          HG.avatars = HG.avatars.concat(extra);
-          hgRenderAvatars();
-        }
-      } catch (e) { /* 公版是加分项，没有就算了 */ }
+      /* 官方公版形象拿掉了。
+       *
+       * 清单查得到（Kenji 的 id 就在公版清单里），但拿去生成影片会被打回
+       * 「Avatar not found」——这个帐号／方案不能用公版形象生成。
+       * 也就是说：我们把一批必定失败的选项摆在选单里让人挑。
+       *
+       * 使用者选了 Kenji、写好稿、按下生成、等到失败，才发现这条路根本
+       * 不通。与其留着，不如不显示。要用公版得先在供应商後台把它加进
+       * 自己的帐号，那时候它会自己出现在「你帐号里的」那一批。 */
       const st = $('#hg-status');
       if (st) st.innerHTML = `<div class="hint" style="color:var(--green)">已连接 · ${HG.avatars.length} 个形象 / ${HG.voices.length} 个声音可选</div>`;
     } catch (e) {
@@ -7811,9 +7813,12 @@ window.TOUR = (function () {
           <div style="font-size:12.5px;color:var(--txt-3)">${a.own ? '你帐号里的' : '官方形象'}${a.gender ? ' · ' + esc(a.gender) : ''}</div>
         </div>`).join('')}
       </div>
-      ${!HG.avatars.length
-        ? `<div class="hint" style="color:var(--amber);margin-bottom:8px">现成形象清单目前是空的（服务连不上，或帐号里没有建好的形象）。
-             <b>上传自己的照片</b>不受影响，直接点上面那一格就行。</div>` : ''}
+      ${!HG.avatars.filter(a => hiddenAvatars().indexOf(a.id) < 0).length
+        ? `<div class="hint" style="color:var(--amber);margin-bottom:8px">
+             ${hiddenAvatars().length
+               ? '你把现有的形象都收起来了。按下面「显示收起的形象」可以叫回来，'
+               : '帐号里目前没有可用的现成形象，'}
+             或者直接用上面两格：<b>上传我的照片</b>、<b>用提示词生成</b> —— 这两条最稳，不依赖现成清单。</div>` : ''}
       ${hiddenAvatars().length ? `<div class="hint" style="margin-bottom:8px">
         已收起 ${hiddenAvatars().length} 个用不到的形象。
         <span style="cursor:pointer;color:var(--violet-2);font-weight:600" data-act="hg-unhide-avatars">显示收起的形象</span></div>` : ''}
