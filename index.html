@@ -5400,6 +5400,21 @@ window.VIEWS = window.VIEWS || {};
     </div>
 
     <div class="card" style="margin-bottom:18px">
+      <div class="card-h"><div><div class="card-t">这台电脑的使用身分</div>
+        <div class="card-s">试用身分有保护上限：单支影片台词 600 字、帐户余额低于保留线就不给生成，避免体验的人把额度用光</div></div>
+        <div class="right">${window.HGINFO && HGINFO.unlocked && HGINFO.unlocked()
+          ? '<span class="tag g">完整版 · 不受试用上限</span>'
+          : '<span class="tag a">试用身分 · 有上限</span>'}</div></div>
+      <div class="explain" style="margin:0">
+        <div class="ex-r"><span class="ex-k">怎么解锁</span><span>网址后面接上 <code>#key=你的凭证</code> 开一次就好。开完凭证会<b>立刻从网址里清掉</b>，只留在这台电脑。换电脑要再做一次——别人拿到网址没有用。</span></div>
+        <div class="ex-r"><span class="ex-k">为什么自己也被挡</span><span>上限是按「凭证」判断的，不是按帐号。公开网址打包进去的是公开凭证，所以自己用同一个网址一样算试用，要解锁一次才会认得你。</span></div>
+      </div>
+      ${window.HGINFO && HGINFO.unlocked && HGINFO.unlocked()
+        ? '<button class="btn btn-sm" style="margin-top:12px" data-act="hg-relock">解除这台电脑的解锁</button>'
+        : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
       <div class="card-h"><div><div class="card-t">支付服务（可选，需自行部署）</div>
         <div class="card-s">GitHub Pages 这类纯静态托管不能安全保存金流 key，所以前端只呼叫你自己部署的支付后端；不部署也可以正常浏览方案</div></div>
         <div class="right"><button class="btn btn-sm" data-act="copy-payment-env">复制环境变量清单</button></div></div>
@@ -6937,6 +6952,12 @@ window.TOUR = (function () {
         if (it && confirm('要从形象库移除「' + it.name + '」吗？只是从清单拿掉，不影响已经生成好的影片。')) hgLibDel(el.dataset.id);
         return;
       }
+      case 'hg-relock':
+        if (!confirm('要解除这台电脑的解锁吗？解除后会回到试用身分（单支台词上限 600 字）。之后用带 #key= 的网址可以再解锁。')) return;
+        hgSetToken('');
+        toast('已解除解锁，重新整理后生效', 'ok');
+        setTimeout(() => location.reload(), 800);
+        return;
       case 'hg-gen-avatar-btn':
         if (!hgCanWrite()) return hgDemoNotice();
         return hgGenAvatarModal();
@@ -7513,14 +7534,70 @@ window.TOUR = (function () {
   const HG_BASE = 'https://heygen-api-self.vercel.app';
   /* 打包时间。用来一眼判断浏览器拿到的是不是最新版——
    * 「你有没有硬刷」这件事问过太多次，与其猜，不如显示出来对一下。 */
-  const BUILD_AT = "09-04 14:37"; /* build-stamp */
+  const BUILD_AT = "09-04 15:17"; /* build-stamp */
   (function () {
     const el = document.getElementById('build-stamp');
     if (el) el.textContent = BUILD_AT ? '版本 ' + BUILD_AT : '';
   })();
 
   const HG_WRITE_TOKEN = "wSZNS0NgUyQGOSGmPC7xaJlCQe7ZaI_d"; /* build-token */
-  const hgCanWrite = () => !!HG_WRITE_TOKEN;
+  /* ============================================================
+   * 解锁：让「自己人」不受试用上限
+   *
+   * 网站发出去给别人体验了，所以服务端对公开凭证套了上限：单支台词
+   * 600 字、帐户余额低于保留线就不给生成。这是为了避免体验用量把
+   * 额度烧光——必要，不能拿掉。
+   *
+   * 但自己也被一起挡住就没道理了。上限是「按凭证」判断的，公开版
+   * 打包进去的是公开凭证，所以自己用同一个网址也算试用。
+   *
+   * 做法：允许在这台浏览器里存一把自己的凭证，覆盖打包进去的那把。
+   * 存了之后所有请求都带这把，服务端认得，就不套上限。
+   *
+   *   解锁：网址后面接 #key=你的凭证，开一次就存下来了，
+   *         而且立刻从网址里清掉（# 后面的东西不会送到伺服器）。
+   *   解除：「支付与方案」页最下面有一个按钮。
+   *
+   * 凭证只存在这台电脑的 localStorage，不会同步、不会进 Git。
+   * 换电脑就要再解锁一次——这是刻意的，别人拿到网址也没用。
+   * ========================================================== */
+  const TOKEN_KEY = 'bookreel.token';
+
+  function unlockToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  /* 打包进去的那把是「预设」，浏览器里存的那把优先。 */
+  function hgToken() {
+    return unlockToken() || HG_WRITE_TOKEN;
+  }
+
+  /* 有没有用自己的凭证在跑。用来显示状态，不显示凭证本身。 */
+  function hgUnlocked() {
+    const t = unlockToken();
+    return !!t && t !== HG_WRITE_TOKEN;
+  }
+
+  function hgSetToken(t) {
+    t = String(t || '').trim();
+    try {
+      if (t) localStorage.setItem(TOKEN_KEY, t);
+      else localStorage.removeItem(TOKEN_KEY);
+    } catch (e) {}
+  }
+
+  /* 网址带 #key= 就存下来，然后立刻把它从网址里抹掉——
+   * 不然重新整理、加书签、截图都会把凭证一起带出去。 */
+  (function () {
+    const m = /(?:^|[#&])key=([^&]+)/.exec(location.hash || '');
+    if (!m) return;
+    hgSetToken(decodeURIComponent(m[1]));
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) { location.hash = ''; }
+  })();
+
+  const hgCanWrite = () => !!hgToken();
 
   /* 一定要有逾时：fetch 预设永远不会自己放弃，网路卡住时那个 Promise
    * 既不成功也不失败，介面就永远停在「连线中…」——使用者只看到一个
@@ -7579,7 +7656,8 @@ window.TOUR = (function () {
 
   async function hgFetch(p, opt, timeoutMs) {
     const o = Object.assign({}, opt);
-    if (HG_WRITE_TOKEN) o.headers = Object.assign({}, o.headers, { 'x-bookreel-token': HG_WRITE_TOKEN });
+    const _tok = hgToken();
+    if (_tok) o.headers = Object.assign({}, o.headers, { 'x-bookreel-token': _tok });
     const ac = new AbortController();
     o.signal = ac.signal;
     const ms = timeoutMs || 15000;
@@ -11308,7 +11386,7 @@ ${hookLibBlock()}
   let rolesVoiceTried = false;
 
   /* views-roles.js 在另一个 IIFE 里，拿不到 HG；开一个只读的窗口给它。 */
-  window.HGINFO = { voices: () => HG.voices, canWrite: () => hgCanWrite() };
+  window.HGINFO = { voices: () => HG.voices, canWrite: () => hgCanWrite(), unlocked: () => hgUnlocked() };
 
   /* 声音清单：人物自述页每个人物都要挑声音，但这一页没有 #hg-status 挂载点，
    * hgAutoCheck() 那一套用不上，所以自己抓一次就好。抓失败不挡任何事——
